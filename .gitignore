@@ -49,3 +49,6 @@ app.*.map.json
 
 # SonarScanner workdir
 .scannerwork/
+
+# Local clone of web repo for agent reference
+_ref_bist/

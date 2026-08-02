@@ -1,0 +1,44 @@
+---
+description: Görsel kimlik — renk, tipografi, ikon web (lotlot.net) ile aynı olmalı
+alwaysApply: true
+---
+
+# Marka görsel tutarlılığı (web = kaynak)
+
+Uygulamadaki **renkler, tema, tipografi, ikonlar, logo ve görsel dil** lotlot.net ile aynı olmalıdır. Tahminle palet/uydurma font seçme.
+
+## Kaynak doğrulama (zorunlu)
+
+Görsel iş yapmadan / bitirmeden web’den doğrula:
+
+1. Canlı CSS token’lar: `https://lotlot.net` → `static/css/brand.css` (veya `brand.min.css`)
+2. Gerekirse BIST: `static/css/brand.css`, `templates/` (landing/auth), `static/img/brand/`
+3. Logo/ikon: mevcut `BrandAssets` URL’leri veya sitedeki `/static/img/brand/*`, `/static/pwa/*`
+
+Token özeti (web `brand.css` — değişiklik olursa siteyi yeniden oku):
+
+| Token | Web |
+|-------|-----|
+| bg-0 / bg-1 / bg-2 | `#071610` / `#0b2018` / `#0f2a20` |
+| text / muted | `#eaf7f1` / muted alpha |
+| accent / accent-2 | `#19e38a` / `#0fd37b` |
+| danger / warning | `#ff4d4f` / `#ffc107` |
+| radius | 12–16px |
+| ambiance | koyu yeşil radial gradient; mint CTA |
+
+Flutter `LotlotColors` / `AppTheme` web token’larından sapıyorsa **web’e hizala** (tek seferlik düzeltme veya F0).
+
+## Kurallar
+
+- Yeni renk/hex uydurma; önce `brand.css` / computed style.
+- Font: sitede kullanılan aile (ve ağırlıklar); “Inter/Roboto default” veya rastgele display font yok.
+- İkon/logo: CDN veya site asset; AI ile alternatif marka ikonu üretip kalıcı kullanma.
+- Grafik mum renkleri web public chart ile uyumlu kalsın (yeşil up / kırmızı down — siteden doğrula).
+- SEO/ASO görselleri de aynı marka dilini kullansın (`seo-expert` ile çelişmesin).
+
+## Teslim kontrolü
+
+- [ ] Renkler web token’larıyla eşleşiyor
+- [ ] Tipografi web ile uyumlu
+- [ ] Logo/ikon site kaynağından
+- [ ] Handbook §6 / tema notu güncel
