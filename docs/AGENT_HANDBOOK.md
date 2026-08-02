@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (yol haritası §0 + brand-visual-parity / v4)
+> Son güncelleme: 2026-08-03 (F0 tema+native / v5)
 
 ---
 
@@ -41,7 +41,7 @@ flowchart TD
 
 | Faz | İsim | Durum | IAP? |
 |-----|------|--------|------|
-| **F0** | Temel / kalite iskeleti | Kısmen (iskelet + kurallar; app adı / release INTERNET açık) | Hayır |
+| **F0** | Temel / kalite iskeleti | Tamam (tema web hizalı; INTERNET; display name) | Hayır |
 | **F1** | Auth tamam | Kısmen (e-posta login + `/me`; Google/Apple/Turnstile yok) | Hayır |
 | **F2** | Keşfet + Watchlist | Bekliyor | Hayır |
 | **F3** | Hisse detay | Bekliyor | Hayır |
@@ -64,9 +64,9 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Flutter iskelet, Provider, secure storage, tema
   - [x] Brand CDN logo + launcher ikon
   - [x] analyze + sonar + tag akışı
-  - [ ] Release `INTERNET` main manifest
-  - [ ] Display name **LOTLOT.NET** (Android label + iOS `CFBundleDisplayName`)
-  - [ ] `LotlotColors` / tema web `brand.css` token’larıyla hizalı (`brand-visual-parity`)
+  - [x] Release `INTERNET` main manifest
+  - [x] Display name **LOTLOT.NET** (Android label + iOS `CFBundleDisplayName`)
+  - [x] `LotlotColors` / tema web `brand.css` token’larıyla hizalı (`brand-visual-parity`)
 - **Dışı:** Yeni ürün ekranı şişirme.
 - **Risk:** Release build’de network yoksa tüm fazlar kırılır.
 
@@ -261,6 +261,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Beş proje skill’i eklendi (SEO, Android FS, iOS FS, PM, siber güvenlik)
 - Her birinde kapsamlı `SKILL.md` + `reference.md`
 
+### v5 (2026-08-03) — F0 kural uyumu
+
+- `LotlotColors` ← web `brand.css` (#19e38a, #0b2018, …)
+- Splash/login web `.brand-dark` radial gradient
+- Android `INTERNET` + label `LOTLOT.NET`; iOS display name; launch `#071610`
+
 ### v4 (2026-08-03) — yol haritası §0 + görsel parity
 
 - Handbook **§0 Mobil ürün yol haritası** (F0–F7); API guide salt-referans politikası
@@ -288,16 +294,12 @@ sonar-scanner
 |---|---|
 | In-app logo | `https://lotlot.net/static/img/brand/lotlot-icon-transparent.png` (`BrandAssets`) |
 | Launcher | Yerel `assets/branding/app_icon.png` (PWA 512’den) + `dart run flutter_launcher_icons` |
-| Tema token’ları | Web `static/css/brand.css` — kural **brand-visual-parity** |
+| Tema token’ları | Web `static/css/brand.css` → `LotlotColors` (`brand-visual-parity`) |
 | Not | CDN `immutable` cache (~1 yıl); aynı URL’de değişince istemci gecikebilir |
-
-**Hizalama borcu (F0):** Flutter `LotlotColors` şu an web token’larından sapıyor (ör. accent `#39FF14` vs web `#19e38a`). Görsel işlerde web’i esas al; temayı web’e çek.
 
 ## 7. Bilinen / ertelenen
 
 - [ ] lotlot.net **SSH** (root/ersin): sunucu yalnız `publickey`; bu Mac’te sunucu key’i yok — sonra
-- [ ] Android **release** `INTERNET` izni main manifest’te yok — **F0**
-- [ ] App display name hâlâ `lotlotnet_mobile` / `Lotlotnet Mobile` — **F0**
 - [ ] F1+: Google/Apple, Turnstile, watchlist, hisse, IAP — bkz. **§0**
 
 ## 8. Dokunulmaması gerekenler

@@ -1,16 +1,27 @@
 import 'package:flutter/material.dart';
 
-/// LOTLOT.NET koyu yeşil + neon yeşil marka paleti.
+/// Web `static/css/brand.css` token’ları — brand-visual-parity.
+/// Kaynak: lotlot.net / BIST `brand.css` (--brand-*).
 class LotlotColors {
-  static const Color background = Color(0xFF0B1F14);
-  static const Color surface = Color(0xFF12281B);
-  static const Color surfaceElevated = Color(0xFF1A3324);
-  static const Color accent = Color(0xFF39FF14);
-  static const Color accentMuted = Color(0xFF2BC40F);
-  static const Color textPrimary = Color(0xFFF5F7F5);
-  static const Color textSecondary = Color(0xFFA8B5AB);
-  static const Color border = Color(0xFF2A4534);
-  static const Color danger = Color(0xFFFF6B6B);
+  static const Color backgroundDeep = Color(0xFF071610); // --brand-bg-0
+  static const Color background = Color(0xFF0B2018); // --brand-bg-1
+  static const Color backgroundMid = Color(0xFF0F2A20); // --brand-bg-2
+  /// --brand-surface ≈ white@6% on bg-1
+  static const Color surface = Color(0xFF1A2D26);
+  /// --brand-surface-2 ≈ white@10% on bg-1
+  static const Color surfaceElevated = Color(0xFF24362F);
+  /// --brand-border ≈ white@12% on bg-1
+  static const Color border = Color(0xFF283B34);
+  static const Color accent = Color(0xFF19E38A); // --brand-accent
+  static const Color accentMuted = Color(0xFF0FD37B); // --brand-accent-2
+  static const Color textPrimary = Color(0xFFEAF7F1); // --brand-text
+  static const Color textSecondary = Color(0xE0EAF7F1); // --brand-muted ~0.88
+  static const Color danger = Color(0xFFFF4D4F); // --brand-danger
+  static const Color warning = Color(0xFFFFC107); // --brand-warning
+  static const Color onAccent = Color(0xFF071610);
+
+  static const double radiusMd = 12; // --brand-radius-md
+  static const double radiusLg = 16; // --brand-radius-lg
 }
 
 class AppTheme {
@@ -24,7 +35,7 @@ class AppTheme {
       scaffoldBackgroundColor: LotlotColors.background,
       colorScheme: const ColorScheme.dark(
         primary: LotlotColors.accent,
-        onPrimary: Color(0xFF041008),
+        onPrimary: LotlotColors.onAccent,
         secondary: LotlotColors.accentMuted,
         surface: LotlotColors.surface,
         onSurface: LotlotColors.textPrimary,
@@ -42,25 +53,25 @@ class AppTheme {
         hintStyle: const TextStyle(color: LotlotColors.textSecondary),
         labelStyle: const TextStyle(color: LotlotColors.textSecondary),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
           borderSide: const BorderSide(color: LotlotColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
           borderSide: const BorderSide(color: LotlotColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
           borderSide: const BorderSide(color: LotlotColors.accent, width: 1.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: LotlotColors.accent,
-          foregroundColor: const Color(0xFF041008),
+          foregroundColor: LotlotColors.onAccent,
           minimumSize: const Size.fromHeight(52),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
           ),
           textStyle: const TextStyle(
             fontWeight: FontWeight.w700,
@@ -74,7 +85,7 @@ class AppTheme {
           minimumSize: const Size.fromHeight(52),
           side: const BorderSide(color: LotlotColors.border),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
           ),
         ),
       ),
