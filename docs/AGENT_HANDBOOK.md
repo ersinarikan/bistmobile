@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03
+> Son güncelleme: 2026-08-03 (skills v3)
 
 ## 1. Proje özeti
 
@@ -27,6 +27,18 @@ Hepsi `alwaysApply: true` (özet):
 6. **quality-gate-pre-push** — Commit/push öncesi `flutter analyze` + `sonar-scanner` (SONAR_TOKEN).
 7. **risk-integrity-mobile** — Kod öncesi risk/etki analizi; iOS+Android bütünlüğü; yan etkiyi kırma.
 8. **agent-handbook** — Bu kılavuzu her değişiklik sonrası güncelle.
+
+## 2b. Agent skills (`.cursor/skills/`)
+
+Her skill: `SKILL.md` + detay `reference.md`. İlgili konuda otomatik / istenince uygula.
+
+| Skill | Rol |
+|-------|-----|
+| `seo-expert` | Teknik SEO, içerik, ASO, deep link / web tutarlılığı |
+| `android-fullstack-developer` | Android native + Play + Billing + FCM + Flutter embedding |
+| `ios-fullstack-developer` | iOS native + StoreKit + APNs + Privacy + Flutter embedding |
+| `project-manager` | Kapsam, faz, risk, bağımlılık, go/no-go |
+| `cybersecurity-expert` | Appsec, token, OWASP Mobile, secret, sertleştirme |
 
 ## 3. Mimari (mevcut)
 
@@ -64,6 +76,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Risk/bütünlük kuralı (`risk-integrity-mobile`)
 - Agent kılavuzu: `docs/AGENT_HANDBOOK.md` + güncelleme kuralı (`agent-handbook`)
 - `.scannerwork/` gitignore
+
+### v3 (2026-08-03) — rol skills
+
+- Beş proje skill’i eklendi (SEO, Android FS, iOS FS, PM, siber güvenlik)
+- Her birinde kapsamlı `SKILL.md` + `reference.md`
 
 ## 5. Çalışma ritüeli
 
