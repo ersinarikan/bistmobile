@@ -1,0 +1,31 @@
+---
+description: Değişiklik öncesi risk analizi — iOS/Android bütünlüğü koru
+alwaysApply: true
+---
+
+# Risk analizi ve bütünlük (iOS + Android)
+
+Hedef her zaman **tek Flutter kod tabanı ile hem iOS hem Android**. Kod yazmadan önce kısa risk analizi yap; yazdıktan sonra bütünlüğü doğrula.
+
+## Değişiklik öncesi (zorunlu)
+
+Şunları düşün / gerekirse ilgili dosyaları oku:
+
+1. **Etki yüzeyi** — Bu değişiklik hangi ekranlar, `core` servisler, native katman (AndroidManifest / Info.plist / izinler / IAP / push) ve API sözleşmesini etkiler?
+2. **Çapraz kırılma** — Auth, token, navigasyon, tema, branding URL gibi paylaşılan yollarda yan etki var mı?
+3. **Platform farkı** — Sadece bir OS’ta mı kırılır? (izin, background, deep link, store/IAP, path, keyboard)
+4. **Gerileme** — Mevcut çalışan akış (splash → login/home, refresh, logout) bozulur mu?
+
+Net risk varsa önce daralt (daha küçük patch) veya kullanıcıya söyle; “hızlı fix” ile bütünlüğü bozma.
+
+## Değişiklik sonrası
+
+- Dokunduğun özellik + doğrudan bağlı akışları zihinsel / test ile kontrol et.
+- Ortak helper’ı değiştirirken tüm çağıranları tara (`Grep` / kullanım yerleri).
+- Platform-özel dosya değiştiyse diğer platform eşleniğini de gözden geçir (simetri veya bilinçli fark).
+
+## Yapma
+
+- Tek ekranı “düzelten” ama `ApiClient` / session / storage semantiğini sessizce değiştiren geniş patch’ler.
+- Android’de çalışıp iOS’u (veya tersi) düşünmeden native varsayım.
+- “Geçici” kırık bırakma; bütünlük bu turun parçasıdır.

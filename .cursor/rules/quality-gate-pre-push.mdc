@@ -1,0 +1,37 @@
+---
+description: Commit/push öncesi zorunlu linter + SonarQube kalite kapısı
+alwaysApply: true
+---
+
+# Kalite kapısı (commit / push öncesi)
+
+**Her local commit ve her push’tan önce** şu kontrolleri çalıştır. Biri kırmızıysa commit/push yapma; önce düzelt.
+
+## 1) Linter (zorunlu)
+
+```bash
+flutter analyze
+```
+
+- Error / warning (analiz fail) → düzelt.
+- `info` lint’leri de Problems’ta görünenleri temizle (mümkünse ignore etme).
+
+## 2) SonarQube / SonarCloud (zorunlu)
+
+```bash
+sonar-scanner
+# veya: sonar-scanner -Dsonar.token=$SONAR_TOKEN
+```
+
+- `sonar-project.properties` kullan.
+- Token: ortam değişkeni `SONAR_TOKEN` (repoya / sohbete yazma).
+- Quality Gate fail veya yeni blocker/critical → commit/push yok.
+
+## 3) Sonra git akışı
+
+Kalite yeşil → kural 5 (`bistmobile-git-flow`): commit → sıradaki tag → push.
+
+## Notlar
+
+- Scanner / token yoksa: kur / kullanıcıdan `SONAR_TOKEN` iste; **atlayarak push etme**.
+- Sadece doküman/kural metni gibi analiz dışı mini değişikliklerde bile `flutter analyze` çalıştır; Sonar’ı anlamlı kod değişikliğinde zorunlu tut, saf markdown-only için kullanıcıya sor.

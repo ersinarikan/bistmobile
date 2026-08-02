@@ -4,6 +4,7 @@ Flutter istemcisi — Android + iOS. Backend: `https://lotlot.net`
 
 ## Doküman
 
+- [Agent kılavuzu](docs/AGENT_HANDBOOK.md) — geliştirme geçmişi ve çalışma ritüeli
 - [Mobil API entegrasyon rehberi](docs/MOBILE_API_INTEGRATION_GUIDE.md)
 
 ## Çalıştırma

@@ -46,3 +46,6 @@ app.*.map.json
 
 # Local Android SDK path
 **/local.properties
+
+# SonarScanner workdir
+.scannerwork/
