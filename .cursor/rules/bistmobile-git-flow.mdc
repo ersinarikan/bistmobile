@@ -1,0 +1,30 @@
+---
+description: Her geliştirme sonrası local commit, sıralı tag, bistmobile push
+alwaysApply: true
+---
+
+# Git yayın akışı (bistmobile)
+
+Hedef remote: **https://github.com/ersinarikan/bistmobile**
+
+Bu projedeki anlamlı geliştirme işi bittiğinde (kullanıcı “commit etme” demese bile, iş teslimi için):
+
+1. **Local commit** — anlamlı mesaj; secret / `.env` / key commit etme.
+2. **Sıralı tag** — mevcut tag’lere bak; bir sonraki numarayı ver.
+   - Tercih: `v1`, `v2`, `v3`, … (yoksa ilk tag `v1`).
+   - Başka semver (`v0.1.0`) zaten varsa aynı şemada bir sonraki sırayı kullan; karıştırma.
+3. **Push** — commit + tag’i `bistmobile` remote’una gönder (`git push` ve `git push --tags` / `git push origin <tag>`).
+
+```bash
+# Örnek sıra
+git status && git diff
+git add … && git commit -m "…"
+git tag vN          # N = son tag + 1
+git push -u origin HEAD
+git push origin vN
+```
+
+- Remote yoksa `origin` → `https://github.com/ersinarikan/bistmobile.git` ekle (veya kullanıcı alias’ı).
+- Henüz hiç commit yoksa önce initial commit + `v1`.
+- Force push / tag silme / history rewrite **yalnızca kullanıcı açıkça isterse**.
+- Kullanıcı açıkça “commit/push yapma” derse bu adımı atla.

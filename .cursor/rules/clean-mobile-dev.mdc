@@ -1,0 +1,23 @@
+---
+description: LOTLOT mobil — temiz kod, iOS/Android uyumu, gereksiz kod yok
+alwaysApply: true
+---
+
+# Mobil geliştirme (iOS + Android)
+
+- Hedef: **lotlot.net ile tam uyumlu** Flutter uygulaması (Android + iOS). Web/API sözleşmesine sadık kal; istemcide sunucu kurallarını yeniden icat etme.
+- **Fazladan / gereksiz kod yazma.** Kullanılmayan import, ölü dal, spekülatif soyutlama, “ileride lazım olur” helper’ları ekleme.
+- **Temiz kod:** küçük fonksiyonlar, net isimler, mevcut `lib/core` + `lib/features` yapısına uy. Yeni pattern uydurma; Provider / mevcut API client kalıbını takip et.
+- **Anlaşılır comment’ler:** “ne” değil “neden / API § referansı / kısıt” yaz. Gereksiz veya kodu tekrarlayan comment koyma. Türkçe veya İngilizce tutarlı olsun; mevcut dosya dilini koru.
+- Değişiklikleri minimal tut: istenmeyen refactor, format-only diff, alakasız dosya dokunuşu yok.
+- Platform farkı varsa (IAP, push, deep link) açıkça ayır; ortak mantığı paylaş, platform kodunu şişirme.
+
+```dart
+// ❌ BAD — spekülatif / gürültü
+// This function logs the user in
+Future<void> login() async { /* unused cache layer "for later" */ }
+
+// ✅ GOOD — gerekçe + sözleşme
+/// JWT’yi Keychain’de sakla; refresh 401 olursa logout (§3, §4).
+Future<void> persistTokens(...) async { ... }
+```

@@ -1,0 +1,20 @@
+---
+description: Her değişiklik sonrası ilgili kodda refaktör fırsatlarını değerlendir
+alwaysApply: true
+---
+
+# Değişiklik sonrası refaktör kontrolü
+
+Kod yazdığın / değiştirdiğin iş bittikten sonra **durup değerlendir**:
+
+1. Az önce dokunduğun dosyalar ve **doğrudan ilişkili** dosyalar (aynı feature, ortak `core` helper, kopyalanmış kalıp).
+2. Ara: tekrarlayan blok, ölü kod, kötü isim, yanlış katman, gereksiz soyutlama, dağınık sabitler.
+3. Net kazanç varsa **aynı turda** uygula (özellikle kendi eklediğin tekrarı). Büyük / riskli refaktörde önce kısaca belirt, onayla veya ayrı adımda yap.
+4. “Her dosyayı yeniden yaz” değil: **fırsat değerlendirmesi** zorunlu; kör scope genişletme yasak. Kural 2 (temiz / gereksiz kod yok) ile çelişmesin.
+
+Kontrol listesi (kısa):
+
+- Aynı string/URL/logic 2+ yerde mi? → tek kaynak
+- Yeni kod eski kalıpla uyumsuz mu? → hizala veya eskiyi sadeleştir
+- Comment / API § referansı güncel mi?
+- Kullanılmayan import / dead code kaldı mı?
