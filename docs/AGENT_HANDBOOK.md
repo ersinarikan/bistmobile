@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (v27 F6 IAP paywall istemci)
+> Son güncelleme: 2026-08-03 (v28 web↔mobil analiz parity)
 
 ---
 
@@ -45,10 +45,10 @@ flowchart TD
 | **F0** | Temel / kalite iskeleti | Tamam (tema web hizalı; INTERNET; display name) | Hayır |
 | **F1** | Auth tamam | Tamam (e-posta+Turnstile+Google+Apple E2E; `/me` tier okuma) | Hayır |
 | **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist) | Hayır |
-| **F3** | Hisse detay | Tamam (public kartlar + mum/MA + auth pattern) | Hayır |
+| **F3** | Hisse detay | Tamam (+ ufuk/ML/formasyon durum parity) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
-| **F6** | IAP paywall | İstemci tamam (prod `IAP_ENABLED=0`; E2E store’a bağlı) | **Evet** |
+| **F6** | IAP paywall | İstemci tamam (prod Apple `IAP_ENABLED=1`; Google SA yok) | **Evet** |
 | **F7** | Mağaza teslimi | Bekliyor | Hazır olmalı |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
@@ -120,6 +120,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Mum + MA (sade); web drawing suite **yok**
   - [x] Pattern/signal alanları olduğu gibi (auth); `pending` → loading/empty
   - [x] Sezgisel rozet + haber sheet; formasyonlar + görsel onay (`pattern-analysis`)
+  - [x] Ufuk chip’leri + `signals_by_horizon` Genel Sinyal Gücü + `ml_unified` tahmin özeti
+  - [x] Formasyon durum etiketleri (web `_patternStatus` hizası) + sıralama
   - [x] Free prune boş → Pro soft gate CTA (auto-pop yok)
   - [x] Disclaimer görünür
   - [x] Browse / watchlist / prediction satırı → `StockDetailScreen`; placeholder kaldırıldı
@@ -189,7 +191,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Garanti/WebView **yok**
   - [x] Soft gate’ler paywall’a bağlanır
   - [x] Config kapalıyken paywall çökmez; satın alma kilitli mesaj
-- **Web bağımlılığı:** Product ID’ler, `IAP_ENABLED`, bundle/package env. **2026-08-03 prod:** `iap.enabled=false`.
+- **Web bağımlılığı:** Product ID’ler, `IAP_ENABLED`, bundle/package env. **2026-08-03 prod:** Apple-only `IAP_ENABLED=1` + `APPLE_IAP_BUNDLE_ID=com.lotlot.lotlotnetMobile`; `platforms.google_play=false` (SA yok). Sandbox E2E store ürünlerine bağlı.
 - **Kod:** `lib/features/billing/` (`BillingController`, `IapService`, `PaywallScreen`); `in_app_purchase`.
 
 #### F7 — Mağaza teslimi
@@ -296,11 +298,17 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ## 4. Yapılanlar (kronoloji)
 
+### v28 (2026-08-03) — Web↔mobil analiz parity
+- Hisse detay `PatternSection`: ufuk chip’leri, Genel Sinyal Gücü (`confidence_bar_type`), `ml_unified` tahmin özeti
+- Formasyon durum etiketleri + web sıralama (`formation_status.dart`); ortak `HorizonChips`
+- İzleme satırı: predictions’tan fiyat + seçili ufuk sinyal teaser
+- Prod IAP (önceki tur): Apple-only açıldı — handbook F6 notu güncellendi
+
 ### v27 (2026-08-03) — F6 IAP paywall (istemci)
 - `in_app_purchase` + `BillingController` / `PaywallScreen`
 - Soft gate → Planları gör → paywall; Hesap: planlar + geri yükle
-- Config `iap.enabled=false` iken satın alma kilitli (Garanti/WebView yok)
-- E2E: web `IAP_ENABLED=1` + App Store / Play ürünleri
+- Config kapalıyken satın alma kilitli (Garanti/WebView yok); sonra prod Apple `enabled=true`
+- E2E: App Store sandbox + (sonra) Play SA/ürünleri
 
 ### v26 (2026-08-03) — Landing, BIST arama, auth + chart cila
 - Splash → `LandingScreen` (Ücretsiz Başla / Giriş / BIST Hisseleri; Özellikler/Metodoloji yok)
@@ -523,16 +531,19 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Google/Apple | Native → mobile endpoints | Var | **ok** |
 | Guest browse | Public stocks | Keşfet | **ok** |
 | Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
+| Watchlist satır teaser | Fiyat + sinyal | Fiyat + seçili ufuk `label` (predictions) | **ok** (v28) |
 | Predictions kart | label, güç çubuğu, stale | label/summary + `genel_confidence_pct` bar; ham `display_state` yok | **ok** (cila) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Chart + levels | Lightweight Charts | Özel mum + MA20 + S/R + dokununca OHLCV | **ok** (sade; drawing suite yok) |
-| Sezgisel + haber sheet | 💡 portal | Rozet + bottom sheet | **ok** (bu tur) |
-| Formasyonlar + görsel onay | Liste + badge | Liste + `görsel onay` | **ok** (bu tur) |
+| Sezgisel + haber sheet | 💡 portal | Rozet + bottom sheet | **ok** |
+| Ufuk + Genel Sinyal | Detay modal ufuk | Chip + `signals_by_horizon` | **ok** (v28) |
+| ML / öngörü özeti | `detailMlUnified` | `ml_unified[horizon]` kart | **ok** (v28; chart çizgisi yok) |
+| Formasyonlar + görsel onay | Liste + durum badge | Durum + `görsel onay` + sıralama | **ok** (v28) |
 | Chart formasyon highlight | range hover | — | **bilinçli dışı** |
 | AI commentary | Pro | CTA → `text` | **ok** |
 | Hisse Sihirbazı | Premium modal | Form + izlemeye ekle | **ok** |
 | Chart alerts | Pro+ | Hesap → ekran | **ok** |
-| Soft gate / IAP | Web paywall | Soft gate → `PaywallScreen` (IAP; prod enabled=0) | **istemci ok** |
+| Soft gate / IAP | Web paywall | Soft gate → `PaywallScreen` (prod Apple enabled) | **istemci ok** |
 | FCM push | — | Optional Firebase | **ok** / no-op configsız |
 | `pattern-summary` UI | Var/özet | Yok | **gap** (backlog) |
 

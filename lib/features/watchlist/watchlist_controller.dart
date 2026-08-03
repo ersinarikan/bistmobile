@@ -189,6 +189,16 @@ class WatchlistController extends ChangeNotifier {
     return null;
   }
 
+  Map<String, dynamic>? predictionForSymbol(String symbol) {
+    final key = symbol.toUpperCase();
+    for (final p in predictions) {
+      if ((p['symbol']?.toString() ?? '').toUpperCase() == key) {
+        return p;
+      }
+    }
+    return null;
+  }
+
   String _friendly(ApiException e) {
     switch (e.errorCode) {
       case 'email_not_verified':

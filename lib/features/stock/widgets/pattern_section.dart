@@ -5,6 +5,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/session_controller.dart';
 import '../../pro/soft_gate_sheet.dart';
+import 'formation_status.dart';
+import 'horizon_chips.dart';
 
 const _mlSources = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
 
@@ -12,6 +14,7 @@ const _sourceLabels = <String, String>{
   'VISUAL_YOLO': 'Görsel',
   'ADVANCED_TA': 'Teknik Analiz',
   'BASIC': 'Teknik Analiz',
+  'BASIC_TA': 'Teknik Analiz',
   'FINGPT': 'Sezgisel',
 };
 
@@ -31,6 +34,19 @@ String _directionLabel(String? raw) {
       return 'Nötr';
     default:
       return raw?.isNotEmpty == true ? raw!.replaceAll('_', ' ') : 'Nötr';
+  }
+}
+
+Color _barColor(String? type) {
+  switch ((type ?? '').toLowerCase()) {
+    case 'buy':
+      return LotlotColors.accent;
+    case 'sell':
+      return LotlotColors.danger;
+    case 'warning':
+      return LotlotColors.warning;
+    default:
+      return LotlotColors.textSecondary;
   }
 }
 
@@ -77,8 +93,8 @@ class _NewsRow {
   final String? direction;
 }
 
-/// Pattern özeti + Sezgisel + Formasyonlar — thin client (§16.1).
-class PatternSection extends StatelessWidget {
+/// Pattern özeti + ufuk + ML + Sezgisel + Formasyonlar — thin client (§16.1).
+class PatternSection extends StatefulWidget {
   const PatternSection({
     super.key,
     required this.isAuthenticated,
@@ -91,6 +107,37 @@ class PatternSection extends StatelessWidget {
   final bool loading;
   final bool pending;
   final Map<String, dynamic>? pattern;
+
+  @override
+  State<PatternSection> createState() => _PatternSectionState();
+}
+
+class _PatternSectionState extends State<PatternSection> {
+  String _horizon = '7d';
+
+  @override
+  void initState() {
+    super.initState();
+    _applyDefaultHorizon();
+  }
+
+  @override
+  void didUpdateWidget(covariant PatternSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(widget.pattern, oldWidget.pattern)) {
+      _applyDefaultHorizon();
+    }
+  }
+
+  void _applyDefaultHorizon() {
+    final p = widget.pattern;
+    if (p == null) return;
+    final signals = p['signals_by_horizon'];
+    final next = pickDefaultHorizon(signals is Map ? signals : null) ?? '7d';
+    if (next != _horizon) {
+      _horizon = next;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,7 +169,7 @@ class PatternSection extends StatelessWidget {
   }
 
   Widget _body(BuildContext context) {
-    if (!isAuthenticated) {
+    if (!widget.isAuthenticated) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -145,7 +192,7 @@ class PatternSection extends StatelessWidget {
       );
     }
 
-    if (loading) {
+    if (widget.loading) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 12),
         child: Center(
@@ -161,13 +208,14 @@ class PatternSection extends StatelessWidget {
       );
     }
 
-    if (pending) {
+    if (widget.pending) {
       return const Text(
         'Analiz hazırlanıyor…',
         style: TextStyle(color: LotlotColors.textSecondary),
       );
     }
 
+    final pattern = widget.pattern;
     if (pattern == null) {
       return const Text(
         'Analiz özeti şu an kullanılamıyor.',
@@ -176,17 +224,18 @@ class PatternSection extends StatelessWidget {
     }
 
     final session = context.watch<SessionController>();
-    final overallRaw = pattern!['overall_signal'];
+    final overallRaw = pattern['overall_signal'];
     final overallDir = _overallDirection(overallRaw);
     final overallReason = _overallReasoning(overallRaw);
     final overallStrength = _overallStrengthPct(overallRaw);
-    final rawPatterns = pattern!['patterns'];
+
+    final rawPatterns = pattern['patterns'];
     final allPatterns = rawPatterns is List
         ? rawPatterns.whereType<Map>().map(Map<String, dynamic>.from).toList()
         : <Map<String, dynamic>>[];
 
-    final newsContext = pattern!['news_context'] is Map
-        ? Map<String, dynamic>.from(pattern!['news_context'] as Map)
+    final newsContext = pattern['news_context'] is Map
+        ? Map<String, dynamic>.from(pattern['news_context'] as Map)
         : null;
 
     final fingpt = allPatterns.cast<Map<String, dynamic>?>().firstWhere(
@@ -194,20 +243,25 @@ class PatternSection extends StatelessWidget {
           orElse: () => null,
         );
 
-    final formations = allPatterns
-        .where((p) => !_mlSources.contains(p['source']?.toString() ?? ''))
-        .toList();
+    final formations = sortFormations(allPatterns, excludeSources: _mlSources);
 
-    final signals = pattern!['signals_by_horizon'];
-    Map<String, dynamic>? signalRow;
-    if (signals is Map) {
-      final raw = signals['7d'] ?? signals['30d'] ?? signals['1d'];
-      if (raw is Map) signalRow = Map<String, dynamic>.from(raw);
-    }
+    final signalsRaw = pattern['signals_by_horizon'];
+    final signalsMap = signalsRaw is Map ? signalsRaw : null;
+    final signalRow = signalRowForHorizon(signalsMap, _horizon);
     final label = signalRow?['label']?.toString();
     final summary = signalRow?['summary_tr']?.toString() ??
         signalRow?['analysis_disclaimer_tr']?.toString() ??
         overallReason;
+
+    final genelPct = signalRow?['genel_confidence_pct'];
+    final barType = signalRow?['confidence_bar_type']?.toString();
+    final strengthPct = genelPct is num
+        ? genelPct.round().clamp(0, 100)
+        : overallStrength;
+
+    final mlRaw = pattern['ml_unified'];
+    final mlMap = mlRaw is Map ? mlRaw : null;
+    final mlHorizon = mlUnifiedForHorizon(mlMap, _horizon);
 
     final hasSezgisel = fingpt != null ||
         (newsContext != null &&
@@ -216,11 +270,16 @@ class PatternSection extends StatelessWidget {
                 (newsContext['news_count'] is num &&
                     (newsContext['news_count'] as num) > 0)));
 
+    final hasMl = mlMap != null && mlMap.isNotEmpty;
+    final hasSignals = signalsMap != null && signalsMap.isNotEmpty;
+
     final hasContent = overallDir != null ||
         label != null ||
         summary != null ||
         formations.isNotEmpty ||
-        hasSezgisel;
+        hasSezgisel ||
+        hasMl ||
+        hasSignals;
 
     if (!hasContent) {
       if (!session.isPro) {
@@ -249,11 +308,18 @@ class PatternSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (hasSignals || hasMl) ...[
+          HorizonChips(
+            selected: _horizon,
+            onSelected: (h) => setState(() => _horizon = h),
+          ),
+          const SizedBox(height: 12),
+        ],
         if (label != null)
           Text(
             label,
-            style: const TextStyle(
-              color: LotlotColors.accent,
+            style: TextStyle(
+              color: _barColor(barType),
               fontWeight: FontWeight.w800,
               fontSize: 16,
             ),
@@ -267,27 +333,37 @@ class PatternSection extends StatelessWidget {
               fontSize: 16,
             ),
           ),
-        if (overallStrength != null) ...[
+        if (strengthPct != null) ...[
           const SizedBox(height: 8),
+          const Text(
+            'Genel Sinyal Gücü',
+            style: TextStyle(
+              color: LotlotColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
           Row(
             children: [
               Expanded(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: overallStrength / 100,
+                    value: strengthPct / 100,
                     minHeight: 6,
                     backgroundColor: LotlotColors.border,
-                    color: LotlotColors.accent,
+                    color: _barColor(barType),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
-                '%$overallStrength',
-                style: const TextStyle(
+                '%$strengthPct',
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
+                  color: _barColor(barType),
                 ),
               ),
             ],
@@ -302,6 +378,10 @@ class PatternSection extends StatelessWidget {
               height: 1.4,
             ),
           ),
+        ],
+        if (mlHorizon != null || hasMl) ...[
+          const SizedBox(height: 14),
+          _MlSummaryCard(horizon: _horizon, horizonMl: mlHorizon),
         ],
         if (hasSezgisel) ...[
           const SizedBox(height: 12),
@@ -330,6 +410,114 @@ class PatternSection extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _MlSummaryCard extends StatelessWidget {
+  const _MlSummaryCard({required this.horizon, this.horizonMl});
+
+  final String horizon;
+  final Map<String, dynamic>? horizonMl;
+
+  @override
+  Widget build(BuildContext context) {
+    final hLabel = horizon.toUpperCase().replaceAll('D', 'G');
+
+    if (horizonMl == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: LotlotColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: LotlotColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tahmin özeti · $hLabel',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Bu ufuk için ML tahmin bilgisi yok.',
+              style: TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final key = pickMlModelKey(horizonMl!);
+    final pick = key != null && horizonMl![key] is Map
+        ? Map<String, dynamic>.from(horizonMl![key] as Map)
+        : null;
+    final price = pick?['price'];
+    final delta = pick?['delta_pct'];
+    final conf = pick?['confidence'] ?? pick?['reliability'];
+    final confPct = conf is num
+        ? (conf <= 1 ? conf * 100 : conf).round().clamp(0, 100)
+        : null;
+    final deltaPct = delta is num ? (delta * 100) : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: LotlotColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: LotlotColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Tahmin özeti · $hLabel',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              if (key != null)
+                _MiniBadge(translateModelLabel(key)),
+            ],
+          ),
+          if (price is num || deltaPct != null || confPct != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              [
+                if (price is num) 'Hedef: ${price.toStringAsFixed(2)}',
+                if (deltaPct != null)
+                  'Δ %${deltaPct >= 0 ? '+' : ''}${deltaPct.toStringAsFixed(1)}',
+                if (confPct != null) 'Model %$confPct',
+              ].join(' · '),
+              style: const TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Model özeti mevcut.',
+              style: TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -527,13 +715,36 @@ class _FormationRow extends StatelessWidget {
     final signal = item['signal']?.toString();
     final source = item['source']?.toString() ?? '';
     final sourceLabel = _sourceLabels[source] ?? source;
-    final effect = item['effect_label']?.toString() ??
-        item['effect_hint_tr']?.toString();
+    final status = formationStatus(item);
+    final effectHint = item['effect_hint_tr']?.toString();
+    final effectLabel = item['effect_label']?.toString();
     final conf = item['confidence'];
     final confPct = conf is num ? (conf <= 1 ? conf * 100 : conf).round() : null;
     final isVisual = source == 'VISUAL_YOLO';
     final signalLabel =
         signal != null && signal.isNotEmpty ? _directionLabel(signal) : null;
+
+    final effectState =
+        (item['effect_state']?.toString() ?? '').toLowerCase();
+    final showEffectLabel = effectLabel != null &&
+        effectLabel.isNotEmpty &&
+        !const {
+          'forming',
+          'armed',
+          'triggered_active',
+          'retest_active',
+        }.contains(effectState) &&
+        effectLabel.toLowerCase() != status.key;
+    final secondary = <String>[];
+    if (effectHint != null &&
+        effectHint.isNotEmpty &&
+        effectHint.toLowerCase() != status.key) {
+      secondary.add(effectHint);
+    } else if (showEffectLabel) {
+      secondary.add(effectLabel);
+    }
+
+    final title = signalLabel == null ? name : '$name · $signalLabel';
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -545,10 +756,7 @@ class _FormationRow extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  [
-                    name,
-                    ?signalLabel,
-                  ].join(' · '),
+                  title,
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
@@ -571,16 +779,17 @@ class _FormationRow extends StatelessWidget {
             spacing: 6,
             runSpacing: 4,
             children: [
+              _MiniBadge(status.key),
               if (sourceLabel.isNotEmpty && !isVisual)
                 _MiniBadge(sourceLabel),
               if (isVisual) const _MiniBadge('Görsel'),
               if (_visualOk && !isVisual) const _MiniBadge('görsel onay'),
             ],
           ),
-          if (effect != null && effect.isNotEmpty) ...[
+          if (secondary.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              effect,
+              secondary.join(' · '),
               style: const TextStyle(
                 color: LotlotColors.textSecondary,
                 fontSize: 12,

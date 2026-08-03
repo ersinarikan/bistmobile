@@ -7,6 +7,7 @@ import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
+import '../stock/widgets/horizon_chips.dart';
 import '../stocks/stocks_search_screen.dart';
 import '../wizard/wizard_screen.dart';
 import 'watchlist_controller.dart';
@@ -177,7 +178,10 @@ class _AuthWatchlistBody extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 8),
-          _HorizonChips(wl: wl),
+          HorizonChips(
+            selected: wl.selectedHorizon,
+            onSelected: wl.setHorizon,
+          ),
           const SizedBox(height: 8),
           if (wl.predictions.isEmpty)
             const Padding(
@@ -250,38 +254,6 @@ class _QuotaBar extends StatelessWidget {
   }
 }
 
-class _HorizonChips extends StatelessWidget {
-  const _HorizonChips({required this.wl});
-
-  final WatchlistController wl;
-
-  static const _horizons = ['1d', '3d', '7d', '14d', '30d'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      children: _horizons.map((h) {
-        final selected = wl.selectedHorizon == h;
-        return ChoiceChip(
-          label: Text(h),
-          selected: selected,
-          onSelected: (_) => wl.setHorizon(h),
-          selectedColor: LotlotColors.accent.withValues(alpha: 0.25),
-          labelStyle: TextStyle(
-            color: selected ? LotlotColors.accent : LotlotColors.textSecondary,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-          ),
-          side: BorderSide(
-            color: selected ? LotlotColors.accent : LotlotColors.border,
-          ),
-          backgroundColor: LotlotColors.surface,
-        );
-      }).toList(),
-    );
-  }
-}
-
 class _WatchlistTile extends StatelessWidget {
   const _WatchlistTile({required this.item});
 
@@ -296,6 +268,23 @@ class _WatchlistTile extends StatelessWidget {
     final alertOn = item['alert_enabled'] == true;
     final session = context.watch<SessionController>();
     final wl = context.watch<WatchlistController>();
+    final pred = symbol.isEmpty ? null : wl.predictionForSymbol(symbol);
+    final signal = pred != null ? wl.signalFor(pred) : null;
+    final current = pred?['current_price'];
+    final signalLabel = signal?['label']?.toString();
+    final action = signal?['action']?.toString() ??
+        signal?['action_type']?.toString();
+
+    final subtitleParts = <String>[
+      if (name != null && name.isNotEmpty) name,
+      if (current is num) current.toStringAsFixed(2),
+      if (signalLabel != null && signalLabel.isNotEmpty)
+        signalLabel
+      else if (action != null && action.isNotEmpty)
+        action,
+      if (!active && reason != null) 'Pasif ($reason)',
+      if (alertOn) 'Sinyal uyarısı açık',
+    ];
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -307,11 +296,7 @@ class _WatchlistTile extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        [
-          ?name,
-          if (!active && reason != null) 'Pasif ($reason)',
-          if (alertOn) 'Sinyal uyarısı açık',
-        ].join(' · '),
+        subtitleParts.join(' · '),
         style: const TextStyle(color: LotlotColors.textSecondary),
       ),
       onTap: symbol.isEmpty
