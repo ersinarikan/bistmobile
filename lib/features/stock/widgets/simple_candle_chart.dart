@@ -32,11 +32,11 @@ class SimpleCandleChart extends StatefulWidget {
 
 class _SimpleCandleChartState extends State<SimpleCandleChart> {
   int? _selected;
-  int _barCount = 120;
+  int _barCount = 60;
   ChartDetailMode _mode = ChartDetailMode.simple;
   bool _showFormationShade = false;
 
-  static const _barOptions = [60, 120, 200, 300];
+  static const _barOptions = [60, 100, 200, 300, 400];
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +57,8 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
     final offset = widget.bars.length - display.length;
     final closes = display.map((b) => b.close).toList();
     final ma20 = _sma(closes, 20);
-    final ma50 = _sma(closes, 50);
+    final ema20 = _ema(closes, 20);
+    final ema50 = _ema(closes, 50);
     final bb = _bollinger(closes, 20, 2);
     final rsi = _rsi(closes, 14);
 
@@ -68,7 +69,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
     if (support is num) minY = math.min(minY, support.toDouble());
     if (resistance is num) maxY = math.max(maxY, resistance.toDouble());
     if (_mode == ChartDetailMode.detailed) {
-      for (final v in [...ma50, ...bb.$1, ...bb.$2]) {
+      for (final v in [...ema20, ...ema50, ...bb.$1, ...bb.$2]) {
         if (v != null) {
           minY = math.min(minY, v);
           maxY = math.max(maxY, v);
@@ -117,9 +118,10 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
         children: [
           _BarInfo(
             bar: sel,
-            ma20: ma20[selIdx],
-            ma50: detailed ? ma50[selIdx] : null,
+            ma20: detailed ? ema20[selIdx] : ma20[selIdx],
+            ma50: detailed ? ema50[selIdx] : null,
             rsi: detailed ? rsi[selIdx] : null,
+            detailed: detailed,
           ),
           const SizedBox(height: 8),
           Wrap(
@@ -202,7 +204,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
           const SizedBox(height: 8),
           Text(
             detailed
-                ? 'Mum · MA20/50 · BB · hacim · RSI · öngörü'
+                ? 'Mum · EMA20/50 · BB · hacim · RSI · öngörü'
                 : 'Mum · MA20 · hacim · S/R',
             style: const TextStyle(
               fontSize: 11,
@@ -233,8 +235,8 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                     ),
                     painter: _ChartPainter(
                       bars: display,
-                      ma20: ma20,
-                      ma50: detailed ? ma50 : const [],
+                      ma20: detailed ? ema20 : ma20,
+                      ma50: detailed ? ema50 : const [],
                       bbLower: detailed ? bb.$1 : const [],
                       bbUpper: detailed ? bb.$2 : const [],
                       rsi: detailed ? rsi : const [],
@@ -279,6 +281,23 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
       sum += closes[i];
       if (i >= period) sum -= closes[i - period];
       if (i >= period - 1) out[i] = sum / period;
+    }
+    return out;
+  }
+
+  static List<double?> _ema(List<double> closes, int period) {
+    final out = List<double?>.filled(closes.length, null);
+    if (closes.length < period) return out;
+    var seed = 0.0;
+    for (var i = 0; i < period; i++) {
+      seed += closes[i];
+    }
+    var ema = seed / period;
+    out[period - 1] = ema;
+    final k = 2.0 / (period + 1);
+    for (var i = period; i < closes.length; i++) {
+      ema = closes[i] * k + ema * (1 - k);
+      out[i] = ema;
     }
     return out;
   }
@@ -340,12 +359,14 @@ class _BarInfo extends StatelessWidget {
     this.ma20,
     this.ma50,
     this.rsi,
+    this.detailed = false,
   });
 
   final OhlcvBar bar;
   final double? ma20;
   final double? ma50;
   final double? rsi;
+  final bool detailed;
 
   @override
   Widget build(BuildContext context) {
@@ -354,12 +375,14 @@ class _BarInfo extends StatelessWidget {
         .toLocal();
     final date =
         '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+    final m20Label = detailed ? 'EMA20' : 'MA20';
+    final m50Label = 'EMA50';
     return Text(
       [
         '$date  O ${_fmt(bar.open)}  H ${_fmt(bar.high)}  '
             'L ${_fmt(bar.low)}  C ${_fmt(bar.close)}',
-        if (ma20 != null) 'MA20 ${_fmt(ma20!)}',
-        if (ma50 != null) 'MA50 ${_fmt(ma50!)}',
+        if (ma20 != null) '$m20Label ${_fmt(ma20!)}',
+        if (ma50 != null) '$m50Label ${_fmt(ma50!)}',
         if (rsi != null) 'RSI ${rsi!.toStringAsFixed(0)}',
         if (bar.volume != null) 'V ${_fmtVol(bar.volume!)}',
       ].join('  · '),
@@ -458,19 +481,28 @@ class _ChartPainter extends CustomPainter {
       _drawLineSeries(
         canvas,
         candlePlot,
+        ma20,
+        LotlotColors.warning.withValues(alpha: 0.95),
+        1.5,
+      );
+      _drawLineSeries(
+        canvas,
+        candlePlot,
         ma50,
-        LotlotColors.warning.withValues(alpha: 0.85),
-        1.2,
+        const Color(0xFF38BDF8).withValues(alpha: 0.92),
+        1.5,
       );
     }
     _drawCandles(canvas, candlePlot);
-    _drawLineSeries(
-      canvas,
-      candlePlot,
-      ma20,
-      LotlotColors.textSecondary.withValues(alpha: 0.9),
-      1.5,
-    );
+    if (!detailed) {
+      _drawLineSeries(
+        canvas,
+        candlePlot,
+        ma20,
+        LotlotColors.textSecondary.withValues(alpha: 0.9),
+        1.5,
+      );
+    }
     if (detailed) _drawForecasts(canvas, candlePlot);
     _drawSelected(canvas, candlePlot, volPlot, rsiPlot);
     _drawVolume(canvas, volPlot);

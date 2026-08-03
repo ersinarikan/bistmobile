@@ -21,23 +21,32 @@ Color confidenceBarColor(String? type) {
 }
 
 String? actionPill(Map<String, dynamic>? signal) {
-  final action = (signal?['action'] ?? signal?['pill'] ?? '')
-      .toString()
-      .toUpperCase();
+  if (signal == null) return null;
+  // Web: resolveCardPillAction — yalnızca backend `action` (AL|SAT|TUT).
+  final action = (signal['action'] ?? '').toString().trim().toUpperCase();
   if (action == 'AL' || action == 'SAT' || action == 'TUT') return action;
-  final type = (signal?['action_type'] ?? '').toString().toUpperCase();
-  if (type.contains('BULL')) return 'AL';
-  if (type.contains('BEAR')) return 'SAT';
-  if (type.contains('HOLD') || type.contains('NEUTR')) return 'TUT';
-  return null;
+  return 'TUT';
 }
 
-bool isMutedActionable(Map<String, dynamic>? signal, bool isPro) {
-  if (isPro || signal == null) return false;
+/// Web: mute yalnızca ücretsiz — `!(APP_IS_PRO || APP_IS_PREMIUM)`.
+bool isMutedActionable(Map<String, dynamic>? signal, {required bool isPaid}) {
+  if (isPaid || signal == null) return false;
   final state = (signal['display_state'] ?? '').toString().toLowerCase();
   final pill = actionPill(signal);
   return (pill == 'AL' && state == 'actionable_bullish') ||
       (pill == 'SAT' && state == 'actionable_bearish');
+}
+
+bool isModelDegraded(Map<String, dynamic>? signal) {
+  final state = (signal?['display_state'] ?? '').toString().toLowerCase();
+  return state == 'model_degraded';
+}
+
+Color pillColorFor(String? pill, {required bool muted, required bool degraded}) {
+  if (muted || degraded) return LotlotColors.warning;
+  if (pill == 'SAT') return LotlotColors.danger;
+  if (pill == 'AL') return LotlotColors.accent;
+  return LotlotColors.textSecondary;
 }
 
 String? formatDeltaPct(dynamic raw) {
@@ -70,15 +79,17 @@ class WatchlistSignalTile extends StatelessWidget {
     final barType = signal?['confidence_bar_type']?.toString();
     final delta = formatDeltaPct(signal?['delta_pct']);
     final pill = actionPill(signal);
-    final muted = isMutedActionable(signal, session.isPro);
-    final barColor = confidenceBarColor(barType);
-    final pillColor = muted
-        ? LotlotColors.textSecondary
-        : (pill == 'SAT'
-            ? LotlotColors.danger
-            : pill == 'AL'
-                ? LotlotColors.accent
-                : LotlotColors.textSecondary);
+    final muted = isMutedActionable(
+      signal,
+      isPaid: session.isPro || session.isPremium,
+    );
+    final degraded = isModelDegraded(signal);
+    final note = signal?['note']?.toString() ??
+        signal?['summary_tr']?.toString();
+    final barColor = degraded
+        ? LotlotColors.warning
+        : confidenceBarColor(barType);
+    final pillColor = pillColorFor(pill, muted: muted, degraded: degraded);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -123,7 +134,7 @@ class WatchlistSignalTile extends StatelessWidget {
                               if (pill != null) ...[
                                 const SizedBox(width: 8),
                                 Opacity(
-                                  opacity: muted ? 0.45 : 1,
+                                  opacity: muted ? 0.58 : 1,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 8,
@@ -215,9 +226,24 @@ class WatchlistSignalTile extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
-                      color: muted
+                      color: muted || degraded
                           ? LotlotColors.textSecondary
                           : LotlotColors.textPrimary,
+                    ),
+                  ),
+                ],
+                if (note != null && note.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    note,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: degraded
+                          ? LotlotColors.warning
+                          : LotlotColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.35,
                     ),
                   ),
                 ],

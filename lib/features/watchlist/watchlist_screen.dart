@@ -71,8 +71,7 @@ class _GuestWatchlistCta extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Giriş yaparak hisseleri takip edin ve tahmin özetlerini görün. '
-            'Hisse aramak için üstteki arama ikonunu veya ana sayfadaki '
-            'BIST Hisseleri’ni kullanın.',
+            'Keşfet sekmesinde BIST 30/100 taraması; üstteki arama ile tam katalog.',
             textAlign: TextAlign.center,
             style: TextStyle(color: LotlotColors.textSecondary, height: 1.45),
           ),
@@ -160,6 +159,19 @@ class _AuthWatchlistBody extends StatelessWidget {
                 ),
           ),
           const SizedBox(height: 8),
+          HorizonChips(
+            selected: wl.selectedHorizon,
+            onSelected: wl.setHorizon,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Ufuk: kartlardaki AL/SAT, Δ% ve sinyal gücünü günceller.',
+            style: TextStyle(
+              color: LotlotColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
           if (wl.items.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
@@ -182,19 +194,6 @@ class _AuthWatchlistBody extends StatelessWidget {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          HorizonChips(
-            selected: wl.selectedHorizon,
-            onSelected: wl.setHorizon,
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Ufuk seçimi listedeki kartları da günceller.',
-            style: TextStyle(
-              color: LotlotColors.textSecondary,
-              fontSize: 12,
-            ),
           ),
           const SizedBox(height: 8),
           if (wl.predictions.isEmpty)
@@ -304,8 +303,13 @@ class _PredictionCard extends StatelessWidget {
     final current = pred['current_price'];
     final delta = formatDeltaPct(signal?['delta_pct']);
     final session = context.watch<SessionController>();
-    final muted = isMutedActionable(signal, session.isPro);
+    final muted = isMutedActionable(
+      signal,
+      isPaid: session.isPro || session.isPremium,
+    );
+    final degraded = isModelDegraded(signal);
     final pill = actionPill(signal);
+    final pillColor = pillColorFor(pill, muted: muted, degraded: degraded);
 
     return InkWell(
       onTap: symbol.isEmpty
@@ -340,13 +344,11 @@ class _PredictionCard extends StatelessWidget {
                 ),
                 if (pill != null)
                   Opacity(
-                    opacity: muted ? 0.45 : 1,
+                    opacity: muted ? 0.58 : 1,
                     child: Text(
                       pill,
                       style: TextStyle(
-                        color: pill == 'SAT'
-                            ? LotlotColors.danger
-                            : LotlotColors.accent,
+                        color: pillColor,
                         fontWeight: FontWeight.w800,
                       ),
                     ),

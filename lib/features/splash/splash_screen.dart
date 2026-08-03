@@ -6,8 +6,9 @@ import '../../core/navigation/deep_link_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/session_controller.dart';
 import '../landing/landing_screen.dart';
+import '../shell/main_shell.dart';
 
-/// Splash: bootstrap → Landing (marka ana sayfa). Ağ/5xx: Yeniden dene (P3).
+/// Splash: bootstrap → auth ise MainShell, değilse Landing. Ağ/5xx: Yeniden dene (P3).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -43,10 +44,12 @@ class _SplashScreenState extends State<SplashScreen> {
       return;
     }
 
-    // Her açılışta marka landing; oturum açıksa oradan shell’e geçilir.
-    // (iOS Keychain uninstall sonrası da kalabilir — yine landing görünür.)
+    // Oturum açıksa doğrudan İzleme|Keşfet; guest → marka landing.
+    final home = session.status == AuthStatus.authenticated
+        ? const MainShell()
+        : const LandingScreen();
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => const LandingScreen()),
+      MaterialPageRoute<void>(builder: (_) => home),
     );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       flushPendingDeepLink();
