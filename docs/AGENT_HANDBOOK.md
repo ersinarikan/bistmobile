@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (v26 Landing / auth / chart cila)
+> Son güncelleme: 2026-08-03 (v27 F6 IAP paywall istemci)
 
 ---
 
@@ -48,7 +48,7 @@ flowchart TD
 | **F3** | Hisse detay | Tamam (public kartlar + mum/MA + auth pattern) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
-| **F6** | IAP paywall | Bekliyor | **Evet** |
+| **F6** | IAP paywall | İstemci tamam (prod `IAP_ENABLED=0`; E2E store’a bağlı) | **Evet** |
 | **F7** | Mağaza teslimi | Bekliyor | Hazır olmalı |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
@@ -180,15 +180,17 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 #### F6 — IAP paywall
 
 - **Amaç:** Tek mobil satış kanalı (guide §9, §25–§28, §29 P2–P3).
-- **Ekranlar:** Paywall; Restore; abonelik yönetimi yönlendirme (store).
+- **Ekranlar:** `PaywallScreen`; Restore; mağaza abonelik yönetimi URL; soft gate → paywall.
 - **API:** `GET /api/billing/iap/config`; `POST .../verify`; `POST .../restore`; sonra `/me`.
 - **Skills:** `ios-fullstack-developer`, `android-fullstack-developer`, `cybersecurity-expert`.
 - **Acceptance:**
-  - [ ] Sandbox/license tester E2E: satın al → verify → tier
-  - [ ] Restore çalışır
-  - [ ] Garanti/WebView **yok**
-  - [ ] Soft gate’ler paywall’a bağlanır
-- **Web bağımlılığı:** Product ID’ler, `IAP_ENABLED`, bundle/package env.
+  - [ ] Sandbox/license tester E2E: satın al → verify → tier (`IAP_ENABLED=1` + store ürünleri)
+  - [x] Restore UI + API çağrısı (prod enabled olunca E2E)
+  - [x] Garanti/WebView **yok**
+  - [x] Soft gate’ler paywall’a bağlanır
+  - [x] Config kapalıyken paywall çökmez; satın alma kilitli mesaj
+- **Web bağımlılığı:** Product ID’ler, `IAP_ENABLED`, bundle/package env. **2026-08-03 prod:** `iap.enabled=false`.
+- **Kod:** `lib/features/billing/` (`BillingController`, `IapService`, `PaywallScreen`); `in_app_purchase`.
 
 #### F7 — Mağaza teslimi
 
@@ -277,8 +279,9 @@ lib/
     landing/                # guest hero (web landing parity)
     stocks/                 # BIST Hisse Merkezi (`GET /api/stocks`)
     auth/                   # login/register/OAuth + SessionController
-    shell/                  # Keşfet | İzleme (auth)
-    browse/                 # shell screener (BIST 30/100 özet)
+    shell/                  # İzleme (+ arama)
+    billing/                # IAP paywall / verify / restore
+    browse/                 # (legacy screener; shell’de yok)
     watchlist/              # auth list + predictions
 ```
 
@@ -292,6 +295,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v27 (2026-08-03) — F6 IAP paywall (istemci)
+- `in_app_purchase` + `BillingController` / `PaywallScreen`
+- Soft gate → Planları gör → paywall; Hesap: planlar + geri yükle
+- Config `iap.enabled=false` iken satın alma kilitli (Garanti/WebView yok)
+- E2E: web `IAP_ENABLED=1` + App Store / Play ürünleri
 
 ### v26 (2026-08-03) — Landing, BIST arama, auth + chart cila
 - Splash → `LandingScreen` (Ücretsiz Başla / Giriş / BIST Hisseleri; Özellikler/Metodoloji yok)
@@ -523,7 +532,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | AI commentary | Pro | CTA → `text` | **ok** |
 | Hisse Sihirbazı | Premium modal | Form + izlemeye ekle | **ok** |
 | Chart alerts | Pro+ | Hesap → ekran | **ok** |
-| Soft gate / IAP | Web paywall | Soft gate (IAP F6) | **partial** (bilinçli) |
+| Soft gate / IAP | Web paywall | Soft gate → `PaywallScreen` (IAP; prod enabled=0) | **istemci ok** |
 | FCM push | — | Optional Firebase | **ok** / no-op configsız |
 | `pattern-summary` UI | Var/özet | Yok | **gap** (backlog) |
 

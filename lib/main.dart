@@ -10,6 +10,7 @@ import 'core/push/socket_alerts.dart';
 import 'core/storage/token_storage.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/session_controller.dart';
+import 'features/billing/billing_controller.dart';
 import 'features/browse/browse_controller.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/stocks/stocks_catalog_controller.dart';
@@ -152,6 +153,12 @@ class _LotlotAppState extends State<LotlotApp> {
         ChangeNotifierProvider<PushService>.value(value: _push),
         Provider<SocketAlertsClient>.value(value: _socket),
         ChangeNotifierProvider<SessionController>.value(value: _session),
+        ChangeNotifierProvider(
+          create: (ctx) => BillingController(
+            apiClient: ctx.read<ApiClient>(),
+            session: ctx.read<SessionController>(),
+          ),
+        ),
         ChangeNotifierProvider(
           create: (_) => BrowseController(apiClient: _api),
         ),

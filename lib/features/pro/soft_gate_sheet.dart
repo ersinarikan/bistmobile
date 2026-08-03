@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../auth/auth_screen.dart';
+import '../auth/session_controller.dart';
+import '../billing/paywall_screen.dart';
 
 enum SoftGateKind { pro, premium }
 
-/// Pro/Premium soft gate — IAP yok (F6); yeni satış yok, web hesap yönetimi OK.
+/// Pro/Premium soft gate — F6: paywall’a yönlendirir (Garanti/WebView yok).
 Future<void> showSoftGateSheet(
   BuildContext context, {
   required SoftGateKind kind,
@@ -15,11 +19,9 @@ Future<void> showSoftGateSheet(
       kind == SoftGateKind.pro ? 'Pro gerekir' : 'Premium gerekir';
   final body = kind == SoftGateKind.pro
       ? 'Bu özellik Pro abonelik ile kullanılabilir. '
-          'Uygulama içi satın alma yakında mağazada. '
-          'Web’den alınmış planınız varsa hesabınızı tarayıcıda yönetebilirsiniz.'
+          'Uygulama içi satın alma App Store / Google Play üzerinden yapılır.'
       : 'Bu özellik Premium abonelik ile kullanılabilir. '
-          'Push uyarıları ve gelişmiş kanallar Premium’dadır. '
-          'Uygulama içi satın alma yakında mağazada.';
+          'Push uyarıları ve gelişmiş kanallar Premium’dadır.';
 
   return showModalBottomSheet<void>(
     context: context,
@@ -53,12 +55,35 @@ Future<void> showSoftGateSheet(
             ),
             const SizedBox(height: 20),
             ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final session = context.read<SessionController>();
+                if (session.status != AuthStatus.authenticated) {
+                  final ok = await Navigator.of(context).push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => const AuthScreen(
+                        initialMode: AuthMode.login,
+                        popOnSuccess: true,
+                      ),
+                    ),
+                  );
+                  if (ok != true || !context.mounted) return;
+                }
+                if (!context.mounted) return;
+                await Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => PaywallScreen(highlight: kind),
+                  ),
+                );
+              },
+              child: const Text('Planları gör'),
+            ),
+            TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text('Tamam'),
             ),
             TextButton(
               onPressed: () async {
-                // Yönetim / mevcut web aboneliği — yeni satış checkout değil (§9.3.1).
                 final uri = Uri.parse('https://lotlot.net');
                 try {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);

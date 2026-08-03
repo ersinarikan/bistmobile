@@ -481,4 +481,45 @@ class ApiClient {
       body: {'token': ?token},
     );
   }
+
+  /// `GET /api/billing/iap/config` — §9.8 (public)
+  Future<Map<String, dynamic>> fetchIapConfig() {
+    return get('/api/billing/iap/config', auth: false);
+  }
+
+  /// `POST /api/billing/iap/verify` — §9.4 / §9.5
+  Future<Map<String, dynamic>> verifyIap({
+    required String platform,
+    required String productId,
+    String? signedTransaction,
+    String? purchaseToken,
+  }) {
+    final body = <String, dynamic>{
+      'platform': platform,
+      'product_id': productId,
+    };
+    if (signedTransaction != null) {
+      body['signed_transaction'] = signedTransaction;
+    }
+    if (purchaseToken != null) {
+      body['purchase_token'] = purchaseToken;
+    }
+    return post('/api/billing/iap/verify', body: body);
+  }
+
+  /// `POST /api/billing/iap/restore` — §9.8
+  Future<Map<String, dynamic>> restoreIap({
+    required String platform,
+    List<String>? signedTransactions,
+    List<Map<String, String>>? purchases,
+  }) {
+    final body = <String, dynamic>{'platform': platform};
+    if (signedTransactions != null) {
+      body['signed_transactions'] = signedTransactions;
+    }
+    if (purchases != null) {
+      body['purchases'] = purchases;
+    }
+    return post('/api/billing/iap/restore', body: body);
+  }
 }

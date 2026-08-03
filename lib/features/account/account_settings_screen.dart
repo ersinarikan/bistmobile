@@ -7,6 +7,8 @@ import '../../core/push/push_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
+import '../billing/billing_controller.dart';
+import '../billing/paywall_screen.dart';
 import '../chart_alerts/chart_alerts_screen.dart';
 import '../landing/landing_screen.dart';
 import '../pro/soft_gate_sheet.dart';
@@ -223,6 +225,55 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       ),
                     ),
                   ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Abonelik',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.workspace_premium_outlined),
+                    title: const Text('Planları yönet'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const PaywallScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.restore),
+                    title: const Text('Aboneliği geri yükle'),
+                    onTap: () async {
+                      final billing = context.read<BillingController>();
+                      await billing.load();
+                      if (!context.mounted) return;
+                      final ok = await billing.restorePurchases();
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            ok
+                                ? 'Abonelik geri yüklendi'
+                                : (billing.error ?? 'Geri yükleme başarısız'),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
