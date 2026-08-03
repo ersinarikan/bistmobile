@@ -249,6 +249,7 @@ Her skill: `SKILL.md` + detay `reference.md`. İlgili konuda otomatik / isteninc
 | `project-manager` | Kapsam, faz, risk, bağımlılık, go/no-go |
 | `cybersecurity-expert` | Appsec, token, OWASP Mobile, secret, sertleştirme |
 | `ux-expert` | Hedefe odaklı UX; jargon/geliştirici notunu UI’dan uzak tut; heuristic review |
+| `test-engineer` | Mobil/API QA; **web↔mobil parity** (her aşamada web kodu); senaryo matrisi; bug → mobil fix |
 
 ## 3. Mimari (mevcut)
 
@@ -262,12 +263,19 @@ lib/
     storage/token_storage.dart
     theme/app_theme.dart    # LotlotColors / dark tema
   features/
-    splash/                 # bootstrap → home | login
-    auth/                   # login + SessionController
-    home/                   # basit home + logout
+    splash/                 # bootstrap → MainShell
+    auth/                   # login/register/OAuth + SessionController
+    shell/                  # Keşfet | İzleme
+    browse/                 # guest search + screener
+    watchlist/              # auth list + predictions
 ```
 
 State: **Provider**. Token: **flutter_secure_storage**.
+
+### Skills notu (2026-08-03)
+
+- `test-engineer`: web parity zorunlu; prod PREDEPLOY §3 + register `email_already_registered`
+- Kayıt fix: `409 email_already_registered` map + Turnstile sonrası sessiz no-op engeli
 
 ## 4. Yapılanlar (kronoloji)
 

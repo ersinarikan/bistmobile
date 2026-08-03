@@ -58,6 +58,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         lastName: _lastName.text.trim(),
         turnstileToken: token,
       );
+      // Token sonrası tekrar köprü sinyali = sessiz no-op olmasın
+      if (result == RegisterResult.needsTurnstile) {
+        session.setError(
+          'Güvenlik doğrulaması yenilenmeli. Lütfen tekrar deneyin.',
+        );
+        result = RegisterResult.failed;
+      }
     }
 
     if (!mounted) return;
@@ -70,6 +77,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             email: _email.text.trim(),
           ),
         ),
+      );
+      return;
+    }
+
+    if (result == RegisterResult.failed && session.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(session.lastError!)),
       );
     }
   }
