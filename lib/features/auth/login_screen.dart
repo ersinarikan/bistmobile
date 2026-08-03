@@ -1,9 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
 import '../home/home_screen.dart';
+import 'oauth_sign_in.dart';
 import 'register_screen.dart';
 import 'session_controller.dart';
 import 'turnstile_bridge_screen.dart';
@@ -27,6 +30,15 @@ class _LoginScreenState extends State<LoginScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  Future<void> _goHomeIfOk(LoginResult result) async {
+    if (!mounted) return;
+    if (result == LoginResult.success) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+      );
+    }
   }
 
   Future<void> _submit() async {
@@ -56,9 +68,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = false);
 
     if (result == LoginResult.success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
-      );
+      await _goHomeIfOk(result);
       return;
     }
 
@@ -73,9 +83,49 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _google() async {
+    setState(() => _loading = true);
+    final session = context.read<SessionController>();
+    try {
+      final idToken = await OauthSignIn.googleIdToken();
+      final result = await session.loginWithGoogleIdToken(idToken);
+      if (!mounted) return;
+      setState(() => _loading = false);
+      await _goHomeIfOk(result);
+    } on OauthSignInException catch (e) {
+      session.setError(e.message);
+      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      session.setError(e.toString());
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _apple() async {
+    setState(() => _loading = true);
+    final session = context.read<SessionController>();
+    try {
+      final apple = await OauthSignIn.appleIdentity();
+      final result = await session.loginWithAppleIdentity(
+        identityToken: apple.identityToken,
+        fullName: apple.fullName,
+      );
+      if (!mounted) return;
+      setState(() => _loading = false);
+      await _goHomeIfOk(result);
+    } on OauthSignInException catch (e) {
+      session.setError(e.message);
+      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      session.setError(e.toString());
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
+    final showApple = !Platform.isAndroid;
 
     return Scaffold(
       body: DecoratedBox(
@@ -183,19 +233,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(
-                    onPressed: _loading
-                        ? null
-                        : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Google / Apple girişi bir sonraki adımda eklenecek.',
-                                ),
-                              ),
-                            );
-                          },
-                    child: const Text('Google / Apple (yakında)'),
+                    onPressed: _loading ? null : _google,
+                    child: const Text('Google ile devam et'),
                   ),
+                  if (showApple) ...[
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: _loading ? null : _apple,
+                      child: const Text('Apple ile devam et'),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   Text(
                     'Yatırım tavsiyesi değildir. Veri analizidir.',

@@ -66,5 +66,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Google Sign-In: OauthLocal.googleIosClientId doldurulunca GIDClientID + URL scheme ekleyin.
+	     Örnek: GIDClientID = 123-abc.apps.googleusercontent.com
+	     CFBundleURLSchemes = com.googleusercontent.apps.123-abc -->
 </dict>
 </plist>

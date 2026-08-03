@@ -34,6 +34,11 @@ class SessionController extends ChangeNotifier {
   Map<String, dynamic>? subscription;
   String? lastError;
 
+  void setError(String? message) {
+    lastError = message;
+    notifyListeners();
+  }
+
   Future<void> bootstrap() async {
     status = AuthStatus.unknown;
     lastError = null;
@@ -155,6 +160,56 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  Future<LoginResult> loginWithGoogleIdToken(String idToken) async {
+    lastError = null;
+    notifyListeners();
+    try {
+      final data = await _api.loginWithGoogle(idToken: idToken);
+      await _api.persistAuthResponse(data);
+      final me = data['user'] != null ? data : await _api.fetchMe();
+      _applyMe(me);
+      status = AuthStatus.authenticated;
+      notifyListeners();
+      return LoginResult.success;
+    } on ApiException catch (e) {
+      lastError = _friendlyAuthMessage(e);
+      notifyListeners();
+      return LoginResult.failed;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return LoginResult.failed;
+    }
+  }
+
+  Future<LoginResult> loginWithAppleIdentity({
+    required String identityToken,
+    Map<String, String?>? fullName,
+  }) async {
+    lastError = null;
+    notifyListeners();
+    try {
+      final data = await _api.loginWithApple(
+        identityToken: identityToken,
+        fullName: fullName,
+      );
+      await _api.persistAuthResponse(data);
+      final me = data['user'] != null ? data : await _api.fetchMe();
+      _applyMe(me);
+      status = AuthStatus.authenticated;
+      notifyListeners();
+      return LoginResult.success;
+    } on ApiException catch (e) {
+      lastError = _friendlyAuthMessage(e);
+      notifyListeners();
+      return LoginResult.failed;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return LoginResult.failed;
+    }
+  }
+
   Future<bool> resendVerification({required String email}) async {
     lastError = null;
     notifyListeners();
@@ -221,6 +276,10 @@ class SessionController extends ChangeNotifier {
       case 'email_exists':
       case 'already_registered':
         return 'Bu e-posta ile kayıtlı bir hesap var.';
+      case 'invalid_oauth_token':
+        return 'Google/Apple oturumu doğrulanamadı. Tekrar deneyin.';
+      case 'id_token_required':
+        return 'OAuth token eksik.';
       case 'inactive_user':
         return 'Hesap pasif. Destek ile iletişime geçin.';
       default:

@@ -208,6 +208,33 @@ class ApiClient {
     return delete('/api/auth/me', body: {'confirm': true});
   }
 
+  /// `POST /api/auth/google-mobile` — §8.4
+  Future<Map<String, dynamic>> loginWithGoogle({required String idToken}) {
+    return post(
+      '/api/auth/google-mobile',
+      body: {'idToken': idToken},
+      auth: false,
+    );
+  }
+
+  /// `POST /api/auth/apple-mobile` — §8.5
+  Future<Map<String, dynamic>> loginWithApple({
+    required String identityToken,
+    Map<String, String?>? fullName,
+  }) {
+    final body = <String, dynamic>{
+      'identityToken': identityToken,
+    };
+    if (fullName != null) {
+      body['fullName'] = fullName;
+    }
+    return post(
+      '/api/auth/apple-mobile',
+      body: body,
+      auth: false,
+    );
+  }
+
   Future<void> persistAuthResponse(Map<String, dynamic> data) async {
     final access = data['access_token']?.toString();
     final refresh = data['refresh_token']?.toString();
