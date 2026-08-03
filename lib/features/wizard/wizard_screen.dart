@@ -30,6 +30,13 @@ const _universeLabels = <String, String>{
   'bist100': 'BIST 100',
 };
 
+String _volumeLabel(String? raw) {
+  if (raw == null || raw.isEmpty || raw.toLowerCase() == 'unknown') {
+    return 'Bilinmiyor';
+  }
+  return raw;
+}
+
 class WizardScreen extends StatefulWidget {
   const WizardScreen({super.key});
 
@@ -451,7 +458,7 @@ class _ResultCard extends StatelessWidget {
                       _Metric('Genel güç', '%${genel.round()}'),
                     if (strength is num)
                       _Metric('Aksiyon', '%${strength.round()}'),
-                    if (volume != null) _Metric('Likidite', volume),
+                    if (volume != null) _Metric('Likidite', _volumeLabel(volume)),
                   ],
                 ),
                 if (current is num || pred is num) ...[

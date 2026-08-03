@@ -18,14 +18,25 @@ const _sourceLabels = <String, String>{
 String _directionLabel(String? raw) {
   switch ((raw ?? '').toLowerCase()) {
     case 'bullish':
+    case 'al':
       return 'Yükseliş';
     case 'bearish':
+    case 'sat':
       return 'Düşüş';
     case 'neutral':
+    case 'tut':
+    case 'hold':
       return 'Nötr';
     default:
-      return raw?.isNotEmpty == true ? raw! : 'Nötr';
+      return raw?.isNotEmpty == true ? raw!.replaceAll('_', ' ') : 'Nötr';
   }
+}
+
+class _NewsRow {
+  const _NewsRow({required this.title, this.source, this.direction});
+  final String title;
+  final String? source;
+  final String? direction;
 }
 
 /// Pattern özeti + Sezgisel + Formasyonlar — thin client (§16.1).
@@ -196,19 +207,24 @@ class PatternSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (overall != null)
+        if (label != null)
           Text(
-            overall.replaceAll('_', ' '),
+            label,
+            style: const TextStyle(
+              color: LotlotColors.accent,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          )
+        else if (overall != null)
+          Text(
+            _directionLabel(overall),
             style: const TextStyle(
               color: LotlotColors.accent,
               fontWeight: FontWeight.w800,
               fontSize: 16,
             ),
           ),
-        if (label != null) ...[
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
         if (summary != null) ...[
           const SizedBox(height: 4),
           Text(
@@ -303,22 +319,30 @@ class _SezgiselChip extends StatelessWidget {
   }
 
   void _openSheet(BuildContext context) {
-    final titles = <String>[];
+    final rows = <_NewsRow>[];
     final items = newsContext?['items'];
     if (items is List) {
       for (final it in items.take(8)) {
-        if (it is Map) {
-          final t = it['title']?.toString();
-          if (t != null && t.isNotEmpty) titles.add(t);
-        }
+        if (it is! Map) continue;
+        final t = it['title']?.toString();
+        if (t == null || t.isEmpty) continue;
+        rows.add(
+          _NewsRow(
+            title: t,
+            source: it['source']?.toString(),
+            direction: it['direction']?.toString(),
+          ),
+        );
       }
     }
-    if (titles.isEmpty) {
+    if (rows.isEmpty) {
       final ni = fingpt?['news_items'];
       if (ni is List) {
         for (final t in ni.take(8)) {
           final s = t?.toString();
-          if (s != null && s.isNotEmpty) titles.add(s);
+          if (s != null && s.isNotEmpty) {
+            rows.add(_NewsRow(title: s));
+          }
         }
       }
     }
@@ -326,6 +350,7 @@ class _SezgiselChip extends StatelessWidget {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: LotlotColors.surface,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(LotlotColors.radiusLg),
@@ -354,7 +379,7 @@ class _SezgiselChip extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              if (titles.isEmpty)
+              if (rows.isEmpty)
                 const Text(
                   'Haber özeti şu an yok.',
                   style: TextStyle(color: LotlotColors.textSecondary),
@@ -362,16 +387,40 @@ class _SezgiselChip extends StatelessWidget {
               else
                 ConstrainedBox(
                   constraints: BoxConstraints(
-                    maxHeight: MediaQuery.sizeOf(ctx).height * 0.45,
+                    maxHeight: MediaQuery.sizeOf(ctx).height * 0.5,
                   ),
                   child: ListView.separated(
                     shrinkWrap: true,
-                    itemCount: titles.length,
+                    itemCount: rows.length,
                     separatorBuilder: (_, _) => const Divider(height: 16),
-                    itemBuilder: (_, i) => Text(
-                      titles[i],
-                      style: const TextStyle(height: 1.4, fontSize: 14),
-                    ),
+                    itemBuilder: (_, i) {
+                      final row = rows[i];
+                      final meta = [
+                        if (row.source != null && row.source!.isNotEmpty)
+                          row.source!,
+                        if (row.direction != null && row.direction!.isNotEmpty)
+                          _directionLabel(row.direction),
+                      ].join(' · ');
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            row.title,
+                            style: const TextStyle(height: 1.4, fontSize: 14),
+                          ),
+                          if (meta.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              meta,
+                              style: const TextStyle(
+                                color: LotlotColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
                   ),
                 ),
               const SizedBox(height: 12),
@@ -415,6 +464,8 @@ class _FormationRow extends StatelessWidget {
     final conf = item['confidence'];
     final confPct = conf is num ? (conf <= 1 ? conf * 100 : conf).round() : null;
     final isVisual = source == 'VISUAL_YOLO';
+    final signalLabel =
+        signal != null && signal.isNotEmpty ? _directionLabel(signal) : null;
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -428,7 +479,7 @@ class _FormationRow extends StatelessWidget {
                 child: Text(
                   [
                     name,
-                    if (signal != null && signal.isNotEmpty) signal,
+                    ?signalLabel,
                   ].join(' · '),
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
@@ -452,10 +503,10 @@ class _FormationRow extends StatelessWidget {
             spacing: 6,
             runSpacing: 4,
             children: [
-              if (sourceLabel.isNotEmpty)
+              if (sourceLabel.isNotEmpty && !isVisual)
                 _MiniBadge(sourceLabel),
               if (isVisual) const _MiniBadge('Görsel'),
-              if (_visualOk) const _MiniBadge('görsel onay'),
+              if (_visualOk && !isVisual) const _MiniBadge('görsel onay'),
             ],
           ),
           if (effect != null && effect.isNotEmpty) ...[

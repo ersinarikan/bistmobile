@@ -74,7 +74,7 @@ class _AiCommentarySectionState extends State<AiCommentarySection> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = 'Yorum alınamadı; tekrar deneyin.';
       });
     }
   }

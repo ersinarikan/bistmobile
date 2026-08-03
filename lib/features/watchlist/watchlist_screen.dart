@@ -399,6 +399,19 @@ class _PredictionCard extends StatelessWidget {
     }
   }
 
+  String _overallLabel(String? raw) {
+    switch ((raw ?? '').toLowerCase()) {
+      case 'bullish':
+        return 'Yükseliş';
+      case 'bearish':
+        return 'Düşüş';
+      case 'neutral':
+        return 'Nötr';
+      default:
+        return (raw ?? '').replaceAll('_', ' ');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final symbol = pred['symbol']?.toString() ?? '';
@@ -446,7 +459,7 @@ class _PredictionCard extends StatelessWidget {
                 ),
                 if (overall != null)
                   Text(
-                    overall,
+                    _overallLabel(overall),
                     style: const TextStyle(
                       color: LotlotColors.accent,
                       fontWeight: FontWeight.w700,

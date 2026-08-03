@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (parity audit + Sezgisel/formasyon + F5 cila)
+> Son güncelleme: 2026-08-03 (v24 UX cila: Sezgisel meta + metinler)
 
 ---
 
@@ -101,7 +101,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Guest → hisse satırına dokununca F3 detay açılır
   - [x] Guest’te watchlist mutation / predictions → net “Giriş yap” / kayıt CTA (sessiz 401 yok)
   - [x] Auth: watchlist CRUD + hata/403/kota mesajları sunucudan
-  - [x] Auth: predictions listesi render-only (`display_state`, horizons)
+  - [x] Auth: predictions listesi render-only (`label` / confidence; ham `display_state` yok)
   - [x] Email verified gate uyumu (watchlist yazma)
   - [x] Splash: token yok → **browse shell** (login değil); token var → `/me` → shell
 - **Dışı:** Admin cache-report UI (zorunlu değil); Pro gated kartlar (F5).
@@ -291,6 +291,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ## 4. Yapılanlar (kronoloji)
 
+### v24 (2026-08-03) — UX cila (Sezgisel + metin)
+- Sezgisel sheet: haber kaynağı + yön; formasyon sinyal Türkçe; çift Görsel rozet yok
+- Predictions/overall Türkçe; AI ham exception yok; wizard likidite `unknown` → Bilinmiyor
+- Handbook P13 / F2 predictions metni güncellendi
+
 ### v23 (2026-08-03) — Pattern yüzeyi + parity audit
 - Hisse detay: Sezgisel sheet, formasyonlar, görsel onay (`pattern-analysis` cache)
 - Handbook §7.2 guide↔prod; §7.3 F0–F5 parity matrisi
@@ -463,7 +468,7 @@ Kaynak: prod `api_auth_routes.py` / `login_protection.py` / `api_watchlist_route
 | P10 | — | Guest Bearer | Public `auth:false` | search/screener `auth:false` | OK |
 | P11 | — | Register error map | §5 kodları | invalid_email/weak/409/sent bayrağı | OK (v11) |
 | P12 | — | Logout | Session wipe | Shell’de kalır (guest) | OK (F2) |
-| P13 | — | Predictions | Render-only | `display_state`/`label` | OK |
+| P13 | — | Predictions | Render-only label/güç | `label` + confidence bar; ham `display_state` yok | **ok** (v22/v24) |
 | P14 | — | Token log | Yok | Grep temiz | OK |
 
 **Critical:** yok.
