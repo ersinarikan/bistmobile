@@ -7,12 +7,15 @@ alwaysApply: true
 
 **Her local commit ve her push’tan önce** şu kontrolleri çalıştır. Biri kırmızıysa commit/push yapma; önce düzelt.
 
-## 0) Test + review (zorunlu — analyze’den önce veya birlikte)
+## 0) Web → test döngüsü (zorunlu)
 
-Kural **`test-and-review`**: dokunduğun akış için web/API referansı + senaryo matrisi + self-review tamamlanmadan “yeşil analyze” yetmez.
+Kural **`test-and-review`**:
 
-- Bulunan bug aynı turda düzeltilir.
-- Cihazda koşulamayan smoke açıkça belirtilir; kod+API review yine yapılır.
+1. **Pre-dev:** web/API davranışı anlaşılmadan kod yok  
+2. **Post-dev:** senaryo + parity + self-review  
+3. Sonra bu dosyadaki analyze + sonar  
+
+Saf markdown/kural-only commit’te senaryo gerekmez; `lib/` veya davranış dokunuşunda gerekir.
 
 ## 1) Linter (zorunlu)
 

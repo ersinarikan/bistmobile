@@ -11,7 +11,8 @@ alwaysApply: true
 - **Anlaşılır comment’ler:** “ne” değil “neden / API § referansı / kısıt” yaz. Gereksiz veya kodu tekrarlayan comment koyma. Türkçe veya İngilizce tutarlı olsun; mevcut dosya dilini koru.
 - Değişiklikleri minimal tut: istenmeyen refactor, format-only diff, alakasız dosya dokunuşu yok.
 - Platform farkı varsa (IAP, push, deep link) açıkça ayır; ortak mantığı paylaş, platform kodunu şişirme.
-- **Yazdıktan sonra:** kural `test-and-review` + skill `test-engineer` — analyze yetmez; hata yollarını test/review et.
+- **Sıra:** önce web/API davranışı anla → sonra kod → bitince `test-and-review` + `test-engineer` (analyze yetmez).
+- Web anlaşılmadan spekülatif mobil akış yazma.
 
 ```dart
 // ❌ BAD — spekülatif / gürültü

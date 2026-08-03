@@ -2,18 +2,26 @@
 
 ## A. Web ↔ mobil parity prosedürü
 
-Her test edilen özellik için doldur:
+**Sıra (zorunlu):** pre-dev web incele → geliştir → post-dev test.
+
+### A0. Pre-dev (kod yok)
 
 | Adım | Soru | Kanıt |
 |------|------|--------|
-| 1 Web | Hangi route/template/JS? | path + satır / curl |
-| 2 API | HTTP + `error` + body alanları? | guide § + canlı yanıt |
-| 3 Mobil | Hangi ekran/controller map ediyor? | `lib/...` |
-| 4 Matris | Happy + hatalar + sıralama? | tablo B |
-| 5 Sapma | Web’de X, mobil Y mi? | ekran / log (token yok) |
-| 6 Fix | Mobil geliştirici ticket? | evet/hayır + doğrulama |
+| 1 Web | Route/template/JS ne yapıyor? | path + satır |
+| 2 API | HTTP + `error`? | guide § + prod |
+| 3 Acceptance | Mobil ne yapacak? | 1–5 madde |
+| 4 Matris iskeleti | R/L/G satırları | tablo B |
 
-**Prod kaynak (kayıt):** `/opt/bist-pattern/bist_pattern/blueprints/api_auth_routes.py` → `api_register`, `api_resend_verification`, `api_login`; koruma: `login_protection.py`.
+### A1. Post-dev
+
+| Adım | Soru | Kanıt |
+|------|------|--------|
+| 1 Web drift | Hâlâ aynı mı? | path / curl |
+| 2 Mobil | Map doğru mu? | `lib/...` |
+| 3 Matris | Geçti/kaldı? | tablo B |
+| 4 Sapma | Web X mobil Y? | ekran |
+| 5 Fix | Aynı turda? | evet / handbook deferred |
 
 ## B. Senaryo matrisi şablonları
 

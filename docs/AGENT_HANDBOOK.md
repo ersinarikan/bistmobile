@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F0–F2 web↔mobil parity review)
+> Son güncelleme: 2026-08-03 (web→geliştir→test ritüeli)
 
 ---
 
@@ -236,7 +236,7 @@ Hepsi `alwaysApply: true` (özet):
 7. **risk-integrity-mobile** — Kod öncesi risk/etki analizi; iOS+Android bütünlüğü; yan etkiyi kırma.
 8. **agent-handbook** — Bu kılavuzu her değişiklik sonrası güncelle (özellikle §0 faz durumu).
 9. **brand-visual-parity** — Renk/tema/font/logo web (`brand.css` / lotlot.net) ile aynı; görsel işi siteden doğrula.
-10. **test-and-review** — Kod yazdıktan sonra senaryo matrisi + self-review zorunlu; analyze yetmez.
+10. **test-and-review** — **Web incele → geliştir → test/parity**; analyze yetmez.
 
 ## 2b. Agent skills (`.cursor/skills/`)
 
@@ -250,7 +250,7 @@ Her skill: `SKILL.md` + detay `reference.md`. İlgili konuda otomatik / isteninc
 | `project-manager` | Kapsam, faz, risk, bağımlılık, go/no-go |
 | `cybersecurity-expert` | Appsec, token, OWASP Mobile, secret, sertleştirme |
 | `ux-expert` | Hedefe odaklı UX; jargon/geliştirici notunu UI’dan uzak tut; heuristic review |
-| `test-engineer` | Mobil/API QA; **kod yazılınca da** uygula; web↔mobil parity; senaryo matrisi; bug → fix |
+| `test-engineer` | **Pre-dev:** web davranışı; **post-dev:** matris + parity; analyze ≠ test |
 
 ## 3. Mimari (mevcut)
 
@@ -353,13 +353,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 1. İstek → **risk analizi** (platform + çapraz etki)
 2. Hangi **§0 faz**? Acceptance’a bak
-3. Minimal / temiz kod; API guide **oku** (yazma); gerekirse BIST/prod
-4. Bitince: **test-and-review** (`test-engineer`: web parity + senaryo matrisi + self-review) → bulguları düzelt
-5. Refaktör değerlendirmesi + **§0 durum güncelle**
-6. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push
+3. **`test-engineer` pre-dev:** web/prod/guide incele → davranış + matris iskeleti (kod yok)
+4. Minimal / temiz kod; API guide **oku** (yazma); thin client
+5. **`test-engineer` post-dev** + kural `test-and-review` → bulguları düzelt
+6. Refaktör değerlendirmesi + **§0 durum güncelle**
+7. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push
 
 ```bash
-# Önce davranış testi/review (kural test-and-review) — sonra:
+# Döngü: web anla → kod → davranış testi → sonra:
 flutter analyze
 export SONAR_TOKEN='…'   # ortama; commit etme
 sonar-scanner

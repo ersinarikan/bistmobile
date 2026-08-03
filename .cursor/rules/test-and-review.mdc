@@ -1,44 +1,57 @@
 ---
-description: Kod yazdıktan sonra zorunlu test + review — analyze yetmez
+description: Web önce → geliştir → test/parity — analyze yetmez
 alwaysApply: true
 ---
 
-# Yaz → Test → Review (zorunlu)
+# Web → Geliştir → Test (zorunlu döngü)
 
-Kod ürettikten / değiştirdikten sonra **iş bitmiş sayılmaz**. `flutter analyze` + Sonar kalite kapısıdır; **davranış testi ve bug review ayrı zorunluluktur**.
+Her anlamlı özellik / davranış değişikliği bu sırayı izler. Sıra bozulmaz.
 
-## Ne zaman
+```text
+1) WEB İNCELE     → davranış anlaşılır (kod + UX + API error)
+2) GELİŞTİR       → mobil thin client (sözleşmeye sadık)
+3) TEST + PARITY  → matris + self-review + düzelt
+4) KALİTE + GİT   → analyze + sonar → commit/tag
+```
 
-- Her anlamlı `lib/` / native / auth-API davranışı değişikliğinde.
-- “Küçük fix” dahil: hata yolu, Turnstile, kota, navigasyon dokunduysa.
+## 1) Web incele (kod yazmadan önce)
 
-## Zorunlu sıra (commit/tag öncesi)
+- Canlı lotlot.net ve/veya prod BIST (`/opt/bist-pattern`, SSH salt okuma) / BIST repo.
+- İlgili route, template/JS, API `error` + HTTP, form kilidi / toast / redirect.
+- Guide § ile doğrula (`MOBILE_API_INTEGRATION_GUIDE.md` — salt okuma).
+- Kısa not: “web şöyle davranıyor; mobil şunu yapacak” (matris iskeleti).
+- **Web anlaşılmadan mobil kod yazma.**
 
-1. **Web/API referansı** — ilgili BIST route / guide § oku; beklenen HTTP + `error` + UX net olsun (`test-engineer` skill, web↔mobil parity maddesi).
-2. **Senaryo matrisi** — happy path + tüm hata / sıralama / sınır (en az dokunduğun akış). Sessiz no-op, takılı loading, map edilmemiş `error` = bug.
-3. **Kanıtlı test** (mümkün olanı yap, atlama):
-   - `curl` / canlı API ile hata kodlarını doğrula (token/şifre sohbete yazma).
-   - Mobil akışı kod üzerinden dal dal izle (her `ApiException` / `Navigator` / loading bayrağı).
-   - Cihaz/simülatör varsa elle smoke; yoksa matriste “cihazda doğrulanmadı” diye açıkça yaz, yine de kod+API review’ı tamamla.
-4. **Self-review (bug avı)** — kendi diff’ine bak:
-   - Hata kodları guide/prod ile birebir mi?
-   - Retry (Turnstile/captcha) sonrası ikinci hata kullanıcıya görünüyor mu?
-   - Guest’te `auth: true` / sessiz 401 var mı?
-   - Empty/loading/error state unutuldu mu?
-   - iOS + Android aynı mantık mı?
-5. **Düzelt** — bulduğun bug’ı aynı turda düzelt; “sonra bakarız” ile bırakma (bilinçli erteleme handbook’a yazılır).
-6. Sonra **quality-gate** (`analyze` + sonar) → git akışı.
+## 2) Geliştir
+
+- Thin client; kota/tier/sinyal uydurma yok.
+- `clean-mobile-dev` + `risk-integrity-mobile`.
+- Yalnızca anlaşılan web/API davranışını uygula.
+
+## 3) Test + davranış kontrol (yazdıktan sonra)
+
+Skill **`test-engineer`** — zorunlu:
+
+1. Web referansını tekrar doğrula (drift var mı?).
+2. Senaryo matrisi: happy + hata + sıralama (Turnstile/captcha retry).
+3. Kanıt: kod dalı + mümkünse GET/smoke; canlı yazıcı POST’u gereksiz yere atma.
+4. Self-review: sessiz no-op, map edilmemiş `error`, guest Bearer, loading takılı.
+5. Sapma = bug → aynı turda düzelt.
+
+## 4) Kalite kapısı
+
+`flutter analyze` + `sonar-scanner` → sonra git akışı.
 
 ## Yasak
 
-- “Yazdım, analyze yeşil, bitti” deyip senaryo/review atlamak.
-- Yalnızca happy path varsaymak.
-- Web’de var olan hata/eşik davranışını mobilde yok saymak.
-- Test etmeden / review etmeden kullanıcıya “tamam” demek.
+- Önce kod yazıp “sonra web’e bakarız”.
+- “Analyze yeşil = bitti”.
+- Yalnızca happy path.
+- Web’deki hata/eşik davranışını mobilde yok saymak.
 
 ## Skill bağları
 
-- Davranış / parity / matris → **`test-engineer`**
-- Diff risk / platform bütünlük → **`risk-integrity-mobile`**
-- UX boş/hata metinleri → **`ux-expert`**
-- Temiz kod → **`clean-mobile-dev`**
+- Öncesi web + sonrası test → **`test-engineer`**
+- Plan / faz → **`project-manager`**
+- Risk → **`risk-integrity-mobile`**
+- UX kopya → **`ux-expert`**
