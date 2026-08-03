@@ -17,7 +17,27 @@ Kural **`test-and-review`**:
 
 Saf markdown/kural-only commit’te senaryo gerekmez; `lib/` veya davranış dokunuşunda gerekir.
 
-## 1) Linter (zorunlu)
+## 1) Pub / bağımlılık konsolu (zorunlu — “hata gibi” satırları)
+
+`flutter pub get` / IDE “Got dependencies!” çıktısını **okuyup sınıflandır**. Agent IDE/extension konsolunu veya terminal `pub get` çıktısını görmezden gelmez.
+
+| Çıktı | Anlam | Aksiyon |
+|-------|--------|---------|
+| `exit code 0` + `Got dependencies!` / `Changed N dependencies!` | Başarılı çözüm | Devam |
+| `N packages have newer versions incompatible with dependency constraints` | Bilgi: constraint yüzünden major/yeni sürüm alınmadı | **Hata değil.** Commit’i bloklama. İsteğe bağlı `flutter pub outdated` ile not et; major bump ayrı iş |
+| `Resolving dependencies...` / sürüm listesi (`0.4.2 (0.5.2 available)`) | Aynı bilgi satırı | Hata değil |
+| `Because … depends on …` / `version solving failed` / `exit code ≠ 0` | Gerçek pub hatası | Düzeltmeden commit/push yok |
+| Package **discontinued** (ör. transitive `js`) | Uyarı | Doğrudan bağımlılıksa planla; transitive ise not et, fazı bloklama |
+
+```bash
+flutter pub get
+# şüphede:
+flutter pub outdated
+```
+
+Yeni paket eklerken (`fl_chart` vb.): `pubspec.yaml` + `pubspec.lock` commit’e dahil; `pub get` yeşil olmalı.
+
+## 2) Linter (zorunlu)
 
 ```bash
 flutter analyze
@@ -26,7 +46,7 @@ flutter analyze
 - Error / warning (analiz fail) → düzelt.
 - `info` lint’leri de Problems’ta görünenleri temizle (mümkünse ignore etme).
 
-## 2) SonarQube / SonarCloud (zorunlu)
+## 3) SonarQube / SonarCloud (zorunlu)
 
 ```bash
 sonar-scanner
@@ -37,7 +57,7 @@ sonar-scanner
 - Token: ortam değişkeni `SONAR_TOKEN` (repoya / sohbete yazma).
 - Quality Gate fail veya yeni blocker/critical → commit/push yok.
 
-## 3) Sonra git akışı
+## 4) Sonra git akışı
 
 Kalite yeşil → kural 5 (`bistmobile-git-flow`): commit → sıradaki tag → push.
 

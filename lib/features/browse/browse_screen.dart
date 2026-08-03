@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../auth/session_controller.dart';
-import '../watchlist/watchlist_controller.dart';
+import '../stock/stock_detail_screen.dart';
 import 'browse_controller.dart';
-import 'stock_placeholder_sheet.dart';
 
 class BrowseScreen extends StatefulWidget {
   const BrowseScreen({super.key});
@@ -34,8 +32,6 @@ class _BrowseScreenState extends State<BrowseScreen> {
   @override
   Widget build(BuildContext context) {
     final browse = context.watch<BrowseController>();
-    final session = context.watch<SessionController>();
-    final watchlist = context.watch<WatchlistController>();
 
     return Column(
       children: [
@@ -81,22 +77,18 @@ class _BrowseScreenState extends State<BrowseScreen> {
           child: browse.isSearching
               ? _SearchBody(
                   browse: browse,
-                  onTap: (symbol, name) => openStockSheet(
+                  onTap: (symbol, name) => openStockDetail(
                     context,
                     symbol: symbol,
                     name: name,
-                    session: session,
-                    watchlist: watchlist,
                   ),
                 )
               : _ScreenerBody(
                   browse: browse,
-                  onTap: (symbol, name) => openStockSheet(
+                  onTap: (symbol, name) => openStockDetail(
                     context,
                     symbol: symbol,
                     name: name,
-                    session: session,
-                    watchlist: watchlist,
                   ),
                 ),
         ),

@@ -327,4 +327,62 @@ class ApiClient {
   Future<Map<String, dynamic>> fetchWatchlistPredictions() {
     return get('/api/watchlist/predictions');
   }
+
+  /// `GET /api/public/stocks/<sym>/valuation` — §17.2 (auth-free)
+  Future<Map<String, dynamic>> fetchPublicValuation(String symbol) {
+    return get(
+      '/api/public/stocks/${Uri.encodeComponent(symbol)}/valuation',
+      auth: false,
+    );
+  }
+
+  /// `GET /api/public/stocks/<sym>/fundamentals` — §17.2.1 (auth-free)
+  Future<Map<String, dynamic>> fetchPublicFundamentals(String symbol) {
+    return get(
+      '/api/public/stocks/${Uri.encodeComponent(symbol)}/fundamentals',
+      auth: false,
+    );
+  }
+
+  /// `GET /api/public/stocks/<sym>/corporate` — §17.2.2 (auth-free)
+  Future<Map<String, dynamic>> fetchPublicCorporate(String symbol) {
+    return get(
+      '/api/public/stocks/${Uri.encodeComponent(symbol)}/corporate',
+      auth: false,
+    );
+  }
+
+  /// `GET /api/public/chart-data/<sym>?bars=` — §17.1 (auth-free)
+  Future<Map<String, dynamic>> fetchPublicChartData(
+    String symbol, {
+    int bars = 180,
+  }) {
+    return get(
+      '/api/public/chart-data/${Uri.encodeComponent(symbol)}',
+      query: {'bars': '$bars'},
+      auth: false,
+    );
+  }
+
+  /// `GET /api/chart-data/<sym>?bars=` — §16.2 (Bearer)
+  Future<Map<String, dynamic>> fetchChartData(
+    String symbol, {
+    int bars = 420,
+  }) {
+    return get(
+      '/api/chart-data/${Uri.encodeComponent(symbol)}',
+      query: {'bars': '$bars'},
+    );
+  }
+
+  /// `GET /api/pattern-analysis/<sym>?fast=1` — §16.1 (Bearer)
+  Future<Map<String, dynamic>> fetchPatternAnalysis(
+    String symbol, {
+    bool fast = true,
+  }) {
+    return get(
+      '/api/pattern-analysis/${Uri.encodeComponent(symbol)}',
+      query: {'fast': fast ? '1' : '0'},
+    );
+  }
 }

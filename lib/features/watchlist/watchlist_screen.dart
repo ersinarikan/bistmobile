@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
+import '../stock/stock_detail_screen.dart';
 import 'watchlist_controller.dart';
 
 class WatchlistScreen extends StatefulWidget {
@@ -279,6 +280,9 @@ class _WatchlistTile extends StatelessWidget {
         ].join(' · '),
         style: const TextStyle(color: LotlotColors.textSecondary),
       ),
+      onTap: symbol.isEmpty
+          ? null
+          : () => openStockDetail(context, symbol: symbol, name: name),
       trailing: IconButton(
         tooltip: 'Kaldır',
         icon: const Icon(Icons.remove_circle_outline, color: LotlotColors.danger),
@@ -319,71 +323,77 @@ class _PredictionCard extends StatelessWidget {
     final displayState = signal?['display_state']?.toString();
     final stale = pred['stale'] == true;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: LotlotColors.surface,
-        borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-        border: Border.all(color: LotlotColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  symbol,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
+    return InkWell(
+      onTap: symbol.isEmpty
+          ? null
+          : () => openStockDetail(context, symbol: symbol),
+      borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: LotlotColors.surface,
+          borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+          border: Border.all(color: LotlotColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    symbol,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
-              ),
-              if (overall != null)
-                Text(
-                  overall,
-                  style: const TextStyle(
-                    color: LotlotColors.accent,
-                    fontWeight: FontWeight.w700,
+                if (overall != null)
+                  Text(
+                    overall,
+                    style: const TextStyle(
+                      color: LotlotColors.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
+              ],
+            ),
+            if (label != null) ...[
+              const SizedBox(height: 6),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
             ],
-          ),
-          if (label != null) ...[
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-          ],
-          if (summary != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              summary,
-              style: const TextStyle(
-                color: LotlotColors.textSecondary,
-                height: 1.4,
+            if (summary != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                summary,
+                style: const TextStyle(
+                  color: LotlotColors.textSecondary,
+                  height: 1.4,
+                ),
               ),
-            ),
-          ],
-          if (displayState != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              displayState.replaceAll('_', ' '),
-              style: const TextStyle(
-                fontSize: 12,
-                color: LotlotColors.textSecondary,
+            ],
+            if (displayState != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                displayState.replaceAll('_', ' '),
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: LotlotColors.textSecondary,
+                ),
               ),
-            ),
-          ],
-          if (stale)
-            const Padding(
-              padding: EdgeInsets.only(top: 6),
-              child: Text(
-                'Veri güncel olmayabilir',
-                style: TextStyle(color: LotlotColors.warning, fontSize: 12),
+            ],
+            if (stale)
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text(
+                  'Veri güncel olmayabilir',
+                  style: TextStyle(color: LotlotColors.warning, fontSize: 12),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

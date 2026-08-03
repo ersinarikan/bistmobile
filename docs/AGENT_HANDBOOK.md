@@ -44,8 +44,8 @@ flowchart TD
 |-----|------|--------|------|
 | **F0** | Temel / kalite iskeleti | Tamam (tema web hizalı; INTERNET; display name) | Hayır |
 | **F1** | Auth tamam | Tamam (e-posta+Turnstile+Google+Apple E2E; `/me` tier okuma) | Hayır |
-| **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist; F3 placeholder) | Hayır |
-| **F3** | Hisse detay | Bekliyor | Hayır |
+| **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist) | Hayır |
+| **F3** | Hisse detay | Tamam (public kartlar + mum/MA + auth pattern) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Bekliyor | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Bekliyor | Satın alma yok |
 | **F6** | IAP paywall | Bekliyor | **Evet** |
@@ -98,7 +98,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Skills:** `project-manager`, `clean-mobile-dev`, `ux-expert`.
 - **Acceptance:**
   - [x] **Guest browse:** oturum yokken ana shell açılır (zorunlu login yok); ara / BIST özet / hisse listesi public API ile
-  - [x] Guest → hisse satırına dokununca F3 teaser’a gidebilir (veya F3 gelene kadar “yakında” + Giriş Yap)
+  - [x] Guest → hisse satırına dokununca F3 detay açılır
   - [x] Guest’te watchlist mutation / predictions → net “Giriş yap” / kayıt CTA (sessiz 401 yok)
   - [x] Auth: watchlist CRUD + hata/403/kota mesajları sunucudan
   - [x] Auth: predictions listesi render-only (`display_state`, horizons)
@@ -112,15 +112,18 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Amaç:** Public teaser (**guest OK**) + auth analiz; Adil Değer ayrı (guide §17.2, §22).
 - **Ekranlar:** Stock detail (özet + kartlar + sade grafik).
 - **API (guest):** `/api/public/stocks/<sym>/valuation|fundamentals|corporate`; `/api/public/chart-data`.
-- **API (auth):** `/api/pattern-analysis`, `/api/chart-data`, batch uçları.
-- **Skills:** `seo-expert` (deep link hazırlığı), Android/iOS FS.
+- **API (auth):** `/api/pattern-analysis`, `/api/chart-data` (levels).
+- **Skills:** `seo-expert` (deep link hazırlığı F7), Android/iOS FS.
 - **Acceptance:**
-  - [ ] Guest hisse detay: public kartlar + grafik teaser; auth-only bloklarda “Giriş yap” CTA
-  - [ ] Valuation ayrı çağrı; yoksa kart gizli
-  - [ ] Mum + MA (sade); web drawing suite **yok**
-  - [ ] Pattern/signal alanları olduğu gibi (auth)
-  - [ ] Disclaimer görünür
-- **Dışı:** Fib/Gann/Elliott çizim motoru.
+  - [x] Guest hisse detay: public kartlar + grafik teaser; auth-only bloklarda “Giriş yap” CTA
+  - [x] Valuation ayrı çağrı; yoksa kart gizli
+  - [x] Mum + MA (sade); web drawing suite **yok**
+  - [x] Pattern/signal alanları olduğu gibi (auth); `pending` → loading/empty
+  - [x] Disclaimer görünür
+  - [x] Browse / watchlist / prediction satırı → `StockDetailScreen`; placeholder kaldırıldı
+- **Pre-dev not (2026-08-03):** Public chart `ohlcv[]` + `time` (unix); valuation/fundamentals/corporate alanları guide ile uyumlu (THYAO canlı GET).
+- **Post-dev matris:** S1 guest THYAO public+CTA; S2 valuation unavailable gizli; S3 auth pattern+levels; S4 pending crash yok; S5 watchlist tap; S6 public `auth:false`; S7 disclaimer.
+- **Dışı:** Fib/Gann/Elliott çizim motoru; chart-alerts (F5); deep link aasa (F7).
 - **Risk:** Cache/`pending` analiz — loading/empty states.
 
 #### F4 — Hesap / yasal / bütünlük
@@ -282,6 +285,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ## 4. Yapılanlar (kronoloji)
 
+### v15 (2026-08-03) — F3 hisse detay
+
+- `StockDetailScreen` + controller: public valuation/fundamentals/corporate/chart paralel; auth pattern + chart levels
+- `fl_chart` mum + SMA(20) overlay; boş kartlar gizli; disclaimer
+- Browse / watchlist / prediction → detail; placeholder sheet kaldırıldı
+- Post-dev: S1–S7 matris; public `auth:false`; P7 fixed
+
 ### v1 (2026-08-03) — ilk push
 
 - Flutter iskelet: auth/session, splash, login, home
@@ -380,7 +390,8 @@ sonar-scanner
 
 - [x] lotlot.net SSH (`~/.ssh/id_ed25519_lotlot` → `root@lotlot.net`)
 - [x] F2: guest browse + watchlist — bkz. **§0**
-- [ ] F3+: hisse detay, hesap, Pro/push, IAP — bkz. **§0**
+- [x] F3: hisse detay (public + auth pattern) — bkz. **§0**
+- [ ] F4+: hesap, Pro/push, IAP — bkz. **§0**
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 
 ### 7.1 Parity review (2026-08-03) — F0–F2
@@ -395,7 +406,7 @@ Kaynak: prod `api_auth_routes.py` / `login_protection.py` / `api_watchlist_route
 | P4 | Med | Login `invalid_credentials`+`captcha_required` | Guide: köprü aç | Köprü açılır; yanlış şifre metni bazen atlanır | **fixed** — mesaj korunur + köprü |
 | P5 | Med | `email_already_registered` CTA | Web: girişe yönlendir | Mesaj var, tek tık Giriş butonu yok | **fixed** — Giriş yap CTA + SnackBar |
 | P6 | Med | Watchlist alert/PATCH | Web alert alanları | F2 MVP add/delete only; PATCH API var UI yok | deferred (F5) |
-| P7 | Med | Hisse detay | Web `/hisse/...` | Placeholder sheet | deferred (**F3**) |
+| P7 | Med | Hisse detay | Web `/hisse/...` | `StockDetailScreen` + public/auth API | **fixed** (F3) |
 | P8 | Low | `oauth_failed` / `token_issue_failed` map | Anlaşılır mesaj | Ham/genel | **fixed** — friendly map |
 | P9 | Low | Browse yoğunluk | Web `/stocks` zengin | Screener+search yeterli F2 | OK / F3 zenginleştirir |
 | P10 | — | Guest Bearer | Public `auth:false` | search/screener `auth:false` | OK |
@@ -404,9 +415,9 @@ Kaynak: prod `api_auth_routes.py` / `login_protection.py` / `api_watchlist_route
 | P13 | — | Predictions | Render-only | `display_state`/`label` | OK |
 | P14 | — | Token log | Yok | Grep temiz | OK |
 
-**Critical:** yok (F3 geçiş blocker yok).
+**Critical:** yok.
 
-**Bu turda düzeltilen:** P1, P2, P8; polish P3–P5 (v14).
+**Bu turda düzeltilen:** P7 (F3 hisse detay).
 
 ## 8. Dokunulmaması gerekenler
 

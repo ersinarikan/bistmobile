@@ -9,7 +9,7 @@ Hedef remote: **https://github.com/ersinarikan/bistmobile**
 
 Bu projedeki anlamlı geliştirme işi bittiğinde (kullanıcı “commit etme” demese bile, iş teslimi için):
 
-0. **Kalite kapısı** — `quality-gate-pre-push` kuralı: önce `flutter analyze`, sonra `sonar-scanner`. Fail ise commit/push yok.
+0. **Kalite kapısı** — `quality-gate-pre-push`: `pub get` çıktısını sınıflandır (bilgi vs gerçek hata) → `flutter analyze` → `sonar-scanner`. Fail ise commit/push yok.
 1. **Local commit** — anlamlı mesaj; secret / `.env` / key / `SONAR_TOKEN` commit etme.
 2. **Sıralı tag** — mevcut tag’lere bak; bir sonraki numarayı ver.
    - Tercih: `v1`, `v2`, `v3`, … (yoksa ilk tag `v1`).
