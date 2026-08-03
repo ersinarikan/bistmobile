@@ -15,6 +15,7 @@ class WatchlistController extends ChangeNotifier {
   bool loading = false;
   bool mutating = false;
   String? lastError;
+  ApiException? lastApiError;
 
   int? get activeCount {
     final v = subscription?['watchlist_active_count'];
@@ -137,11 +138,40 @@ class WatchlistController extends ChangeNotifier {
     }
   }
 
+  Future<bool> setAlertEnabled(String symbol, bool enabled) async {
+    mutating = true;
+    lastError = null;
+    lastApiError = null;
+    notifyListeners();
+    try {
+      await _api.patchWatchlist(
+        symbol.toUpperCase(),
+        body: {'alert_enabled': enabled},
+      );
+      await refresh();
+      return true;
+    } on ApiException catch (e) {
+      lastApiError = e;
+      lastError = _friendly(e);
+      mutating = false;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      lastError = e.toString();
+      mutating = false;
+      notifyListeners();
+      return false;
+    } finally {
+      mutating = false;
+    }
+  }
+
   void clear() {
     items = [];
     predictions = [];
     subscription = null;
     lastError = null;
+    lastApiError = null;
     loading = false;
     notifyListeners();
   }

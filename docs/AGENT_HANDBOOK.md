@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F4 cila)
+> Son güncelleme: 2026-08-03 (F5 Pro + push çekirdek)
 
 ---
 
@@ -47,7 +47,7 @@ flowchart TD
 | **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist) | Hayır |
 | **F3** | Hisse detay | Tamam (public kartlar + mum/MA + auth pattern) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
-| **F5** | Pro yüzey + push (satın alma yok) | Bekliyor | Satın alma yok |
+| **F5** | Pro yüzey + push (satın alma yok) | Tamam çekirdek (soft gate, chart alerts, FCM/Socket; wizard/AI dışı) | Satın alma yok |
 | **F6** | IAP paywall | Bekliyor | **Evet** |
 | **F7** | Mağaza teslimi | Bekliyor | Hazır olmalı |
 
@@ -150,33 +150,23 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 #### F5 — Pro yüzey + push (satın alma yok)
 
 - **Amaç:** Tier’a göre gated özellikler + **Premium gerçek zamanlı / push bildirimleri**; **satın alma F6’da**.
-- **Ekranlar:** Soft gate (“Pro/Premium gerekir”); Chart alerts; AI commentary; Hisse Sihirbazı; **OS bildirim izni + push onboarding**.
-- **API:** guide §13–§16, §18, **§25 Premium bildirimler**; `device/register|unregister`; chart-alerts (`channels_allowed.push` yalnız Premium); Socket.IO.
-- **Skills:** Android/iOS FS (FCM/APNs), `cybersecurity-expert`, `ux-expert`.
-- **Tier özeti (entitlement yalnızca `/me`):**
-  | Tier | Mobilde tipik | Push (FCM / Socket) |
-  |------|---------------|---------------------|
-  | Free | Temel watchlist / public | Yok |
-  | Pro | Chart alerts (e-posta), Pro API | Chart `notify_push` **yok**; sinyal push yok |
-  | Premium | + wizard, push kanalları | **Evet** — watchlist `alert_enabled` + `push_notifications` |
-- **Mobil ne yapar (backend tetikler, istemci dinler/kaydeder):**
-  1. OS izni iste (iOS `UNUserNotificationCenter` / Android 13+ `POST_NOTIFICATIONS`) — **context’li** (Premium + uyarı açınca; cold-start spam yok).
-  2. Firebase Messaging ile **FCM registration token** al (iOS’ta APNs → FCM köprüsü).
-  3. Premium + `push_notifications=true` → `POST /api/notifications/device/register` `{ token, platform: ios|android }`.
-  4. **Arka plan / kapalı:** sunucu FCM gönderir → sistem tepsisi; tap → `data.deep_link` ile in-app rota.
-  5. **Ön plan (canlı):** Socket.IO `https://lotlot.net` path `/socket.io`, `auth: { token }`, `join_user` → `actionable_alert` dinle (yerel banner/in-app; web push **kullanılmaz**).
-  6. Logout / izin iptali / tier düşüşü → `device/unregister`; token yenilenince yeniden register.
-- **Acceptance:**
-  - [ ] `pro_required` / `premium_required` → net UX (henüz IAP sheet yok)
-  - [ ] OS bildirim izni akışı (iOS + Android 13+)
-  - [ ] FCM register (Premium); logout / unregister; token refresh
-  - [ ] Foreground Socket.IO `actionable_alert` (opsiyonel ama roadmap’te)
-  - [ ] Deep link handler (`data.deep_link`)
-  - [ ] Web abonelik `/me` ile okunur; client tier uydurmaz
-  - [ ] Privacy Manifest / Data safety: push token bildirimi
-- **Dışı:** StoreKit/Play purchase sheet; VAPID / web-push subscribe (PWA-only).
-- **Risk:** Entitlement client’ta fake “pro yapma”; izinsiz push; Free/Pro’ya register denemek (403).
-- **Durum (2026-08-03):** Yol haritasında; **kod yok** (`lib/` FCM/Socket yok). F0–F1 sonrası sırada F5’te uygulanır.
+- **Bu turda (çekirdek):** Soft gate; Chart alerts; watchlist `alert_enabled`; OS izni + FCM register; Socket `actionable_alert`; `deep_link` → hisse detay.
+- **Ertelenen dilim:** Hisse Sihirbazı UI; AI commentary UI.
+- **API:** §18.3 chart-alerts; §25 `device/register|unregister`; Socket.IO.
+- **Firebase:** `android/app/google-services.json` + `ios/Runner/GoogleService-Info.plist` **gitignore**. Yoksa init no-op + hesap uyarısı (S7).
+- **Acceptance (çekirdek):**
+  - [x] `pro_required` / `premium_required` → soft gate (IAP yok)
+  - [x] OS bildirim izni akışı (context’li; Premium + push)
+  - [x] FCM register (Premium + push on); logout unregister; token refresh path
+  - [x] Foreground Socket.IO `actionable_alert` banner
+  - [x] Deep link handler (`data.deep_link` → StockDetail)
+  - [x] Tier `/me` — client uydurmaz
+  - [x] Privacy Manifest / Data safety notu (aşağı)
+- **Firebase ekleme:** Console’dan iOS/Android app → dosyaları yerel yollara koy → rebuild. Commit etme.
+- **Privacy / Data safety:** FCM registration token = cihaz tanımlayıcı; App Privacy / Play Data safety’de bildirim + identifiers. Token loglanmaz.
+- **Post-dev matris:** S1–S10 (plan).
+- **Dışı:** StoreKit/Play purchase; VAPID/web-push; wizard/AI.
+- **Risk:** Entitlement fake yok; Free/Pro `device/register` client guard.
 
 #### F6 — IAP paywall
 
@@ -291,6 +281,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v19 (2026-08-03) — F5 Pro + push çekirdek
+
+- Soft gate; chart alerts CRUD; watchlist `alert_enabled`
+- Firebase optional (gitignore configs); FCM register; Socket actionable_alert; deep_link
+- Privacy/Data safety notu; wizard/AI ertelendi
 
 ### v18 (2026-08-03) — F4 cila
 
@@ -416,7 +412,9 @@ sonar-scanner
 - [x] F2: guest browse + watchlist — bkz. **§0**
 - [x] F3: hisse detay (public + auth pattern) — bkz. **§0**
 - [x] F4: hesap / yasal / bildirim prefs — bkz. **§0**
-- [ ] F5+: Pro/push, IAP — bkz. **§0**
+- [x] F5 çekirdek: soft gate + chart alerts + push/socket — bkz. **§0**
+- [ ] F5 dilim: wizard / AI commentary
+- [ ] F6+: IAP — bkz. **§0**
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 
 ### 7.1 Parity review (2026-08-03) — F0–F2
@@ -430,7 +428,7 @@ Kaynak: prod `api_auth_routes.py` / `login_protection.py` / `api_watchlist_route
 | P3 | Med | Bootstrap 5xx/ağ | Soft retry / “yeniden dene” | Guest shell + token kalır; splash retry yok | **fixed** — splash Yeniden dene + Misafir |
 | P4 | Med | Login `invalid_credentials`+`captcha_required` | Guide: köprü aç | Köprü açılır; yanlış şifre metni bazen atlanır | **fixed** — mesaj korunur + köprü |
 | P5 | Med | `email_already_registered` CTA | Web: girişe yönlendir | Mesaj var, tek tık Giriş butonu yok | **fixed** — Giriş yap CTA + SnackBar |
-| P6 | Med | Watchlist alert/PATCH | Web alert alanları | F2 MVP add/delete only; PATCH API var UI yok | deferred (F5) |
+| P6 | Med | Watchlist alert/PATCH | Web alert alanları | `alert_enabled` UI + soft gate | **fixed** (F5) |
 | P7 | Med | Hisse detay | Web `/hisse/...` | `StockDetailScreen` + public/auth API | **fixed** (F3) |
 | P8 | Low | `oauth_failed` / `token_issue_failed` map | Anlaşılır mesaj | Ham/genel | **fixed** — friendly map |
 | P9 | Low | Browse yoğunluk | Web `/stocks` zengin | Screener+search yeterli F2 | OK / F3 zenginleştirir |

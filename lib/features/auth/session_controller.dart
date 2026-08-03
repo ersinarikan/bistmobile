@@ -34,6 +34,15 @@ class SessionController extends ChangeNotifier {
   Map<String, dynamic>? subscription;
   String? lastError;
 
+  bool get isPro => subscription?['is_pro'] == true;
+  bool get isPremium => subscription?['is_premium'] == true;
+  bool get pushNotificationsOn => user?['push_notifications'] == true;
+  String? get userId {
+    final id = user?['id'];
+    if (id == null) return null;
+    return id.toString();
+  }
+
   /// Son API `error` kodu (UI CTA için — örn. email_already_registered).
   String? lastErrorCode;
 

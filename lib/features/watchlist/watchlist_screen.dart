@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
+import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
 import 'watchlist_controller.dart';
 
@@ -265,6 +266,9 @@ class _WatchlistTile extends StatelessWidget {
     final name = item['name']?.toString();
     final active = item['active'] != false;
     final reason = item['disabled_reason']?.toString();
+    final alertOn = item['alert_enabled'] == true;
+    final session = context.watch<SessionController>();
+    final wl = context.watch<WatchlistController>();
 
     return ListTile(
       contentPadding: EdgeInsets.zero,
@@ -279,31 +283,72 @@ class _WatchlistTile extends StatelessWidget {
         [
           ?name,
           if (!active && reason != null) 'Pasif ($reason)',
+          if (alertOn) 'Sinyal uyarısı açık',
         ].join(' · '),
         style: const TextStyle(color: LotlotColors.textSecondary),
       ),
       onTap: symbol.isEmpty
           ? null
           : () => openStockDetail(context, symbol: symbol, name: name),
-      trailing: IconButton(
-        tooltip: 'Kaldır',
-        icon: const Icon(Icons.remove_circle_outline, color: LotlotColors.danger),
-        onPressed: symbol.isEmpty
-            ? null
-            : () async {
-                final ok = await context
-                    .read<WatchlistController>()
-                    .removeSymbol(symbol);
-                if (!context.mounted) return;
-                if (!ok) {
-                  final err = context.read<WatchlistController>().lastError;
-                  if (err != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(err)),
-                    );
-                  }
-                }
-              },
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            tooltip: alertOn ? 'Sinyal uyarısını kapat' : 'Sinyal uyarısını aç',
+            icon: Icon(
+              alertOn ? Icons.notifications_active : Icons.notifications_none,
+              color: alertOn ? LotlotColors.accent : LotlotColors.textSecondary,
+            ),
+            onPressed: symbol.isEmpty || wl.mutating
+                ? null
+                : () async {
+                    if (!session.isPremium) {
+                      await showSoftGateSheet(
+                        context,
+                        kind: SoftGateKind.premium,
+                      );
+                      return;
+                    }
+                    final ok = await wl.setAlertEnabled(symbol, !alertOn);
+                    if (!context.mounted) return;
+                    if (!ok) {
+                      final apiErr = wl.lastApiError;
+                      if (apiErr != null &&
+                          tryShowSoftGateForApiError(context, apiErr)) {
+                        return;
+                      }
+                      if (wl.lastError != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(wl.lastError!)),
+                        );
+                      }
+                    }
+                  },
+          ),
+          IconButton(
+            tooltip: 'Kaldır',
+            icon: const Icon(
+              Icons.remove_circle_outline,
+              color: LotlotColors.danger,
+            ),
+            onPressed: symbol.isEmpty
+                ? null
+                : () async {
+                    final ok = await context
+                        .read<WatchlistController>()
+                        .removeSymbol(symbol);
+                    if (!context.mounted) return;
+                    if (!ok) {
+                      final err = context.read<WatchlistController>().lastError;
+                      if (err != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(err)),
+                        );
+                      }
+                    }
+                  },
+          ),
+        ],
       ),
     );
   }

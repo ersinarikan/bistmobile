@@ -6,7 +6,9 @@ import '../../core/legal/legal_urls.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
+import '../chart_alerts/chart_alerts_screen.dart';
 import '../watchlist/watchlist_controller.dart';
+import '../../core/push/push_service.dart';
 
 /// F4 Hesap / yasal — auth: profil+tercihler; guest: yasal + giriş.
 class AccountSettingsScreen extends StatefulWidget {
@@ -224,13 +226,24 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Cihaz bildirimi sonraki sürümde. Bu ayarlar hesap tercihini kaydeder.',
+                    'Cihaz bildirimi Premium + bu tercih açıkken FCM ile kaydedilir. '
+                    'Firebase config yoksa kayıt atlanır.',
                     style: TextStyle(
                       color: LotlotColors.textSecondary,
                       fontSize: 12,
                       height: 1.35,
                     ),
                   ),
+                  if (context.watch<PushService>().statusMessage != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      context.watch<PushService>().statusMessage!,
+                      style: const TextStyle(
+                        color: LotlotColors.warning,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -324,7 +337,36 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
           ),
           if (auth) ...[
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            Text(
+              'Pro özellikler',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            _SurfaceCard(
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Grafik uyarıları'),
+                subtitle: const Text(
+                  'Pro+ teknik koşul uyarıları',
+                  style: TextStyle(
+                    color: LotlotColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const ChartAlertsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
             OutlinedButton(
               onPressed: _logout,
               child: const Text('Çıkış yap'),

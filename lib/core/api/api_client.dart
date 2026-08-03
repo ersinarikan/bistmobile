@@ -400,4 +400,46 @@ class ApiClient {
       query: {'fast': fast ? '1' : '0'},
     );
   }
+
+  /// `GET /api/chart-alerts/limits` — §18.3 (Pro+)
+  Future<Map<String, dynamic>> fetchChartAlertLimits() {
+    return get('/api/chart-alerts/limits');
+  }
+
+  /// `GET /api/chart-alerts` — §18.3
+  Future<Map<String, dynamic>> fetchChartAlerts({String? symbol}) {
+    return get(
+      '/api/chart-alerts',
+      query: symbol != null ? {'symbol': symbol} : null,
+    );
+  }
+
+  /// `POST /api/chart-alerts` — §18.3
+  Future<Map<String, dynamic>> createChartAlert(Map<String, dynamic> body) {
+    return post('/api/chart-alerts', body: body);
+  }
+
+  /// `DELETE /api/chart-alerts/<id>` — §18.3
+  Future<Map<String, dynamic>> deleteChartAlert(String id) {
+    return delete('/api/chart-alerts/${Uri.encodeComponent(id)}');
+  }
+
+  /// `POST /api/notifications/device/register` — §25 (Premium)
+  Future<Map<String, dynamic>> registerDevice({
+    required String token,
+    required String platform,
+  }) {
+    return post(
+      '/api/notifications/device/register',
+      body: {'token': token, 'platform': platform},
+    );
+  }
+
+  /// `POST /api/notifications/device/unregister` — §25
+  Future<Map<String, dynamic>> unregisterDevice({String? token}) {
+    return post(
+      '/api/notifications/device/unregister',
+      body: {'token': ?token},
+    );
+  }
 }
