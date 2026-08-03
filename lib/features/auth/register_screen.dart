@@ -75,6 +75,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         MaterialPageRoute<void>(
           builder: (_) => VerifyEmailPendingScreen(
             email: _email.text.trim(),
+            verificationEmailSent: session.lastVerificationEmailSent ?? true,
           ),
         ),
       );

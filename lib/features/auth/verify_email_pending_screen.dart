@@ -6,9 +6,16 @@ import 'session_controller.dart';
 
 /// Kayıt sonrası e-posta doğrulama bekleme — JWT yok (§5).
 class VerifyEmailPendingScreen extends StatefulWidget {
-  const VerifyEmailPendingScreen({super.key, required this.email});
+  const VerifyEmailPendingScreen({
+    super.key,
+    required this.email,
+    this.verificationEmailSent = true,
+  });
 
   final String email;
+
+  /// API `verification_email_sent` — false ise abartılı “gönderdik” dili yok.
+  final bool verificationEmailSent;
 
   @override
   State<VerifyEmailPendingScreen> createState() =>
@@ -28,13 +35,27 @@ class _VerifyEmailPendingScreenState extends State<VerifyEmailPendingScreen> {
     final session = context.read<SessionController>();
     final ok = await session.resendVerification(email: widget.email);
     if (!mounted) return;
+    final sent = session.lastVerificationEmailSent == true;
     setState(() {
       _resending = false;
-      _bannerOk = ok;
-      _banner = ok
-          ? 'Doğrulama e-postası gönderildi.'
-          : (session.lastError ?? 'Gönderilemedi');
+      _bannerOk = ok && sent;
+      _banner = session.lastError ??
+          (ok
+              ? (sent
+                  ? 'Doğrulama e-postası gönderildi.'
+                  : 'E-posta şu an gönderilemedi.')
+              : 'Gönderilemedi');
     });
+  }
+
+  String get _bodyCopy {
+    if (widget.verificationEmailSent) {
+      return '${widget.email} adresine bir doğrulama bağlantısı gönderdik. '
+          'Bağlantıya tıkladıktan sonra giriş yapabilirsiniz.';
+    }
+    return 'Hesabınız oluşturuldu ancak doğrulama e-postası şu an '
+        'gönderilemedi (${widget.email}). Aşağıdan yeniden deneyin; '
+        'bağlantıya tıkladıktan sonra giriş yapabilirsiniz.';
   }
 
   @override
@@ -48,10 +69,12 @@ class _VerifyEmailPendingScreenState extends State<VerifyEmailPendingScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
+            Icon(
               Icons.mark_email_unread_outlined,
               size: 64,
-              color: LotlotColors.accent,
+              color: widget.verificationEmailSent
+                  ? LotlotColors.accent
+                  : LotlotColors.warning,
             ),
             const SizedBox(height: 24),
             Text(
@@ -61,8 +84,7 @@ class _VerifyEmailPendingScreenState extends State<VerifyEmailPendingScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              '${widget.email} adresine bir doğrulama bağlantısı gönderdik. '
-              'Bağlantıya tıkladıktan sonra giriş yapabilirsiniz.',
+              _bodyCopy,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: LotlotColors.textSecondary,

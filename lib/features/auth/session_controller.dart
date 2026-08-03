@@ -34,6 +34,9 @@ class SessionController extends ChangeNotifier {
   Map<String, dynamic>? subscription;
   String? lastError;
 
+  /// Son register/resend yanıtındaki `verification_email_sent` (§5).
+  bool? lastVerificationEmailSent;
+
   void setError(String? message) {
     lastError = message;
     notifyListeners();
@@ -123,6 +126,7 @@ class SessionController extends ChangeNotifier {
     String? turnstileToken,
   }) async {
     lastError = null;
+    lastVerificationEmailSent = null;
     notifyListeners();
     try {
       final data = await _api.register(
@@ -135,6 +139,7 @@ class SessionController extends ChangeNotifier {
       // 201 pending_verification — JWT yok
       if (data['status']?.toString() == 'pending_verification' ||
           data['verification_required'] == true) {
+        lastVerificationEmailSent = data['verification_email_sent'] == true;
         notifyListeners();
         return RegisterResult.pendingVerification;
       }
@@ -212,10 +217,19 @@ class SessionController extends ChangeNotifier {
 
   Future<bool> resendVerification({required String email}) async {
     lastError = null;
+    lastVerificationEmailSent = null;
     notifyListeners();
     try {
       final data = await _api.resendVerification(email: email);
-      lastError = data['message']?.toString();
+      lastVerificationEmailSent = data['verification_email_sent'] == true;
+      // Guide: 200 generic; mobilde sent bayrağına göre kopya ayır (R3b / V2)
+      if (lastVerificationEmailSent == true) {
+        lastError = data['message']?.toString() ??
+            'Doğrulama e-postası gönderildi.';
+      } else {
+        lastError =
+            'Doğrulama e-postası şu an gönderilemedi. Biraz sonra tekrar deneyin.';
+      }
       notifyListeners();
       return true;
     } on ApiException catch (e) {
@@ -277,6 +291,17 @@ class SessionController extends ChangeNotifier {
       case 'already_registered':
       case 'email_already_registered':
         return 'Bu e-posta ile kayıtlı bir hesap var. Giriş yapmayı deneyin.';
+      case 'email_and_password_required':
+        return 'E-posta ve şifre gerekli.';
+      case 'email_required':
+        return 'E-posta gerekli.';
+      case 'invalid_email':
+        return 'Geçerli bir e-posta adresi girin.';
+      case 'weak_password':
+        return 'Şifre en az 8 karakter olmalı.';
+      case 'register_failed':
+      case 'server_error':
+        return 'Kayıt şu an tamamlanamadı. Biraz sonra tekrar deneyin.';
       case 'invalid_oauth_token':
         return 'Apple/Google doğrulanamadı. Biraz sonra tekrar deneyin.';
       case 'id_token_required':
@@ -287,8 +312,10 @@ class SessionController extends ChangeNotifier {
         return 'Hesap pasif. Destek ile iletişime geçin.';
       case 'invalid_turnstile':
         return 'Güvenlik doğrulaması geçersiz veya süresi doldu. Tekrar deneyin.';
+      case 'captcha_required':
+        return 'Güvenlik doğrulaması gerekli. Lütfen tekrar deneyin.';
       default:
-        return e.message;
+        return e.message.isNotEmpty ? e.message : 'İstek başarısız';
     }
   }
 }

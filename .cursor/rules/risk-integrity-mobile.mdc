@@ -23,6 +23,7 @@ Net risk varsa önce daralt (daha küçük patch) veya kullanıcıya söyle; “
 - Dokunduğun özellik + doğrudan bağlı akışları zihinsel / test ile kontrol et.
 - Ortak helper’ı değiştirirken tüm çağıranları tara (`Grep` / kullanım yerleri).
 - Platform-özel dosya değiştiyse diğer platform eşleniğini de gözden geçir (simetri veya bilinçli fark).
+- Davranış değiştiyse **`test-and-review`** + **`test-engineer`** (senaryo matrisi); analyze tek başına yetmez.
 
 ## Yapma
 

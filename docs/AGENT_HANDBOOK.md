@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F2 guest browse + watchlist)
+> Son güncelleme: 2026-08-03 (register error map + verification_email_sent UX)
 
 ---
 
@@ -228,14 +228,15 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 Hepsi `alwaysApply: true` (özet):
 
 1. **web-server-ssh** — Canlı sunucu www.lotlot.net; SSH ile teşhis (yazma/restart izinsiz yok). Kod referansı için önce BIST repo.
-2. **clean-mobile-dev** — Temiz kod; gereksiz kod yok; anlaşılır “neden” comment’leri.
+2. **clean-mobile-dev** — Temiz kod; gereksiz kod yok; anlaşılır “neden” comment’leri; yazınca test/review.
 3. **post-change-refactor** — Değişiklik sonrası ilgili dosyalarda refaktör fırsatını değerlendir.
 4. **web-bist-repo** — Web kodu: ersinarikan/BIST.
 5. **bistmobile-git-flow** — İş bitince: kalite → commit → sıradaki tag (`vN`) → push bistmobile.
-6. **quality-gate-pre-push** — Commit/push öncesi `flutter analyze` + `sonar-scanner` (SONAR_TOKEN).
+6. **quality-gate-pre-push** — Commit/push öncesi: **test+review** + `flutter analyze` + `sonar-scanner`.
 7. **risk-integrity-mobile** — Kod öncesi risk/etki analizi; iOS+Android bütünlüğü; yan etkiyi kırma.
 8. **agent-handbook** — Bu kılavuzu her değişiklik sonrası güncelle (özellikle §0 faz durumu).
 9. **brand-visual-parity** — Renk/tema/font/logo web (`brand.css` / lotlot.net) ile aynı; görsel işi siteden doğrula.
+10. **test-and-review** — Kod yazdıktan sonra senaryo matrisi + self-review zorunlu; analyze yetmez.
 
 ## 2b. Agent skills (`.cursor/skills/`)
 
@@ -249,7 +250,7 @@ Her skill: `SKILL.md` + detay `reference.md`. İlgili konuda otomatik / isteninc
 | `project-manager` | Kapsam, faz, risk, bağımlılık, go/no-go |
 | `cybersecurity-expert` | Appsec, token, OWASP Mobile, secret, sertleştirme |
 | `ux-expert` | Hedefe odaklı UX; jargon/geliştirici notunu UI’dan uzak tut; heuristic review |
-| `test-engineer` | Mobil/API QA; **web↔mobil parity** (her aşamada web kodu); senaryo matrisi; bug → mobil fix |
+| `test-engineer` | Mobil/API QA; **kod yazılınca da** uygula; web↔mobil parity; senaryo matrisi; bug → fix |
 
 ## 3. Mimari (mevcut)
 
@@ -274,8 +275,10 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ### Skills notu (2026-08-03)
 
-- `test-engineer`: web parity zorunlu; prod PREDEPLOY §3 + register `email_already_registered`
-- Kayıt fix: `409 email_already_registered` map + Turnstile sonrası sessiz no-op engeli
+- `test-engineer`: web parity zorunlu; prod PREDEPLOY §3 + register matrisi (reference B1–B5)
+- Kayıt: `email_already_registered` + `invalid_email` / `weak_password` / `rate_limited` map
+- `verification_email_sent` → pending ekran kopyası + resend banner
+- Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
 
@@ -350,11 +353,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 1. İstek → **risk analizi** (platform + çapraz etki)
 2. Hangi **§0 faz**? Acceptance’a bak
-3. Minimal / temiz kod; API guide **oku** (yazma); gerekirse BIST
-4. Bitince: refaktör değerlendirmesi + **§0 durum güncelle**
-5. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push
+3. Minimal / temiz kod; API guide **oku** (yazma); gerekirse BIST/prod
+4. Bitince: **test-and-review** (`test-engineer`: web parity + senaryo matrisi + self-review) → bulguları düzelt
+5. Refaktör değerlendirmesi + **§0 durum güncelle**
+6. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push
 
 ```bash
+# Önce davranış testi/review (kural test-and-review) — sonra:
 flutter analyze
 export SONAR_TOKEN='…'   # ortama; commit etme
 sonar-scanner

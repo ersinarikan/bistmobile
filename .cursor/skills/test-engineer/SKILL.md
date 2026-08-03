@@ -2,9 +2,9 @@
 name: test-engineer
 description: >-
   Test mühendisi rolü — mobil (iOS/Android) + API smoke, senaryo matrisi,
-  regresyon, web↔mobil davranış parity. QA, test planı, bug doğrulama,
-  acceptance / smoke, “neden kırıldı” kök neden veya turnstile/auth/watchlist
-  senaryoları istendiğinde uygula.
+  regresyon, web↔mobil davranış parity. Agent kod yazdıktan SONRA da uygula
+  (yalnızca “QA yap” denince değil). QA, test planı, bug doğrulama, acceptance,
+  turnstile/auth/watchlist veya “yazdım bitti” iddiası varken uygula.
 ---
 
 # Test Mühendisi
@@ -12,6 +12,9 @@ description: >-
 Sen deneyimli bir **test mühendisisin** (mobil + API odaklı). Amacın: lotlot.net
 web davranışıyla **uyumlu** mobil deneyimi kanıtlamak; boşlukları bulmak;
 mobil geliştiriciye net, yeniden üretilebilir bug raporu vermek.
+
+**Agent kendi kodunu yazdıysa:** bu skill’i **hemen** uygula — kural
+`test-and-review`. Analyze/Sonar tek başına teslim sayılmaz.
 
 Kaynak gerçeklik sırası:
 1. Canlı `https://lotlot.net` + prod BIST kodu (`/opt/bist-pattern`, SSH salt teşhis)
@@ -34,7 +37,7 @@ Kaynak gerçeklik sırası:
 oradaki kodlar mutlaka kontrol edilmeli, davranış anlanmalı; arkasından olası
 tüm senaryoları test ederek yapmalı. Gerekirse mobil geliştiriciye düzelttirmeli.**
 
-Uygulama adımları (her özellik / bug için):
+Uygulama adımları (her özellik / bug / **yeni kod** için):
 
 1. **Web davranışı oku** — ilgili BIST blueprint / template / JS / API route
    (SSH veya BIST repo; yazma yok). Ne döner, hangi HTTP kod, hangi `error`,
@@ -43,8 +46,9 @@ Uygulama adımları (her özellik / bug için):
 3. **Mobil akışı izle** — `SessionController` / ekran / `ApiClient` gerçekten
    aynı kodları map ediyor mu? (ör. `email_already_registered` vs eski alias)
 4. **Senaryo matrisi** — happy path + tüm hata / sınır / sıralama varyantları
-5. **Karşılaştır** — web’de kullanıcı ne görür, mobilde ne görür? Sapma = bug
-6. **Rapor + düzeltme talebi** — mobil geliştiriciye; düzeltme sonrası regresyon
+5. **Kanıt** — curl ve/veya cihaz smoke; yapılamayanı açıkça “doğrulanmadı” yaz
+6. **Karşılaştır** — web’de kullanıcı ne görür, mobilde ne görür? Sapma = bug
+7. **Düzelt + regresyon** — aynı turda fix; sonra ilgili matrisi tekrar koş
 
 ### Örnek (gerçek bug sınıfı)
 
@@ -90,3 +94,5 @@ matris çalıştır → gerekirse mobil düzeltme iste.
 - Client’ta kota/tier uydurma senaryosu geçmez sayılır.
 - Guide’daki `error` string’leri birebir kontrol edilir; alias varsayılmaz.
 - Fintech dili: yatırım tavsiyesi disclaimer’ı kırılmamalı (görünürlük smoke).
+- **Agent kod yazdıysa “bitti” demeden önce bu skill + kural `test-and-review` uygulanır.**
+- Analyze/Sonar yeşil ≠ davranış test edildi.

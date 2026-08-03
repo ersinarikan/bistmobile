@@ -1,11 +1,18 @@
 ---
-description: Commit/push öncesi zorunlu linter + SonarQube kalite kapısı
+description: Commit/push öncesi linter + Sonar + test/review kanıtı
 alwaysApply: true
 ---
 
 # Kalite kapısı (commit / push öncesi)
 
 **Her local commit ve her push’tan önce** şu kontrolleri çalıştır. Biri kırmızıysa commit/push yapma; önce düzelt.
+
+## 0) Test + review (zorunlu — analyze’den önce veya birlikte)
+
+Kural **`test-and-review`**: dokunduğun akış için web/API referansı + senaryo matrisi + self-review tamamlanmadan “yeşil analyze” yetmez.
+
+- Bulunan bug aynı turda düzeltilir.
+- Cihazda koşulamayan smoke açıkça belirtilir; kod+API review yine yapılır.
 
 ## 1) Linter (zorunlu)
 
@@ -35,3 +42,4 @@ Kalite yeşil → kural 5 (`bistmobile-git-flow`): commit → sıradaki tag → 
 
 - Scanner / token yoksa: kur / kullanıcıdan `SONAR_TOKEN` iste; **atlayarak push etme**.
 - Sadece doküman/kural metni gibi analiz dışı mini değişikliklerde bile `flutter analyze` çalıştır; Sonar’ı anlamlı kod değişikliğinde zorunlu tut, saf markdown-only için kullanıcıya sor.
+- Saf kural/skill/markdown-only commit’te senaryo matrisi gerekmez; `lib/` veya davranış dokunuşunda gerekir.
