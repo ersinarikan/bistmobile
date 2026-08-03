@@ -6,7 +6,7 @@ import '../../core/theme/app_theme.dart';
 
 enum SoftGateKind { pro, premium }
 
-/// Pro/Premium soft gate — IAP yok (F6); web veya “yakında mağaza”.
+/// Pro/Premium soft gate — IAP yok (F6); yeni satış yok, web hesap yönetimi OK.
 Future<void> showSoftGateSheet(
   BuildContext context, {
   required SoftGateKind kind,
@@ -15,10 +15,11 @@ Future<void> showSoftGateSheet(
       kind == SoftGateKind.pro ? 'Pro gerekir' : 'Premium gerekir';
   final body = kind == SoftGateKind.pro
       ? 'Bu özellik Pro abonelik ile kullanılabilir. '
-          'Satın alma yakında mağazada; şimdilik web üzerinden planınızı yönetebilirsiniz.'
+          'Uygulama içi satın alma yakında mağazada. '
+          'Web’den alınmış planınız varsa hesabınızı tarayıcıda yönetebilirsiniz.'
       : 'Bu özellik Premium abonelik ile kullanılabilir. '
           'Push uyarıları ve gelişmiş kanallar Premium’dadır. '
-          'Satın alma yakında mağazada.';
+          'Uygulama içi satın alma yakında mağazada.';
 
   return showModalBottomSheet<void>(
     context: context,
@@ -57,13 +58,14 @@ Future<void> showSoftGateSheet(
             ),
             TextButton(
               onPressed: () async {
+                // Yönetim / mevcut web aboneliği — yeni satış checkout değil (§9.3.1).
                 final uri = Uri.parse('https://lotlot.net');
                 try {
                   await launchUrl(uri, mode: LaunchMode.externalApplication);
                 } catch (_) {}
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('lotlot.net’i aç'),
+              child: const Text('Web hesabını aç'),
             ),
           ],
         ),
@@ -82,7 +84,10 @@ bool tryShowSoftGateForApiError(BuildContext context, ApiException e) {
     showSoftGateSheet(context, kind: SoftGateKind.premium);
     return true;
   }
-  if (code == 'pro_required' || msg.contains('pro access required')) {
+  if (code == 'pro_required' ||
+      code == 'chart_alerts_not_available' ||
+      msg.contains('pro access required') ||
+      msg.contains('chart_alerts_not_available')) {
     showSoftGateSheet(context, kind: SoftGateKind.pro);
     return true;
   }

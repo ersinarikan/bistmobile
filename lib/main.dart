@@ -46,6 +46,7 @@ class _LotlotAppState extends State<LotlotApp> {
   AuthStatus? _lastAuth;
   bool? _lastPushOn;
   bool? _lastPremium;
+  bool _sessionBusy = false;
 
   @override
   void initState() {
@@ -58,6 +59,10 @@ class _LotlotAppState extends State<LotlotApp> {
       ..statusMessage = widget.firebaseReady
           ? null
           : 'Firebase yapılandırılmadı (google-services / GoogleService-Info).';
+    if (widget.firebaseReady) {
+      _push.attachMessagingHandlers();
+      _push.addListener(_onPushTokenRefresh);
+    }
     _socket = SocketAlertsClient()
       ..onAlert = showActionableAlertSnack;
     _session.addListener(_onSession);
@@ -72,44 +77,64 @@ class _LotlotAppState extends State<LotlotApp> {
         }
       });
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      flushPendingDeepLink();
+    });
+  }
+
+  void _onPushTokenRefresh() {
+    if (_session.status != AuthStatus.authenticated) return;
+    if (!_session.isPremium || !_session.pushNotificationsOn) return;
+    _push.syncRegistration(
+      isPremium: true,
+      pushOn: true,
+    );
   }
 
   Future<void> _onSession() async {
-    final status = _session.status;
-    if (status != AuthStatus.authenticated) {
-      if (_lastAuth == AuthStatus.authenticated) {
-        await _push.unregisterQuiet();
+    if (_sessionBusy) return;
+    _sessionBusy = true;
+    try {
+      final status = _session.status;
+      if (status != AuthStatus.authenticated) {
+        if (_lastAuth == AuthStatus.authenticated) {
+          await _push.unregisterQuiet(clearAll: true);
+          _socket.disconnect();
+        }
+        _lastAuth = status;
+        _lastPushOn = null;
+        _lastPremium = null;
+        return;
+      }
+
+      final pushOn = _session.pushNotificationsOn;
+      final premium = _session.isPremium;
+      final authChanged = status != _lastAuth;
+      final prefsChanged =
+          pushOn != _lastPushOn || premium != _lastPremium;
+      _lastAuth = status;
+      _lastPushOn = pushOn;
+      _lastPremium = premium;
+
+      if (!authChanged && !prefsChanged) return;
+
+      await _push.syncRegistration(isPremium: premium, pushOn: pushOn);
+      final access = await _tokens.readAccessToken();
+      final uid = _session.userId;
+      if (access != null && uid != null && premium && pushOn) {
+        _socket.connect(accessToken: access, userId: uid);
+      } else {
         _socket.disconnect();
       }
-      _lastAuth = status;
-      _lastPushOn = null;
-      _lastPremium = null;
-      return;
-    }
-
-    final pushOn = _session.pushNotificationsOn;
-    final premium = _session.isPremium;
-    final authChanged = status != _lastAuth;
-    final prefsChanged =
-        pushOn != _lastPushOn || premium != _lastPremium;
-    _lastAuth = status;
-    _lastPushOn = pushOn;
-    _lastPremium = premium;
-
-    if (!authChanged && !prefsChanged) return;
-
-    await _push.syncRegistration(isPremium: premium, pushOn: pushOn);
-    final access = await _tokens.readAccessToken();
-    final uid = _session.userId;
-    if (access != null && uid != null && premium && pushOn) {
-      _socket.connect(accessToken: access, userId: uid);
-    } else {
-      _socket.disconnect();
+    } finally {
+      _sessionBusy = false;
     }
   }
 
   @override
   void dispose() {
+    _push.removeListener(_onPushTokenRefresh);
     _session.removeListener(_onSession);
     _socket.disconnect();
     _session.dispose();

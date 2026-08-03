@@ -16,7 +16,10 @@ class ChartAlertsController extends ChangeNotifier {
   ApiException? lastApiError;
 
   int? get used {
-    final v = limits?['used'] ?? limits?['active_count'] ?? limits?['count'];
+    final v = limits?['used'] ??
+        limits?['active'] ??
+        limits?['active_count'] ??
+        limits?['count'];
     return v is num ? v.toInt() : null;
   }
 
@@ -25,10 +28,11 @@ class ChartAlertsController extends ChangeNotifier {
     return v is num ? v.toInt() : null;
   }
 
+  /// `channels_allowed` yoksa sunucu karar versin (true).
   bool get channelsPushAllowed {
     final ch = limits?['channels_allowed'];
-    if (ch is Map) return ch['push'] == true;
-    return false;
+    if (ch is! Map) return true;
+    return ch['push'] == true;
   }
 
   Future<void> refresh() async {
@@ -38,7 +42,10 @@ class ChartAlertsController extends ChangeNotifier {
     notifyListeners();
     try {
       final lim = await _api.fetchChartAlertLimits();
-      limits = lim;
+      final nested = lim['limits'];
+      limits = nested is Map
+          ? Map<String, dynamic>.from(nested)
+          : Map<String, dynamic>.from(lim);
       final list = await _api.fetchChartAlerts();
       final raw = list['alerts'] ?? list['items'] ?? list['data'];
       alerts = raw is List
@@ -49,7 +56,7 @@ class ChartAlertsController extends ChangeNotifier {
           : [];
     } on ApiException catch (e) {
       lastApiError = e;
-      lastError = e.message;
+      lastError = _friendly(e);
       alerts = [];
       limits = null;
     } catch (e) {
@@ -93,16 +100,13 @@ class ChartAlertsController extends ChangeNotifier {
     } on ApiException catch (e) {
       lastApiError = e;
       lastError = _friendly(e);
-      mutating = false;
-      notifyListeners();
       return false;
     } catch (e) {
       lastError = e.toString();
-      mutating = false;
-      notifyListeners();
       return false;
     } finally {
       mutating = false;
+      notifyListeners();
     }
   }
 
@@ -117,16 +121,13 @@ class ChartAlertsController extends ChangeNotifier {
     } on ApiException catch (e) {
       lastApiError = e;
       lastError = _friendly(e);
-      mutating = false;
-      notifyListeners();
       return false;
     } catch (e) {
       lastError = e.toString();
-      mutating = false;
-      notifyListeners();
       return false;
     } finally {
       mutating = false;
+      notifyListeners();
     }
   }
 
@@ -138,6 +139,8 @@ class ChartAlertsController extends ChangeNotifier {
             : 'Grafik uyarı kotası doldu.';
       case 'chart_alerts_not_available':
         return 'Grafik uyarıları bu planda kullanılamıyor.';
+      case 'push_disabled':
+        return 'Hesapta push kapalı. Hesap ayarlarından açın.';
       default:
         return e.message;
     }

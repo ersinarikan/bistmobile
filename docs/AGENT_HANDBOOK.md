@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F5 Pro + push çekirdek)
+> Son güncelleme: 2026-08-03 (F5 cila: FCM/deep-link/soft-gate)
 
 ---
 
@@ -157,9 +157,11 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Acceptance (çekirdek):**
   - [x] `pro_required` / `premium_required` → soft gate (IAP yok)
   - [x] OS bildirim izni akışı (context’li; Premium + push)
-  - [x] FCM register (Premium + push on); logout unregister; token refresh path
-  - [x] Foreground Socket.IO `actionable_alert` banner
-  - [x] Deep link handler (`data.deep_link` → StockDetail)
+  - [x] FCM register (Premium + push on); logout unregister; `onTokenRefresh` → re-register
+  - [x] Foreground FCM `onMessage` → SnackBar; Socket `actionable_alert` banner
+  - [x] Deep link (`data.deep_link` → StockDetail); cold-start kuyruk + splash flush
+  - [x] Free chart-alerts: soft gate otomatik pop yok (boş + Detay)
+  - [x] Hesap push aç → Premium soft gate; watchlist alert + push kapalı → Hesap yönü
   - [x] Tier `/me` — client uydurmaz
   - [x] Privacy Manifest / Data safety notu (aşağı)
 - **Firebase ekleme:** Console’dan iOS/Android app → dosyaları yerel yollara koy → rebuild. Commit etme.
@@ -281,6 +283,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v20 (2026-08-03) — F5 cila
+- Soft gate auto-pop kaldırıldı; push toggle Premium gate; FCM foreground SnackBar
+- `onTokenRefresh` re-register; deep_link cold-start kuyruk; Türkçe chart form etiketleri
+- `push_disabled` / kota alanları / `channels_allowed` yoksa sunucuya bırak
 
 ### v19 (2026-08-03) — F5 Pro + push çekirdek
 

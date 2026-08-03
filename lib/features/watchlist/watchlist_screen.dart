@@ -309,6 +309,7 @@ class _WatchlistTile extends StatelessWidget {
                       );
                       return;
                     }
+                    final turningOn = !alertOn;
                     final ok = await wl.setAlertEnabled(symbol, !alertOn);
                     if (!context.mounted) return;
                     if (!ok) {
@@ -322,6 +323,18 @@ class _WatchlistTile extends StatelessWidget {
                           SnackBar(content: Text(wl.lastError!)),
                         );
                       }
+                      return;
+                    }
+                    if (turningOn && !session.pushNotificationsOn) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Sinyal uyarısı açıldı; cihaz push için '
+                            'Hesap → Push bildirimlerini açın.',
+                          ),
+                          duration: Duration(seconds: 5),
+                        ),
+                      );
                     }
                   },
           ),

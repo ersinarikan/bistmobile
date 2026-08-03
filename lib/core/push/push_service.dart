@@ -1,11 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../api/api_client.dart';
+import '../navigation/deep_link_router.dart';
 
 /// FCM lifecycle — Firebase yoksa no-op (crash yok).
 class PushService extends ChangeNotifier {
@@ -18,23 +19,24 @@ class PushService extends ChangeNotifier {
   String? lastToken;
   String? lastError;
   String? statusMessage;
+  StreamSubscription<String>? _tokenSub;
+  bool _syncing = false;
 
-  Future<void> initFirebase() async {
-    lastError = null;
-    try {
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-      firebaseReady = true;
-      statusMessage = null;
-      FirebaseMessaging.onMessage.listen((_) {});
-    } catch (e) {
-      firebaseReady = false;
-      statusMessage =
-          'Firebase yapılandırılmadı (google-services / GoogleService-Info).';
-      debugPrint('PushService.initFirebase: $e');
-    }
-    notifyListeners();
+  void attachMessagingHandlers() {
+    if (!firebaseReady) return;
+    FirebaseMessaging.onMessage.listen((msg) {
+      showFcmForegroundSnack(
+        Map<String, dynamic>.from(msg.data),
+        title: msg.notification?.title,
+        body: msg.notification?.body,
+      );
+    });
+    _tokenSub?.cancel();
+    _tokenSub = FirebaseMessaging.instance.onTokenRefresh.listen((token) {
+      lastToken = token;
+      // Caller should re-sync; notify so UI/session can react.
+      notifyListeners();
+    });
   }
 
   Future<bool> ensurePermission() async {
@@ -76,48 +78,69 @@ class PushService extends ChangeNotifier {
     required bool isPremium,
     required bool pushOn,
   }) async {
-    if (!isPremium || !pushOn) {
-      await unregisterQuiet();
-      return false;
-    }
-    if (!firebaseReady) {
-      statusMessage =
-          'Firebase yapılandırılmadı; cihaz kaydı atlandı.';
-      notifyListeners();
-      return false;
-    }
-    final okPerm = await ensurePermission();
-    if (!okPerm) {
-      statusMessage = 'Bildirim izni verilmedi.';
-      notifyListeners();
-      return false;
-    }
-    final token = await fetchToken();
-    if (token == null || token.length < 20) {
-      statusMessage = 'FCM token alınamadı.';
-      notifyListeners();
-      return false;
-    }
+    if (_syncing) return false;
+    _syncing = true;
     try {
-      final platform = Platform.isIOS ? 'ios' : 'android';
-      await _api.registerDevice(token: token, platform: platform);
-      statusMessage = 'Cihaz kaydı tamam.';
-      notifyListeners();
-      return true;
-    } on ApiException catch (e) {
-      lastError = e.message;
-      statusMessage = e.message;
-      notifyListeners();
-      return false;
+      if (!isPremium || !pushOn) {
+        await unregisterQuiet(clearAll: true);
+        statusMessage = null;
+        notifyListeners();
+        return false;
+      }
+      if (!firebaseReady) {
+        statusMessage =
+            'Firebase yapılandırılmadı; cihaz kaydı atlandı.';
+        notifyListeners();
+        return false;
+      }
+      final okPerm = await ensurePermission();
+      if (!okPerm) {
+        statusMessage = 'Bildirim izni verilmedi.';
+        notifyListeners();
+        return false;
+      }
+      final token = await fetchToken();
+      if (token == null || token.length < 20) {
+        statusMessage = 'FCM token alınamadı.';
+        notifyListeners();
+        return false;
+      }
+      try {
+        final platform = Platform.isIOS ? 'ios' : 'android';
+        await _api.registerDevice(token: token, platform: platform);
+        statusMessage = 'Cihaz kaydı tamam.';
+        lastError = null;
+        notifyListeners();
+        return true;
+      } on ApiException catch (e) {
+        lastError = e.message;
+        statusMessage = e.errorCode == 'push_disabled'
+            ? 'Hesap bildirimi kapalı; kayıt yapılmadı.'
+            : e.message;
+        notifyListeners();
+        return false;
+      }
+    } finally {
+      _syncing = false;
     }
   }
 
-  Future<void> unregisterQuiet() async {
-    final token = lastToken;
+  /// Logout: tüm cihaz tokenlarını temizle (token yoksa body boş).
+  Future<void> unregisterQuiet({bool clearAll = false}) async {
     try {
-      await _api.unregisterDevice(token: token);
+      if (clearAll || lastToken == null) {
+        await _api.unregisterDevice();
+      } else {
+        await _api.unregisterDevice(token: lastToken);
+      }
     } catch (_) {}
     lastToken = null;
+  }
+
+  @override
+  void dispose() {
+    _tokenSub?.cancel();
+    super.dispose();
   }
 }
 

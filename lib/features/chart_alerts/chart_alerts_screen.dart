@@ -7,6 +7,27 @@ import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import 'chart_alerts_controller.dart';
 
+const _sourceLabels = <String, String>{
+  'price': 'Fiyat',
+  'rsi14': 'RSI (14)',
+  'ema20': 'EMA 20',
+  'ema50': 'EMA 50',
+  'bb_upper': 'Bollinger üst',
+  'bb_lower': 'Bollinger alt',
+};
+
+const _opLabels = <String, String>{
+  'lt': 'Küçüktür (<)',
+  'gt': 'Büyüktür (>)',
+  'lte': 'Küçük eşit (≤)',
+  'gte': 'Büyük eşit (≥)',
+};
+
+const _freqLabels = <String, String>{
+  'once': 'Bir kez',
+  'every_time': 'Her tetiklenmede',
+};
+
 class ChartAlertsScreen extends StatefulWidget {
   const ChartAlertsScreen({super.key});
 
@@ -35,10 +56,8 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
     final ctrl = _ctrl;
     if (ctrl == null || !mounted) return;
     final session = context.read<SessionController>();
-    if (!session.isPro) {
-      await showSoftGateSheet(context, kind: SoftGateKind.pro);
-      return;
-    }
+    // Free: soft gate otomatik açılmaz — boş durum + Detay yeterli.
+    if (!session.isPro) return;
     await ctrl.refresh();
     if (!mounted) return;
     final err = ctrl.lastApiError;
@@ -60,7 +79,7 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
       backgroundColor: LotlotColors.surface,
       builder: (ctx) => _CreateAlertSheet(
         allowPush: session.isPremium && ctrl.channelsPushAllowed,
-        onSubmit: (symbol, source, op, value, email, push) async {
+        onSubmit: (symbol, source, op, value, email, push, frequency) async {
           final ok = await ctrl.create(
             symbol: symbol,
             source: source,
@@ -68,6 +87,7 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
             value: value,
             notifyEmail: email,
             notifyPush: push && session.isPremium,
+            frequency: frequency,
           );
           if (!ctx.mounted) return;
           if (!ok) {
@@ -116,12 +136,14 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _onAdd(session),
-            backgroundColor: LotlotColors.accent,
-            foregroundColor: LotlotColors.onAccent,
-            child: const Icon(Icons.add),
-          ),
+          floatingActionButton: session.isPro
+              ? FloatingActionButton(
+                  onPressed: () => _onAdd(session),
+                  backgroundColor: LotlotColors.accent,
+                  foregroundColor: LotlotColors.onAccent,
+                  child: const Icon(Icons.add),
+                )
+              : null,
           body: _body(session, ctrl),
         );
       },
@@ -198,7 +220,10 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
             )
           else
             ...ctrl.alerts.map((a) {
-              final id = a['id']?.toString() ?? '';
+              final id = a['id']?.toString() ??
+                  a['alert_id']?.toString() ??
+                  a['_id']?.toString() ??
+                  '';
               final symbol = a['symbol']?.toString() ?? '—';
               final summary = a['summary_tr']?.toString() ??
                   a['conditions_summary_tr']?.toString() ??
@@ -292,6 +317,7 @@ class _CreateAlertSheet extends StatefulWidget {
     num value,
     bool email,
     bool push,
+    String frequency,
   ) onSubmit;
 
   @override
@@ -303,6 +329,7 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
   final _value = TextEditingController(text: '30');
   String _source = 'rsi14';
   String _op = 'lt';
+  String _frequency = 'once';
   bool _email = true;
   bool _push = false;
   bool _busy = false;
@@ -315,7 +342,8 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
     'bb_upper',
     'bb_lower',
   ];
-  static const _ops = ['lt', 'gt', 'lte'];
+  static const _ops = ['lt', 'gt', 'lte', 'gte'];
+  static const _freqs = ['once', 'every_time'];
 
   @override
   void dispose() {
@@ -351,7 +379,12 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
               initialValue: _source,
               decoration: const InputDecoration(labelText: 'Kaynak'),
               items: _sources
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(_sourceLabels[s] ?? s),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _source = v ?? _source),
             ),
@@ -360,7 +393,12 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
               initialValue: _op,
               decoration: const InputDecoration(labelText: 'Operatör'),
               items: _ops
-                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(_opLabels[s] ?? s),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _op = v ?? _op),
             ),
@@ -370,6 +408,20 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(labelText: 'Değer'),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _frequency,
+              decoration: const InputDecoration(labelText: 'Sıklık'),
+              items: _freqs
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s,
+                      child: Text(_freqLabels[s] ?? s),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _frequency = v ?? _frequency),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -409,6 +461,7 @@ class _CreateAlertSheetState extends State<_CreateAlertSheet> {
                         val,
                         _email,
                         _push,
+                        _frequency,
                       );
                       if (mounted) setState(() => _busy = false);
                     },

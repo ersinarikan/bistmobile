@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
+import '../../core/navigation/deep_link_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/session_controller.dart';
 import '../shell/main_shell.dart';
@@ -45,6 +46,9 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const MainShell()),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      flushPendingDeepLink();
+    });
   }
 
   @override
@@ -118,6 +122,9 @@ class _SplashScreenState extends State<SplashScreen> {
                           builder: (_) => const MainShell(),
                         ),
                       );
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        flushPendingDeepLink();
+                      });
                     },
                     child: const Text('Misafir devam et'),
                   ),

@@ -3,12 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/legal/legal_urls.dart';
+import '../../core/push/push_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../chart_alerts/chart_alerts_screen.dart';
+import '../pro/soft_gate_sheet.dart';
 import '../watchlist/watchlist_controller.dart';
-import '../../core/push/push_service.dart';
 
 /// F4 Hesap / yasal — auth: profil+tercihler; guest: yasal + giriş.
 class AccountSettingsScreen extends StatefulWidget {
@@ -72,6 +73,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   Future<void> _setPush(bool value) async {
     final session = context.read<SessionController>();
+    if (value && !session.isPremium) {
+      await showSoftGateSheet(context, kind: SoftGateKind.premium);
+      return;
+    }
     setState(() => _patchingPush = true);
     final ok = await session.updateNotificationPrefs(pushNotifications: value);
     if (!mounted) return;
@@ -248,6 +253,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: const Text('Push bildirimleri'),
+                    subtitle: session.isPremium
+                        ? null
+                        : const Text(
+                            'Premium gerekir',
+                            style: TextStyle(
+                              color: LotlotColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
                     value: pushOn,
                     onChanged: (!prefsReady || _patchingPush) ? null : _setPush,
                     activeThumbColor: LotlotColors.onAccent,
