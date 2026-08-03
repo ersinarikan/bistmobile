@@ -10,6 +10,7 @@ import '../auth/session_controller.dart';
 import '../chart_alerts/chart_alerts_screen.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../watchlist/watchlist_controller.dart';
+import '../wizard/wizard_screen.dart';
 
 /// F4 Hesap / yasal — auth: profil+tercihler; guest: yasal + giriş.
 class AccountSettingsScreen extends StatefulWidget {
@@ -360,24 +361,48 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
             const SizedBox(height: 8),
             _SurfaceCard(
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Grafik uyarıları'),
-                subtitle: const Text(
-                  'Pro+ teknik koşul uyarıları',
-                  style: TextStyle(
-                    color: LotlotColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const ChartAlertsScreen(),
+              child: Column(
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Grafik uyarıları'),
+                    subtitle: const Text(
+                      'Pro+ teknik koşul uyarıları',
+                      style: TextStyle(
+                        color: LotlotColors.textSecondary,
+                        fontSize: 12,
+                      ),
                     ),
-                  );
-                },
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const ChartAlertsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: LotlotColors.border),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Hisse Sihirbazı'),
+                    subtitle: const Text(
+                      'Premium öneri taraması',
+                      style: TextStyle(
+                        color: LotlotColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const WizardScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

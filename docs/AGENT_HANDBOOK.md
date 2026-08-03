@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F5 cila: FCM/deep-link/soft-gate)
+> Son güncelleme: 2026-08-03 (F5 dilim: wizard + AI commentary)
 
 ---
 
@@ -47,7 +47,7 @@ flowchart TD
 | **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist) | Hayır |
 | **F3** | Hisse detay | Tamam (public kartlar + mum/MA + auth pattern) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
-| **F5** | Pro yüzey + push (satın alma yok) | Tamam çekirdek (soft gate, chart alerts, FCM/Socket; wizard/AI dışı) | Satın alma yok |
+| **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
 | **F6** | IAP paywall | Bekliyor | **Evet** |
 | **F7** | Mağaza teslimi | Bekliyor | Hazır olmalı |
 
@@ -151,8 +151,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 
 - **Amaç:** Tier’a göre gated özellikler + **Premium gerçek zamanlı / push bildirimleri**; **satın alma F6’da**.
 - **Bu turda (çekirdek):** Soft gate; Chart alerts; watchlist `alert_enabled`; OS izni + FCM register; Socket `actionable_alert`; `deep_link` → hisse detay.
-- **Ertelenen dilim:** Hisse Sihirbazı UI; AI commentary UI.
-- **API:** §18.3 chart-alerts; §25 `device/register|unregister`; Socket.IO.
+- **Dilim (wizard/AI):** Hisse Sihirbazı UI; AI commentary UI — **tamam**.
+- **API:** §18.1–18.3; §25 `device/register|unregister`; Socket.IO.
 - **Firebase:** `android/app/google-services.json` + `ios/Runner/GoogleService-Info.plist` **gitignore**. Yoksa init no-op + hesap uyarısı (S7).
 - **Acceptance (çekirdek):**
   - [x] `pro_required` / `premium_required` → soft gate (IAP yok)
@@ -164,10 +164,15 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Hesap push aç → Premium soft gate; watchlist alert + push kapalı → Hesap yönü
   - [x] Tier `/me` — client uydurmaz
   - [x] Privacy Manifest / Data safety notu (aşağı)
+- **Acceptance (dilim):**
+  - [x] Pro: hisse detay CTA → `POST /api/ai/commentary` → `text`; Free soft gate
+  - [x] 429 rate_limited/busy + 502 anlaşılır
+  - [x] Premium: Sihirbaz (`AL`/`SAT`/`TUT`, horizons prod) → `results` → detay
+  - [x] 400 `invalid_selection` + `details`
 - **Firebase ekleme:** Console’dan iOS/Android app → dosyaları yerel yollara koy → rebuild. Commit etme.
 - **Privacy / Data safety:** FCM registration token = cihaz tanımlayıcı; App Privacy / Play Data safety’de bildirim + identifiers. Token loglanmaz.
-- **Post-dev matris:** S1–S10 (plan).
-- **Dışı:** StoreKit/Play purchase; VAPID/web-push; wizard/AI.
+- **Post-dev matris:** S1–S10 (plan); wizard W1–W7.
+- **Dışı:** StoreKit/Play purchase; VAPID/web-push.
 - **Risk:** Entitlement fake yok; Free/Pro `device/register` client guard.
 
 #### F6 — IAP paywall
@@ -283,6 +288,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v21 (2026-08-03) — F5 dilim: wizard + AI
+- Hisse detay: CTA → `POST /api/ai/commentary` → `text` (Pro soft gate)
+- Hisse Sihirbazı: Premium form (AL/SAT/TUT, prod horizons) → results → detay
+- Hesap + İzleme girişleri; prod şema (guide `bullish` örneği kullanılmaz)
 
 ### v20 (2026-08-03) — F5 cila
 - Soft gate auto-pop kaldırıldı; push toggle Premium gate; FCM foreground SnackBar
@@ -420,7 +430,7 @@ sonar-scanner
 - [x] F3: hisse detay (public + auth pattern) — bkz. **§0**
 - [x] F4: hesap / yasal / bildirim prefs — bkz. **§0**
 - [x] F5 çekirdek: soft gate + chart alerts + push/socket — bkz. **§0**
-- [ ] F5 dilim: wizard / AI commentary
+- [x] F5 dilim: wizard / AI commentary
 - [ ] F6+: IAP — bkz. **§0**
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 

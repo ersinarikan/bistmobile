@@ -7,6 +7,7 @@ import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
+import '../wizard/wizard_screen.dart';
 import 'watchlist_controller.dart';
 
 class WatchlistScreen extends StatefulWidget {
@@ -117,6 +118,18 @@ class _AuthWatchlistBody extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           _QuotaBar(wl: wl),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const WizardScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.auto_awesome, size: 18),
+            label: const Text('Hisse Sihirbazı'),
+          ),
           if (wl.lastError != null) ...[
             const SizedBox(height: 8),
             Text(

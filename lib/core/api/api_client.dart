@@ -424,6 +424,40 @@ class ApiClient {
     return delete('/api/chart-alerts/${Uri.encodeComponent(id)}');
   }
 
+  /// `POST /api/ai/commentary` — §18.1 (Pro); success body `text`
+  Future<Map<String, dynamic>> fetchAiCommentary({
+    required String symbol,
+    int bars = 300,
+  }) {
+    return post(
+      '/api/ai/commentary',
+      body: {
+        'symbol': symbol.toUpperCase(),
+        'bars': bars.clamp(120, 900),
+      },
+    );
+  }
+
+  /// `POST /api/watchlist/wizard/recommendations` — §18.2 (Premium)
+  Future<Map<String, dynamic>> fetchWizardRecommendations({
+    required List<String> horizons,
+    required List<String> signalTypes,
+    String universe = 'all',
+    int limit = 5,
+    int daysBack = 7,
+  }) {
+    return post(
+      '/api/watchlist/wizard/recommendations',
+      body: {
+        'horizons': horizons,
+        'signal_types': signalTypes,
+        'universe': universe,
+        'limit': limit.clamp(1, 10),
+        'days_back': daysBack.clamp(1, 30),
+      },
+    );
+  }
+
   /// `POST /api/notifications/device/register` — §25 (Premium)
   Future<Map<String, dynamic>> registerDevice({
     required String token,

@@ -7,6 +7,7 @@ import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../watchlist/watchlist_controller.dart';
 import 'stock_detail_controller.dart';
+import 'widgets/ai_commentary_section.dart';
 import 'widgets/corporate_card.dart';
 import 'widgets/fundamentals_card.dart';
 import 'widgets/pattern_section.dart';
@@ -214,6 +215,7 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                     pending: ctrl.patternPending,
                     pattern: ctrl.pattern,
                   ),
+                  AiCommentarySection(symbol: widget.symbol),
                 ],
                 if (ctrl.error != null)
                   Padding(
