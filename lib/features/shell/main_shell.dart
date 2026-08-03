@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/theme/app_theme.dart';
+import '../account/account_settings_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../browse/browse_screen.dart';
-import '../watchlist/watchlist_controller.dart';
 import '../watchlist/watchlist_screen.dart';
 
-/// F2 ortak shell: Keşfet | İzleme (guest + auth).
+/// F2 ortak shell: Keşfet | İzleme (guest + auth). F4: Hesap/Bilgi.
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -19,54 +18,24 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   var _index = 0;
 
-  Future<void> _confirmDelete(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Hesabı sil'),
-        content: const Text(
-          'Hesabınız ve ilişkili veriler kalıcı olarak silinir. '
-          'Bu işlem geri alınamaz.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Vazgeç'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: TextButton.styleFrom(foregroundColor: LotlotColors.danger),
-            child: const Text('Sil'),
-          ),
-        ],
+  void _openAccount() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const AccountSettingsScreen(),
       ),
     );
-    if (ok != true || !context.mounted) return;
-
-    final session = context.read<SessionController>();
-    final deleted = await session.deleteAccount();
-    if (!context.mounted) return;
-    if (deleted) {
-      context.read<WatchlistController>().clear();
-      setState(() => _index = 0);
-    } else if (session.lastError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(session.lastError!)),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
     final authenticated = session.status == AuthStatus.authenticated;
-    final email = session.user?['email']?.toString();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('LOTLOT.NET'),
         actions: [
-          if (!authenticated)
+          if (!authenticated) ...[
             TextButton(
               onPressed: () {
                 Navigator.of(context).push(
@@ -76,38 +45,17 @@ class _MainShellState extends State<MainShell> {
                 );
               },
               child: const Text('Giriş'),
-            )
-          else
-            PopupMenuButton<String>(
+            ),
+            IconButton(
+              tooltip: 'Bilgi',
+              onPressed: _openAccount,
+              icon: const Icon(Icons.info_outline),
+            ),
+          ] else
+            IconButton(
               tooltip: 'Hesap',
-              onSelected: (value) async {
-                if (value == 'logout') {
-                  await context.read<SessionController>().logout();
-                  if (!context.mounted) return;
-                  context.read<WatchlistController>().clear();
-                  setState(() => _index = 0);
-                } else if (value == 'delete') {
-                  await _confirmDelete(context);
-                }
-              },
-              itemBuilder: (ctx) => [
-                if (email != null)
-                  PopupMenuItem(
-                    enabled: false,
-                    child: Text(
-                      email,
-                      style: const TextStyle(color: LotlotColors.textSecondary),
-                    ),
-                  ),
-                const PopupMenuItem(value: 'logout', child: Text('Çıkış')),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Text(
-                    'Hesabı sil',
-                    style: TextStyle(color: LotlotColors.danger),
-                  ),
-                ),
-              ],
+              onPressed: _openAccount,
+              icon: const Icon(Icons.account_circle_outlined),
             ),
         ],
       ),

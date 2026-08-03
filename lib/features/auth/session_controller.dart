@@ -313,6 +313,54 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// `GET /api/auth/me` yenile — hesap ekranı.
+  Future<bool> refreshMe() async {
+    lastError = null;
+    try {
+      final me = await _api.fetchMe();
+      _applyMe(me);
+      status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      lastError = _friendlyAuthMessage(e);
+      notifyListeners();
+      return false;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// `PATCH /api/auth/me` bildirim tercihleri — F4 (FCM yok).
+  Future<bool> updateNotificationPrefs({
+    bool? pushNotifications,
+    bool? emailNotifications,
+  }) async {
+    lastError = null;
+    lastErrorCode = null;
+    notifyListeners();
+    try {
+      final me = await _api.patchMe(
+        pushNotifications: pushNotifications,
+        emailNotifications: emailNotifications,
+      );
+      _applyMe(me);
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      lastError = _friendlyAuthMessage(e);
+      lastErrorCode = e.errorCode;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   void _applyMe(Map<String, dynamic> me) {
     user = me['user'] as Map<String, dynamic>? ?? me;
     subscription = me['subscription'] as Map<String, dynamic>?;
@@ -362,6 +410,8 @@ class SessionController extends ChangeNotifier {
         return e.message.isNotEmpty
             ? e.message
             : 'E-posta henüz doğrulanmadı.';
+      case 'no_supported_fields':
+        return 'Bu tercihler şu an güncellenemiyor.';
       default:
         return e.message.isNotEmpty ? e.message : 'İstek başarısız';
     }

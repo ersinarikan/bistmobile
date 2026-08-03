@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F3 polish: login return + auth reload)
+> Son güncelleme: 2026-08-03 (F4 hesap / yasal)
 
 ---
 
@@ -46,7 +46,7 @@ flowchart TD
 | **F1** | Auth tamam | Tamam (e-posta+Turnstile+Google+Apple E2E; `/me` tier okuma) | Hayır |
 | **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist) | Hayır |
 | **F3** | Hisse detay | Tamam (public kartlar + mum/MA + auth pattern) | Hayır |
-| **F4** | Hesap / yasal / bütünlük | Bekliyor | Hayır |
+| **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Bekliyor | Satın alma yok |
 | **F6** | IAP paywall | Bekliyor | **Evet** |
 | **F7** | Mağaza teslimi | Bekliyor | Hazır olmalı |
@@ -129,15 +129,22 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 #### F4 — Hesap / yasal / bütünlük
 
 - **Amaç:** Settings, yasal, iOS↔Android parity smoke.
-- **Ekranlar:** Account/Settings; Legal (WebView veya dış tarayıcı); hesap bildirimi tercihleri (`push_notifications` / `email_notifications` → `PATCH /me`).
-- **API:** §8 `PATCH /me`; legal URL’ler web.
-- **Skills:** `cybersecurity-expert`, `project-manager`, `seo-expert` (ASO metin taslağı erken), `ux-expert`.
+- **Ekranlar:** `AccountSettingsScreen`; Legal **dış tarayıcı** (`url_launcher`); `push_notifications` / `email_notifications` → `PATCH /me`.
+- **API:** §8 `PATCH /api/auth/me`; legal: `/gizlilik`, `/privacy`, `/terms`.
+- **Skills:** `cybersecurity-expert`, `project-manager`, `seo-expert` (ASO), `ux-expert`.
 - **Acceptance:**
-  - [ ] Quota + subscription **okuma** (`/me`) — `tier` / `is_pro` / `is_premium` (Free / Pro / Premium)
-  - [ ] Privacy/terms/KVKK erişimi
-  - [ ] Kritik ekranlarda yatırım tavsiyesi değildir
-  - [ ] iOS + Android smoke checklist yeşil
-  - [ ] Ayarlarda `push_notifications` toggle (OS izni F5’te; toggle backend tercihi)
+  - [x] Quota + subscription **okuma** (`/me`) — `subscription.label` + watchlist limit / mutation remaining
+  - [x] Privacy/terms/KVKK erişimi (dış tarayıcı)
+  - [x] Kritik ekranlarda yatırım tavsiyesi değildir (hesap ekranı + mevcut auth/detail)
+  - [x] iOS + Android smoke checklist (aşağıda)
+  - [x] Ayarlarda `push_notifications` + `email_notifications` toggle (OS/FCM **yok** — F5)
+- **Pre-dev (2026-08-03):** `/gizlilik` `/privacy` `/terms` → 200; `/me` Bearer zorunlu.
+- **Post-dev matris:** S1 auth hesap `/me`; S2–S3 toggle PATCH; S4 hata geri al; S5 yasal; S6 guest bilgi; S7 çıkış/sil.
+- **Smoke checklist (manuel):**
+  - [ ] iOS: Hesap aç → label görünür → toggle → yasal tarayıcı → çıkış
+  - [ ] Android: aynı
+  - [ ] Guest: Bilgi ikonu → yasal + Giriş; PATCH yok
+- **ASO (erken taslak):** Başlık “LOTLOT.NET — BIST Analiz”; kısa: “BIST hisseleri, adil değer ve izleme listesi. Yatırım tavsiyesi değildir.” Anahtar: BIST, hisse, adil değer, lotlot.
 - **Dışı:** IAP satın alma UI; FCM token kaydı (F5).
 
 #### F5 — Pro yüzey + push (satın alma yok)
@@ -285,6 +292,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ## 4. Yapılanlar (kronoloji)
 
+### v17 (2026-08-03) — F4 hesap / yasal
+
+- `AccountSettingsScreen`: `/me` label+kota; push/e-posta PATCH; yasal dış tarayıcı
+- `url_launcher` + `LegalUrls`; shell Hesap / Bilgi; logout-sil ayarlarda
+- Post-dev S1–S7; ASO taslak; smoke checklist
+
 ### v16 (2026-08-03) — F3 cila
 
 - Login `popOnSuccess`: detay/watchlist/shell’den girişte ekran korunur
@@ -397,7 +410,8 @@ sonar-scanner
 - [x] lotlot.net SSH (`~/.ssh/id_ed25519_lotlot` → `root@lotlot.net`)
 - [x] F2: guest browse + watchlist — bkz. **§0**
 - [x] F3: hisse detay (public + auth pattern) — bkz. **§0**
-- [ ] F4+: hesap, Pro/push, IAP — bkz. **§0**
+- [x] F4: hesap / yasal / bildirim prefs — bkz. **§0**
+- [ ] F5+: Pro/push, IAP — bkz. **§0**
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 
 ### 7.1 Parity review (2026-08-03) — F0–F2

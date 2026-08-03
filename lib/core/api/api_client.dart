@@ -168,6 +168,21 @@ class ApiClient {
   /// `GET /api/auth/me` — §4 / §9
   Future<Map<String, dynamic>> fetchMe() => get('/api/auth/me');
 
+  /// `PATCH /api/auth/me` — §8 (bildirim tercihleri)
+  Future<Map<String, dynamic>> patchMe({
+    bool? pushNotifications,
+    bool? emailNotifications,
+  }) {
+    final body = <String, dynamic>{};
+    if (pushNotifications != null) {
+      body['push_notifications'] = pushNotifications;
+    }
+    if (emailNotifications != null) {
+      body['email_notifications'] = emailNotifications;
+    }
+    return patch('/api/auth/me', body: body);
+  }
+
   /// `POST /api/auth/login` — §6
   Future<Map<String, dynamic>> login({
     required String email,
