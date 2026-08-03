@@ -7,7 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/session_controller.dart';
 import 'features/splash/splash_screen.dart';
 
-/// F0 shell: web teması + session bootstrap (splash → home|login).
+/// F1 auth shell: splash → login|register|home; Turnstile köprüsü.
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const LotlotApp());

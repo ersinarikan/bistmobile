@@ -10,11 +10,15 @@ class ApiException implements Exception {
     required this.statusCode,
     required this.message,
     this.body,
+    this.errorCode,
   });
 
   final int statusCode;
   final String message;
   final Map<String, dynamic>? body;
+
+  /// API `error` alanı — örn. `invalid_turnstile`, `email_not_verified`.
+  final String? errorCode;
 
   @override
   String toString() => 'ApiException($statusCode): $message';
@@ -51,6 +55,14 @@ class ApiClient {
     return _send('POST', path, body: body, auth: auth);
   }
 
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    Map<String, dynamic>? body,
+    bool auth = true,
+  }) {
+    return _send('DELETE', path, body: body, auth: auth);
+  }
+
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
@@ -72,16 +84,15 @@ class ApiClient {
     }
 
     final uri = _uri(path, query);
+    final encoded = body == null ? null : jsonEncode(body);
     late http.Response response;
     switch (method) {
       case 'GET':
         response = await _http.get(uri, headers: headers);
       case 'POST':
-        response = await _http.post(
-          uri,
-          headers: headers,
-          body: body == null ? null : jsonEncode(body),
-        );
+        response = await _http.post(uri, headers: headers, body: encoded);
+      case 'DELETE':
+        response = await _http.delete(uri, headers: headers, body: encoded);
       default:
         throw UnsupportedError('HTTP $method desteklenmiyor');
     }
@@ -118,6 +129,7 @@ class ApiClient {
           decoded?['error']?.toString() ??
           'İstek başarısız',
       body: decoded,
+      errorCode: decoded?['error']?.toString(),
     );
   }
 
@@ -162,6 +174,40 @@ class ApiClient {
     return post('/api/auth/login', body: body, auth: false);
   }
 
+  /// `POST /api/auth/register` — §5
+  Future<Map<String, dynamic>> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    String? turnstileToken,
+  }) {
+    final body = <String, dynamic>{
+      'email': email,
+      'password': password,
+      'first_name': firstName,
+      'last_name': lastName,
+    };
+    if (turnstileToken != null) {
+      body['turnstile_token'] = turnstileToken;
+    }
+    return post('/api/auth/register', body: body, auth: false);
+  }
+
+  /// `POST /api/auth/resend-verification` — §5
+  Future<Map<String, dynamic>> resendVerification({required String email}) {
+    return post(
+      '/api/auth/resend-verification',
+      body: {'email': email},
+      auth: false,
+    );
+  }
+
+  /// `DELETE /api/auth/me` — §8 (`confirm: true` zorunlu)
+  Future<Map<String, dynamic>> deleteAccount() {
+    return delete('/api/auth/me', body: {'confirm': true});
+  }
+
   Future<void> persistAuthResponse(Map<String, dynamic> data) async {
     final access = data['access_token']?.toString();
     final refresh = data['refresh_token']?.toString();
@@ -175,9 +221,17 @@ class ApiClient {
     await _tokens.saveTokens(accessToken: access, refreshToken: refresh);
   }
 
+  /// Logout: refresh revoke + yerel wipe (§8).
   Future<void> logout() async {
+    final refresh = await _tokens.readRefreshToken();
     try {
-      await post('/api/auth/logout');
+      await post(
+        '/api/auth/logout',
+        body: {
+          if (refresh != null && refresh.isNotEmpty) 'refresh_token': refresh,
+        },
+        auth: false,
+      );
     } catch (_) {
       // Yerel oturumu yine de temizle
     }

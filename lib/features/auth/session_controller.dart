@@ -5,6 +5,19 @@ import '../../core/storage/token_storage.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
+enum LoginResult {
+  success,
+  failed,
+  needsTurnstile,
+  emailNotVerified,
+}
+
+enum RegisterResult {
+  pendingVerification,
+  needsTurnstile,
+  failed,
+}
+
 /// Oturum + `/api/auth/me` subscription state.
 class SessionController extends ChangeNotifier {
   SessionController({
@@ -53,29 +66,127 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> loginWithEmail({
+  Future<LoginResult> loginWithEmail({
     required String email,
     required String password,
+    String? turnstileToken,
   }) async {
     lastError = null;
     notifyListeners();
     try {
-      final data = await _api.login(email: email, password: password);
-      // captcha_required ise UI Turnstile köprüsünü açacak (sonraki sprint)
-      if (data['captcha_required'] == true ||
-          data['error']?.toString() == 'captcha_required') {
-        lastError = 'Doğrulama gerekli (Turnstile). Sonraki adımda eklenecek.';
-        notifyListeners();
-        return false;
-      }
+      final data = await _api.login(
+        email: email,
+        password: password,
+        turnstileToken: turnstileToken,
+      );
       await _api.persistAuthResponse(data);
       final me = data['user'] != null ? data : await _api.fetchMe();
       _applyMe(me);
       status = AuthStatus.authenticated;
       notifyListeners();
+      return LoginResult.success;
+    } on ApiException catch (e) {
+      final code = e.errorCode;
+      if (code == 'captcha_required' || e.body?['captcha_required'] == true) {
+        lastError = null;
+        notifyListeners();
+        return LoginResult.needsTurnstile;
+      }
+      if (code == 'email_not_verified' ||
+          (e.statusCode == 403 && e.body?['verification_required'] == true)) {
+        lastError = e.message.isNotEmpty
+            ? e.message
+            : 'E-posta henüz doğrulanmadı.';
+        notifyListeners();
+        return LoginResult.emailNotVerified;
+      }
+      lastError = _friendlyAuthMessage(e);
+      notifyListeners();
+      return LoginResult.failed;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return LoginResult.failed;
+    }
+  }
+
+  Future<RegisterResult> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    String? turnstileToken,
+  }) async {
+    lastError = null;
+    notifyListeners();
+    try {
+      final data = await _api.register(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        turnstileToken: turnstileToken,
+      );
+      // 201 pending_verification — JWT yok
+      if (data['status']?.toString() == 'pending_verification' ||
+          data['verification_required'] == true) {
+        notifyListeners();
+        return RegisterResult.pendingVerification;
+      }
+      lastError = data['message']?.toString() ?? 'Kayıt tamamlanamadı';
+      notifyListeners();
+      return RegisterResult.failed;
+    } on ApiException catch (e) {
+      // Prod ALWAYS: ilk token’sız deneme → invalid_turnstile (lazy köprü)
+      if (e.errorCode == 'invalid_turnstile' ||
+          (e.statusCode == 400 &&
+              (e.message.toLowerCase().contains('turnstile')))) {
+        lastError = null;
+        notifyListeners();
+        return RegisterResult.needsTurnstile;
+      }
+      lastError = _friendlyAuthMessage(e);
+      notifyListeners();
+      return RegisterResult.failed;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return RegisterResult.failed;
+    }
+  }
+
+  Future<bool> resendVerification({required String email}) async {
+    lastError = null;
+    notifyListeners();
+    try {
+      final data = await _api.resendVerification(email: email);
+      lastError = data['message']?.toString();
+      notifyListeners();
       return true;
     } on ApiException catch (e) {
-      lastError = e.message;
+      lastError = _friendlyAuthMessage(e);
+      notifyListeners();
+      return false;
+    } catch (e) {
+      lastError = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    lastError = null;
+    notifyListeners();
+    try {
+      await _api.deleteAccount();
+      await _tokens.clear();
+      user = null;
+      subscription = null;
+      status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      lastError = _friendlyAuthMessage(e);
       notifyListeners();
       return false;
     } catch (e) {
@@ -96,5 +207,24 @@ class SessionController extends ChangeNotifier {
   void _applyMe(Map<String, dynamic> me) {
     user = me['user'] as Map<String, dynamic>? ?? me;
     subscription = me['subscription'] as Map<String, dynamic>?;
+  }
+
+  String _friendlyAuthMessage(ApiException e) {
+    switch (e.errorCode) {
+      case 'invalid_credentials':
+        return 'E-posta veya şifre hatalı.';
+      case 'rate_limited':
+        final sec = e.body?['retry_after_seconds'];
+        return sec != null
+            ? 'Çok fazla deneme. $sec sn sonra tekrar deneyin.'
+            : 'Çok fazla deneme. Biraz sonra tekrar deneyin.';
+      case 'email_exists':
+      case 'already_registered':
+        return 'Bu e-posta ile kayıtlı bir hesap var.';
+      case 'inactive_user':
+        return 'Hesap pasif. Destek ile iletişime geçin.';
+      default:
+        return e.message;
+    }
   }
 }

@@ -3,29 +3,31 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
-import '../home/home_screen.dart';
-import 'register_screen.dart';
 import 'session_controller.dart';
 import 'turnstile_bridge_screen.dart';
 import 'verify_email_pending_screen.dart';
 
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  bool _loading = false;
+  final _firstName = TextEditingController();
+  final _lastName = TextEditingController();
+  var _loading = false;
 
   @override
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _firstName.dispose();
+    _lastName.dispose();
     super.dispose();
   }
 
@@ -33,21 +35,27 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     final session = context.read<SessionController>();
-    var result = await session.loginWithEmail(
+
+    var result = await session.register(
       email: _email.text.trim(),
       password: _password.text,
+      firstName: _firstName.text.trim(),
+      lastName: _lastName.text.trim(),
     );
 
-    if (result == LoginResult.needsTurnstile && mounted) {
+    // Lazy Turnstile — §5 / §8.6
+    if (result == RegisterResult.needsTurnstile && mounted) {
       final token = await TurnstileBridgeScreen.open(context);
       if (!mounted) return;
       if (token == null || token.isEmpty) {
         setState(() => _loading = false);
         return;
       }
-      result = await session.loginWithEmail(
+      result = await session.register(
         email: _email.text.trim(),
         password: _password.text,
+        firstName: _firstName.text.trim(),
+        lastName: _lastName.text.trim(),
         turnstileToken: token,
       );
     }
@@ -55,15 +63,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (result == LoginResult.success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
-      );
-      return;
-    }
-
-    if (result == LoginResult.emailNotVerified) {
-      await Navigator.of(context).push(
+    if (result == RegisterResult.pendingVerification) {
+      await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => VerifyEmailPendingScreen(
             email: _email.text.trim(),
@@ -93,39 +94,52 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const SizedBox(height: 24),
-                  const Center(
-                    child: BrandLogo(width: 80, height: 72),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: IconButton(
+                      onPressed: _loading
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back),
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const Center(child: BrandLogo(width: 72, height: 64)),
+                  const SizedBox(height: 12),
                   Text(
-                    'LOTLOT.NET',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: LotlotColors.accent,
-                          fontWeight: FontWeight.w800,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Giriş Yap',
+                    'Hesap oluştur',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: _firstName,
+                    textCapitalization: TextCapitalization.words,
+                    autofillHints: const [AutofillHints.givenName],
+                    decoration: const InputDecoration(labelText: 'Ad'),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Ad gerekli' : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _lastName,
+                    textCapitalization: TextCapitalization.words,
+                    autofillHints: const [AutofillHints.familyName],
+                    decoration: const InputDecoration(labelText: 'Soyad'),
+                    validator: (v) =>
+                        (v == null || v.trim().isEmpty) ? 'Soyad gerekli' : null,
+                  ),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(
-                      labelText: 'E-posta',
-                    ),
+                    decoration: const InputDecoration(labelText: 'E-posta'),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
                         return 'E-posta gerekli';
@@ -134,16 +148,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   TextFormField(
                     controller: _password,
                     obscureText: true,
-                    autofillHints: const [AutofillHints.password],
-                    decoration: const InputDecoration(
-                      labelText: 'Şifre',
-                    ),
+                    autofillHints: const [AutofillHints.newPassword],
+                    decoration: const InputDecoration(labelText: 'Şifre'),
                     validator: (v) {
                       if (v == null || v.isEmpty) return 'Şifre gerekli';
+                      if (v.length < 8) return 'En az 8 karakter';
                       return null;
                     },
                   ),
@@ -166,43 +179,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: LotlotColors.onAccent,
                             ),
                           )
-                        : const Text('Giriş Yap'),
+                        : const Text('Kayıt ol'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   TextButton(
                     onPressed: _loading
                         ? null
-                        : () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const RegisterScreen(),
-                              ),
-                            );
-                          },
-                    child: const Text('Hesap oluştur'),
-                  ),
-                  const SizedBox(height: 8),
-                  OutlinedButton(
-                    onPressed: _loading
-                        ? null
-                        : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Google / Apple girişi bir sonraki adımda eklenecek.',
-                                ),
-                              ),
-                            );
-                          },
-                    child: const Text('Google / Apple (yakında)'),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Yatırım tavsiyesi değildir. Veri analizidir.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: LotlotColors.textSecondary,
-                        ),
+                        : () => Navigator.of(context).pop(),
+                    child: const Text('Zaten hesabım var'),
                   ),
                 ],
               ),

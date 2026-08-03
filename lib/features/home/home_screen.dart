@@ -8,6 +8,45 @@ import '../auth/session_controller.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
+  Future<void> _confirmDelete(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hesabı sil'),
+        content: const Text(
+          'Hesabınız ve ilişkili veriler kalıcı olarak silinir. '
+          'Bu işlem geri alınamaz.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: LotlotColors.danger),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+
+    final session = context.read<SessionController>();
+    final deleted = await session.deleteAccount();
+    if (!context.mounted) return;
+    if (deleted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+        (_) => false,
+      );
+    } else if (session.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(session.lastError!)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
@@ -75,6 +114,12 @@ class HomeScreen extends StatelessWidget {
             'BIST analiz araçlarınız burada toplanacak. '
             'Watchlist ve hisse detayları yakında.',
             style: TextStyle(color: LotlotColors.textSecondary, height: 1.5),
+          ),
+          const SizedBox(height: 32),
+          TextButton(
+            onPressed: () => _confirmDelete(context),
+            style: TextButton.styleFrom(foregroundColor: LotlotColors.danger),
+            child: const Text('Hesabı sil'),
           ),
         ],
       ),
