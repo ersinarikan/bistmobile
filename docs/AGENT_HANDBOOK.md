@@ -291,6 +291,9 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ## 4. Yapılanlar (kronoloji)
 
+### v25 (2026-08-03) — Watchlist build-phase fix
+- Guest `clear()` / auth `refresh()` post-frame (setState during build yok)
+
 ### v24 (2026-08-03) — UX cila (Sezgisel + metin)
 - Sezgisel sheet: haber kaynağı + yön; formasyon sinyal Türkçe; çift Görsel rozet yok
 - Predictions/overall Türkçe; AI ham exception yok; wizard likidite `unknown` → Bilinmiyor

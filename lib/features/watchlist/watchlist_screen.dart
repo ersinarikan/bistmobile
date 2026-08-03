@@ -27,13 +27,14 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
     final wl = context.read<WatchlistController>();
     if (session.status != _lastStatus) {
       _lastStatus = session.status;
-      if (session.status == AuthStatus.authenticated) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) wl.refresh();
-        });
-      } else {
-        wl.clear();
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (session.status == AuthStatus.authenticated) {
+          wl.refresh();
+        } else {
+          wl.clear();
+        }
+      });
     }
   }
 
