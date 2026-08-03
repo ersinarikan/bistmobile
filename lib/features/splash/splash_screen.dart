@@ -3,12 +3,10 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
-import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
-import '../home/home_screen.dart';
+import '../shell/main_shell.dart';
 
-/// Splash: token var mı → `/api/auth/me` → home veya login (API guide §4).
-/// Görsel: web `.brand-dark` radial + CDN logo (brand-visual-parity).
+/// Splash: token → `/me` → MainShell (guest veya auth). Guide §4 + F2 guest.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -28,12 +26,8 @@ class _SplashScreenState extends State<SplashScreen> {
     await session.bootstrap();
     if (!mounted) return;
 
-    final next = session.status == AuthStatus.authenticated
-        ? const HomeScreen()
-        : const LoginScreen();
-
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (_) => next),
+      MaterialPageRoute<void>(builder: (_) => const MainShell()),
     );
   }
 

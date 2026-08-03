@@ -277,9 +277,13 @@ class SessionController extends ChangeNotifier {
       case 'already_registered':
         return 'Bu e-posta ile kayıtlı bir hesap var.';
       case 'invalid_oauth_token':
-        return 'Google/Apple oturumu doğrulanamadı. Tekrar deneyin.';
+        return 'Apple/Google token sunucuda doğrulanamadı. '
+            'Apple için backend APPLE_CLIENT_ID = com.lotlot.lotlotnetMobile olmalı '
+            '(web Services ID değil).';
       case 'id_token_required':
         return 'OAuth token eksik.';
+      case 'identity_token_required':
+        return 'Apple token eksik.';
       case 'inactive_user':
         return 'Hesap pasif. Destek ile iletişime geçin.';
       default:

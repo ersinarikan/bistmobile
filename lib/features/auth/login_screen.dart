@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
-import '../home/home_screen.dart';
+import '../shell/main_shell.dart';
+import '../watchlist/watchlist_controller.dart';
 import 'oauth_sign_in.dart';
 import 'register_screen.dart';
 import 'session_controller.dart';
@@ -32,11 +33,13 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _goHomeIfOk(LoginResult result) async {
+  Future<void> _goShellIfOk(LoginResult result) async {
     if (!mounted) return;
     if (result == LoginResult.success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => const HomeScreen()),
+      context.read<WatchlistController>().refresh();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const MainShell()),
+        (_) => false,
       );
     }
   }
@@ -68,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = false);
 
     if (result == LoginResult.success) {
-      await _goHomeIfOk(result);
+      await _goShellIfOk(result);
       return;
     }
 
@@ -91,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await session.loginWithGoogleIdToken(idToken);
       if (!mounted) return;
       setState(() => _loading = false);
-      await _goHomeIfOk(result);
+      await _goShellIfOk(result);
     } on OauthSignInException catch (e) {
       session.setError(e.message);
       if (mounted) setState(() => _loading = false);
@@ -112,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       setState(() => _loading = false);
-      await _goHomeIfOk(result);
+      await _goShellIfOk(result);
     } on OauthSignInException catch (e) {
       session.setError(e.message);
       if (mounted) setState(() => _loading = false);
@@ -230,6 +233,19 @@ class _LoginScreenState extends State<LoginScreen> {
                             );
                           },
                     child: const Text('Hesap oluştur'),
+                  ),
+                  TextButton(
+                    onPressed: _loading
+                        ? null
+                        : () {
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const MainShell(),
+                              ),
+                              (_) => false,
+                            );
+                          },
+                    child: const Text('Keşfet’e dön'),
                   ),
                   const SizedBox(height: 8),
                   OutlinedButton(

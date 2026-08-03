@@ -63,6 +63,14 @@ class ApiClient {
     return _send('DELETE', path, body: body, auth: auth);
   }
 
+  Future<Map<String, dynamic>> patch(
+    String path, {
+    Map<String, dynamic>? body,
+    bool auth = true,
+  }) {
+    return _send('PATCH', path, body: body, auth: auth);
+  }
+
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
@@ -91,6 +99,8 @@ class ApiClient {
         response = await _http.get(uri, headers: headers);
       case 'POST':
         response = await _http.post(uri, headers: headers, body: encoded);
+      case 'PATCH':
+        response = await _http.patch(uri, headers: headers, body: encoded);
       case 'DELETE':
         response = await _http.delete(uri, headers: headers, body: encoded);
       default:
@@ -263,5 +273,58 @@ class ApiClient {
       // Yerel oturumu yine de temizle
     }
     await _tokens.clear();
+  }
+
+  /// `GET /api/stocks/search?q=` — §17 (auth-free)
+  Future<Map<String, dynamic>> searchStocks(String query) {
+    return get(
+      '/api/stocks/search',
+      query: {'q': query},
+      auth: false,
+    );
+  }
+
+  /// `GET /api/public/index-screener?index=` — §17.4 (auth-free)
+  Future<Map<String, dynamic>> fetchIndexScreener(String index) {
+    return get(
+      '/api/public/index-screener',
+      query: {'index': index},
+      auth: false,
+    );
+  }
+
+  /// `GET /api/watchlist` — §10
+  Future<Map<String, dynamic>> fetchWatchlist() => get('/api/watchlist');
+
+  /// `POST /api/watchlist` — §11
+  Future<Map<String, dynamic>> addWatchlist({
+    required String symbol,
+    String? notes,
+  }) {
+    return post('/api/watchlist', body: {
+      'symbol': symbol,
+      'notes': ?notes,
+    });
+  }
+
+  /// `DELETE /api/watchlist/<symbol>` — §13
+  Future<Map<String, dynamic>> removeWatchlist(String symbol) {
+    return delete('/api/watchlist/${Uri.encodeComponent(symbol)}');
+  }
+
+  /// `PATCH /api/watchlist/<symbol>` — §12 (F2 UI kullanmaz; helper hazır)
+  Future<Map<String, dynamic>> patchWatchlist(
+    String symbol, {
+    Map<String, dynamic>? body,
+  }) {
+    return patch(
+      '/api/watchlist/${Uri.encodeComponent(symbol)}',
+      body: body,
+    );
+  }
+
+  /// `GET /api/watchlist/predictions` — §14
+  Future<Map<String, dynamic>> fetchWatchlistPredictions() {
+    return get('/api/watchlist/predictions');
   }
 }

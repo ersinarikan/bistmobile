@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F1 Google/Apple native / v8)
+> Son güncelleme: 2026-08-03 (F2 guest browse + watchlist)
 
 ---
 
@@ -13,9 +13,10 @@
 |------|--------|
 | Yol haritası yazım yeri | **Yalnızca bu handbook (§0)** |
 | API sözleşmesi | [`docs/MOBILE_API_INTEGRATION_GUIDE.md`](MOBILE_API_INTEGRATION_GUIDE.md) + web [ersinarikan/BIST](https://github.com/ersinarikan/BIST) — **salt okuma**. Web ekibi günceller; mobil ekip guide’ı fork’lamaz / §0 oraya yazmaz. |
-| Ürün sırası | **Önce uygulamayı tam geliştir** (auth → keşif → watchlist → hisse → hesap → Pro yüzey/push). **IAP / paywall en sonda** (F6). |
+| Ürün sırası | **Önce uygulamayı tam geliştir** (auth + **guest keşif** → watchlist → hisse → hesap → Pro yüzey/push). **IAP / paywall en sonda** (F6). |
 | Monetization kanalı | Yalnızca **StoreKit / Play Billing**. Garanti / WebView checkout **asla** (App Store 3.1.1). |
 | İstemci rolü | Thin client: tier, kota, sinyal, ML kararlarını **yeniden hesaplama**; API’yi render et. |
+| Guest browse | **Evet.** Kayıt/login zorunlu olmadan public keşif (arama, BIST özet, hisse teaser). Watchlist / Pro özellikler auth ister. |
 
 **Neden IAP sonda:** Auth + watchlist + hisse deneyimi doğrulanmadan paywall scope ve Review riskini büyütür. IAP API CANLI olsa da ürün değeri önce kanıtlanır.
 
@@ -42,8 +43,8 @@ flowchart TD
 | Faz | İsim | Durum | IAP? |
 |-----|------|--------|------|
 | **F0** | Temel / kalite iskeleti | Tamam (tema web hizalı; INTERNET; display name) | Hayır |
-| **F1** | Auth tamam | İlerliyor (e-posta+Turnstile+OAuth kodu; Google Client ID doldurulmalı) | Hayır |
-| **F2** | Keşfet + Watchlist | Bekliyor | Hayır |
+| **F1** | Auth tamam | Tamam (e-posta+Turnstile+Google+Apple E2E; `/me` tier okuma) | Hayır |
+| **F2** | Keşfet + Watchlist (+ guest) | Tamam (shell + browse + watchlist; F3 placeholder) | Hayır |
 | **F3** | Hisse detay | Bekliyor | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Bekliyor | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Bekliyor | Satın alma yok |
@@ -84,32 +85,40 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Token log’larda yok
   - [x] Register → `pending_verification` + resend UX
   - [x] `email_not_verified` → doğrulama bekleyen ekran
-- **Dışı:** Web session cookie auth.
-- **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_CLIENT_ID`=`com.lotlot.lotlotnetMobile`, `TURNSTILE_SITE_KEY`. Google Cloud OAuth client’ları + iOS URL scheme.
+  - [x] Apple native E2E (prod `APPLE_MOBILE_CLIENT_IDS=com.lotlot.lotlotnetMobile` + web `APPLE_CLIENT_ID`)
+- **Dışı:** Web session cookie auth. Guest shell F2’de (F1 sonrası splash hâlâ login’e düşebilir; F2’de browse’a açılır).
+- **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_MOBILE_CLIENT_IDS`, `TURNSTILE_SITE_KEY`. Google Cloud OAuth client’ları + iOS URL scheme.
 
-#### F2 — Keşfet + Watchlist
+#### F2 — Keşfet + Watchlist (+ guest browse)
 
-- **Amaç:** Ana shell: ara, izleme listesi, tahmin özeti (guide §10–§12, §17 stocks).
-- **Ekranlar:** Home/Watchlist; Search/Browse; kota göstergesi.
-- **API:** `GET/POST/PATCH/DELETE /api/watchlist*`; `GET /api/watchlist/predictions`; `GET /api/stocks/search`; `/me` quota alanları.
-- **Skills:** `project-manager`, `clean-mobile-dev`.
+- **Amaç:** Ana shell: **kayıtsız keşif** + (auth ise) izleme listesi / tahmin özeti (guide §10–§12, §17 stocks / public).
+- **Ekranlar:** Guest/Auth ortak shell — Search/Browse; BIST 30/100 özet; Home/Watchlist (auth); kota göstergesi (auth); login/register CTA (guest).
+- **API (guest, Bearer yok):** `GET /api/stocks/search`; `GET /api/stocks`; `GET /api/public/index-screener`; (F3’e köprü) public chart/valuation teaser linkleri.
+- **API (auth):** `GET/POST/PATCH/DELETE /api/watchlist*`; `GET /api/watchlist/predictions`; `/me` quota alanları.
+- **Skills:** `project-manager`, `clean-mobile-dev`, `ux-expert`.
 - **Acceptance:**
-  - [ ] CRUD + hata/403/kota mesajları sunucudan
-  - [ ] Predictions listesi render-only (`display_state`, horizons)
-  - [ ] Email verified gate uyumu
-- **Dışı:** Admin cache-report UI (zorunlu değil).
-- **Risk:** Aylık mutation kotası client’ta uydurulmaz.
+  - [x] **Guest browse:** oturum yokken ana shell açılır (zorunlu login yok); ara / BIST özet / hisse listesi public API ile
+  - [x] Guest → hisse satırına dokununca F3 teaser’a gidebilir (veya F3 gelene kadar “yakında” + Giriş Yap)
+  - [x] Guest’te watchlist mutation / predictions → net “Giriş yap” / kayıt CTA (sessiz 401 yok)
+  - [x] Auth: watchlist CRUD + hata/403/kota mesajları sunucudan
+  - [x] Auth: predictions listesi render-only (`display_state`, horizons)
+  - [x] Email verified gate uyumu (watchlist yazma)
+  - [x] Splash: token yok → **browse shell** (login değil); token var → `/me` → shell
+- **Dışı:** Admin cache-report UI (zorunlu değil); Pro gated kartlar (F5).
+- **Risk:** Aylık mutation kotası client’ta uydurulmaz; guest’te Bearer gönderme.
 
 #### F3 — Hisse detay
 
-- **Amaç:** Public teaser + auth analiz; Adil Değer ayrı (guide §17.2, §22).
+- **Amaç:** Public teaser (**guest OK**) + auth analiz; Adil Değer ayrı (guide §17.2, §22).
 - **Ekranlar:** Stock detail (özet + kartlar + sade grafik).
-- **API:** `/api/public/stocks/<sym>/valuation|fundamentals|corporate`; `/api/public/chart-data`; auth: `/api/pattern-analysis`, `/api/chart-data`, batch uçları.
+- **API (guest):** `/api/public/stocks/<sym>/valuation|fundamentals|corporate`; `/api/public/chart-data`.
+- **API (auth):** `/api/pattern-analysis`, `/api/chart-data`, batch uçları.
 - **Skills:** `seo-expert` (deep link hazırlığı), Android/iOS FS.
 - **Acceptance:**
+  - [ ] Guest hisse detay: public kartlar + grafik teaser; auth-only bloklarda “Giriş yap” CTA
   - [ ] Valuation ayrı çağrı; yoksa kart gizli
   - [ ] Mum + MA (sade); web drawing suite **yok**
-  - [ ] Pattern/signal alanları olduğu gibi
+  - [ ] Pattern/signal alanları olduğu gibi (auth)
   - [ ] Disclaimer görünür
 - **Dışı:** Fib/Gann/Elliott çizim motoru.
 - **Risk:** Cache/`pending` analiz — loading/empty states.
@@ -307,7 +316,21 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 - `google_sign_in` + `sign_in_with_apple` → `POST .../google-mobile` / `apple-mobile`
 - iOS Sign in with Apple entitlement; Bundle ID `com.lotlot.lotlotnetMobile`
-- `OauthConfig` / `OauthLocal` — Google Client ID’leri doldurulmalı (+ backend `GOOGLE_MOBILE_CLIENT_IDS`)
+- `OauthConfig` / `OauthLocal` — Google iOS client dolu; Apple E2E prod (`APPLE_MOBILE_CLIENT_IDS`)
+
+### Handbook — guest browse (2026-08-03)
+
+- §0.1 karar: **Guest browse = evet** (kayıtsız public keşif)
+- F2 acceptance: guest shell, public search/screener, auth CTA; splash token yok → browse
+- F3: guest hisse teaser + auth-only CTA
+- F1 durumu: Tamam (Apple E2E OK)
+
+### v9 (2026-08-03) — F2 guest browse + watchlist
+
+- `MainShell`: Keşfet | İzleme; splash → shell (zorunlu login yok)
+- Public: `stocks/search`, `public/index-screener`; auth: watchlist CRUD + predictions
+- Guest İzleme CTA; hisse satırı F3 placeholder sheet; kota / `email_not_verified` mesajları
+- F1 `HomeScreen` stub kaldırıldı (hesap menüsü AppBar’da)
 
 ### v4 (2026-08-03) — yol haritası §0 + görsel parity
 
@@ -341,8 +364,10 @@ sonar-scanner
 
 ## 7. Bilinen / ertelenen
 
-- [ ] lotlot.net **SSH** (root/ersin): sunucu yalnız `publickey`; bu Mac’te sunucu key’i yok — sonra
-- [ ] F1+: Google/Apple, Turnstile, watchlist, hisse, IAP — bkz. **§0**
+- [x] lotlot.net SSH (`~/.ssh/id_ed25519_lotlot` → `root@lotlot.net`)
+- [x] F2: guest browse + watchlist — bkz. **§0**
+- [ ] F3+: hisse detay, hesap, Pro/push, IAP — bkz. **§0**
+- [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 
 ## 8. Dokunulmaması gerekenler
 
