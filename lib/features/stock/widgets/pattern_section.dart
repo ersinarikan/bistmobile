@@ -18,9 +18,11 @@ const _sourceLabels = <String, String>{
 String _directionLabel(String? raw) {
   switch ((raw ?? '').toLowerCase()) {
     case 'bullish':
+    case 'buy':
     case 'al':
       return 'Yükseliş';
     case 'bearish':
+    case 'sell':
     case 'sat':
       return 'Düşüş';
     case 'neutral':
@@ -30,6 +32,42 @@ String _directionLabel(String? raw) {
     default:
       return raw?.isNotEmpty == true ? raw!.replaceAll('_', ' ') : 'Nötr';
   }
+}
+
+/// Prod bazen `overall_signal` string (`BUY`), bazen nesne döner.
+Map<String, dynamic>? _asOverallMap(dynamic raw) {
+  if (raw is Map) return Map<String, dynamic>.from(raw);
+  return null;
+}
+
+String? _overallDirection(dynamic raw) {
+  final map = _asOverallMap(raw);
+  if (map != null) {
+    return map['signal']?.toString() ?? map['direction']?.toString();
+  }
+  final s = raw?.toString().trim();
+  if (s == null || s.isEmpty || s.startsWith('{')) return null;
+  return s;
+}
+
+String? _overallReasoning(dynamic raw) {
+  final map = _asOverallMap(raw);
+  if (map == null) return null;
+  final r = map['reasoning']?.toString().trim();
+  return (r != null && r.isNotEmpty) ? r : null;
+}
+
+int? _overallStrengthPct(dynamic raw) {
+  final map = _asOverallMap(raw);
+  if (map == null) return null;
+  final strength = map['strength'];
+  if (strength is num) return strength.round().clamp(0, 100);
+  final conf = map['confidence'];
+  if (conf is num) {
+    final v = conf <= 1 ? conf * 100 : conf;
+    return v.round().clamp(0, 100);
+  }
+  return null;
 }
 
 class _NewsRow {
@@ -138,7 +176,10 @@ class PatternSection extends StatelessWidget {
     }
 
     final session = context.watch<SessionController>();
-    final overall = pattern!['overall_signal']?.toString();
+    final overallRaw = pattern!['overall_signal'];
+    final overallDir = _overallDirection(overallRaw);
+    final overallReason = _overallReasoning(overallRaw);
+    final overallStrength = _overallStrengthPct(overallRaw);
     final rawPatterns = pattern!['patterns'];
     final allPatterns = rawPatterns is List
         ? rawPatterns.whereType<Map>().map(Map<String, dynamic>.from).toList()
@@ -165,7 +206,8 @@ class PatternSection extends StatelessWidget {
     }
     final label = signalRow?['label']?.toString();
     final summary = signalRow?['summary_tr']?.toString() ??
-        signalRow?['analysis_disclaimer_tr']?.toString();
+        signalRow?['analysis_disclaimer_tr']?.toString() ??
+        overallReason;
 
     final hasSezgisel = fingpt != null ||
         (newsContext != null &&
@@ -174,7 +216,7 @@ class PatternSection extends StatelessWidget {
                 (newsContext['news_count'] is num &&
                     (newsContext['news_count'] as num) > 0)));
 
-    final hasContent = overall != null ||
+    final hasContent = overallDir != null ||
         label != null ||
         summary != null ||
         formations.isNotEmpty ||
@@ -216,17 +258,43 @@ class PatternSection extends StatelessWidget {
               fontSize: 16,
             ),
           )
-        else if (overall != null)
+        else if (overallDir != null)
           Text(
-            _directionLabel(overall),
+            _directionLabel(overallDir),
             style: const TextStyle(
               color: LotlotColors.accent,
               fontWeight: FontWeight.w800,
               fontSize: 16,
             ),
           ),
+        if (overallStrength != null) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: overallStrength / 100,
+                    minHeight: 6,
+                    backgroundColor: LotlotColors.border,
+                    color: LotlotColors.accent,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '%$overallStrength',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ],
         if (summary != null) ...[
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             summary,
             style: const TextStyle(

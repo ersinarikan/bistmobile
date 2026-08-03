@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../account/account_settings_screen.dart';
-import '../auth/login_screen.dart';
+import '../auth/auth_screen.dart';
 import '../auth/session_controller.dart';
-import '../browse/browse_screen.dart';
+import '../stocks/stocks_search_screen.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../watchlist/watchlist_screen.dart';
 
-/// F2 ortak shell: Keşfet | İzleme (guest + auth). F4: Hesap/Bilgi.
+/// Auth sonrası ana kabuk — İzleme (Keşfet kaldırıldı; hisse arama Landing/BIST).
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -17,7 +17,6 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  var _index = 0;
   AuthStatus? _lastAuth;
 
   void _openAccount() {
@@ -36,10 +35,8 @@ class _MainShellState extends State<MainShell> {
     if (_lastAuth != null &&
         _lastAuth == AuthStatus.authenticated &&
         status != AuthStatus.authenticated) {
-      // Çıkış / hesap silme → Keşfet sekmesi
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        setState(() => _index = 0);
         context.read<WatchlistController>().clear();
       });
     }
@@ -55,53 +52,43 @@ class _MainShellState extends State<MainShell> {
       appBar: AppBar(
         title: const Text('LOTLOT.NET'),
         actions: [
-          if (!authenticated) ...[
+          IconButton(
+            tooltip: 'BIST Hisseleri',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const StocksSearchScreen(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.search),
+          ),
+          if (!authenticated)
             TextButton(
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const LoginScreen(popOnSuccess: true),
+                    builder: (_) => const AuthScreen(
+                      initialMode: AuthMode.login,
+                      popOnSuccess: true,
+                    ),
                   ),
                 );
               },
               child: const Text('Giriş'),
             ),
-            IconButton(
-              tooltip: 'Bilgi',
-              onPressed: _openAccount,
-              icon: const Icon(Icons.info_outline),
+          IconButton(
+            tooltip: authenticated ? 'Hesap' : 'Bilgi',
+            onPressed: _openAccount,
+            icon: Icon(
+              authenticated
+                  ? Icons.account_circle_outlined
+                  : Icons.info_outline,
             ),
-          ] else
-            IconButton(
-              tooltip: 'Hesap',
-              onPressed: _openAccount,
-              icon: const Icon(Icons.account_circle_outlined),
-            ),
-        ],
-      ),
-      body: IndexedStack(
-        index: _index,
-        children: const [
-          BrowseScreen(),
-          WatchlistScreen(),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore),
-            label: 'Keşfet',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_border),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'İzleme',
           ),
         ],
       ),
+      body: const WatchlistScreen(),
     );
   }
 }

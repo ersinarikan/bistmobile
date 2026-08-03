@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (v24 UX cila: Sezgisel meta + metinler)
+> Son güncelleme: 2026-08-03 (v26 Landing / auth / chart cila)
 
 ---
 
@@ -97,13 +97,13 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **API (auth):** `GET/POST/PATCH/DELETE /api/watchlist*`; `GET /api/watchlist/predictions`; `/me` quota alanları.
 - **Skills:** `project-manager`, `clean-mobile-dev`, `ux-expert`.
 - **Acceptance:**
-  - [x] **Guest browse:** oturum yokken ana shell açılır (zorunlu login yok); ara / BIST özet / hisse listesi public API ile
+  - [x] **Guest browse:** oturum yokken **Landing** açılır (zorunlu login yok); BIST Hisseleri → tam katalog arama; hisse teaser public API ile
   - [x] Guest → hisse satırına dokununca F3 detay açılır
   - [x] Guest’te watchlist mutation / predictions → net “Giriş yap” / kayıt CTA (sessiz 401 yok)
   - [x] Auth: watchlist CRUD + hata/403/kota mesajları sunucudan
   - [x] Auth: predictions listesi render-only (`label` / confidence; ham `display_state` yok)
   - [x] Email verified gate uyumu (watchlist yazma)
-  - [x] Splash: token yok → **browse shell** (login değil); token var → `/me` → shell
+  - [x] Splash: bootstrap → **Landing** (auth olsa da); logout → Landing; shell’de Keşfet yok
 - **Dışı:** Admin cache-report UI (zorunlu değil); Pro gated kartlar (F5).
 - **Risk:** Aylık mutation kotası client’ta uydurulmaz; guest’te Bearer gönderme.
 
@@ -273,10 +273,12 @@ lib/
     storage/token_storage.dart
     theme/app_theme.dart    # LotlotColors / dark tema
   features/
-    splash/                 # bootstrap → MainShell
+    splash/                 # bootstrap → Landing | MainShell
+    landing/                # guest hero (web landing parity)
+    stocks/                 # BIST Hisse Merkezi (`GET /api/stocks`)
     auth/                   # login/register/OAuth + SessionController
-    shell/                  # Keşfet | İzleme
-    browse/                 # guest search + screener
+    shell/                  # Keşfet | İzleme (auth)
+    browse/                 # shell screener (BIST 30/100 özet)
     watchlist/              # auth list + predictions
 ```
 
@@ -290,6 +292,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v26 (2026-08-03) — Landing, BIST arama, auth + chart cila
+- Splash → `LandingScreen` (Ücretsiz Başla / Giriş / BIST Hisseleri; Özellikler/Metodoloji yok)
+- `StocksSearchScreen`: `GET /api/stocks` + sektör + BIST 30/100; satır → detay
+- Birleşik `AuthScreen` (web modal parity: Apple/Google, kayıt↔giriş, geri/kapat)
+- `MainShell`: Keşfet kaldırıldı — İzleme + arama; logout → Landing
+- Chart: CustomPainter mum + MA20 + S/R + OHLCV dokunma; `overall_signal` Map parse (G9)
+- `analysis_options.yaml`: `build/**` exclude (Problems flood)
 
 ### v25 (2026-08-03) — Watchlist build-phase fix
 - Guest `clear()` / auth `refresh()` post-frame (setState during build yok)
@@ -492,8 +502,9 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | G6 | Med | Sezgisel / görsel onay | `news_context` kısmen; UI adı yok | FINGPT + `news_context` + `confirmation_sources` | Mobil UI eklendi; guide’a Sezgisel/görsel onay notu |
 | G7 | Low | `user/predictions`, `pattern-summary` | §18.1 listeli | Prod var | Mobil client **yok** (bilinçli; backlog) |
 | G8 | Low | Batch pattern | §15.1 | Prod var | Mobil yok (bilinçli) |
+| G9 | Med | `overall_signal` | Örnek string `BUY` | Nesne `{signal,confidence,strength,reasoning,signals[]}` veya string | Mobil her iki şekli parse eder; **guide örneğini güncelle** |
 
-**Web ekibine özet:** G1–G6 guide düzeltme; G7–G8 isteğe bağlı mobil sonraki faz.
+**Web ekibine özet:** G1–G6, G9 guide düzeltme; G7–G8 isteğe bağlı mobil sonraki faz.
 
 ### 7.3 F0–F5 web ↔ mobil parity matrisi (2026-08-03)
 
@@ -505,7 +516,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
 | Predictions kart | label, güç çubuğu, stale | label/summary + `genel_confidence_pct` bar; ham `display_state` yok | **ok** (cila) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
-| Chart + levels | Detay chart | Mum + S/R | **ok** / partial (formasyon range highlight yok) |
+| Chart + levels | Lightweight Charts | Özel mum + MA20 + S/R + dokununca OHLCV | **ok** (sade; drawing suite yok) |
 | Sezgisel + haber sheet | 💡 portal | Rozet + bottom sheet | **ok** (bu tur) |
 | Formasyonlar + görsel onay | Liste + badge | Liste + `görsel onay` | **ok** (bu tur) |
 | Chart formasyon highlight | range hover | — | **bilinçli dışı** |

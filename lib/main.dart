@@ -12,6 +12,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/session_controller.dart';
 import 'features/browse/browse_controller.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/stocks/stocks_catalog_controller.dart';
 import 'features/watchlist/watchlist_controller.dart';
 
 Future<void> main() async {
@@ -153,6 +154,9 @@ class _LotlotAppState extends State<LotlotApp> {
         ChangeNotifierProvider<SessionController>.value(value: _session),
         ChangeNotifierProvider(
           create: (_) => BrowseController(apiClient: _api),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => StocksCatalogController(apiClient: _api),
         ),
         ChangeNotifierProvider(
           create: (_) => WatchlistController(apiClient: _api),

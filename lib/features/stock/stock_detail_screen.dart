@@ -197,9 +197,9 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                       (ctrl.levels!['support'] != null ||
                           ctrl.levels!['resistance'] != null))
                     const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                      padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
                       child: Text(
-                        'Kesik çizgi: destek / direnç',
+                        'Kesik çizgi: yeşil destek · sarı direnç (girişli grafik)',
                         style: TextStyle(
                           fontSize: 11,
                           color: LotlotColors.textSecondary,

@@ -7,6 +7,7 @@ import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
+import '../stocks/stocks_search_screen.dart';
 import '../wizard/wizard_screen.dart';
 import 'watchlist_controller.dart';
 
@@ -69,7 +70,8 @@ class _GuestWatchlistCta extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'Giriş yaparak hisseleri takip edin ve tahmin özetlerini görün. '
-            'Keşfet sekmesinden kayıtsız arama yapabilirsiniz.',
+            'Hisse aramak için üstteki arama ikonunu veya ana sayfadaki '
+            'BIST Hisseleri’ni kullanın.',
             textAlign: TextAlign.center,
             style: TextStyle(color: LotlotColors.textSecondary, height: 1.45),
           ),
@@ -92,6 +94,17 @@ class _GuestWatchlistCta extends StatelessWidget {
               );
             },
             child: const Text('Hesap oluştur'),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const StocksSearchScreen(),
+                ),
+              );
+            },
+            child: const Text('BIST Hisseleri'),
           ),
         ],
       ),
@@ -150,7 +163,7 @@ class _AuthWatchlistBody extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Text(
-                'Listeniz boş — Keşfet’ten hisse ekleyin.',
+                'Listeniz boş — arama ile hisse ekleyin.',
                 style: TextStyle(color: LotlotColors.textSecondary),
               ),
             )

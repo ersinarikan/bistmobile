@@ -290,6 +290,11 @@ class ApiClient {
     await _tokens.clear();
   }
 
+  /// `GET /api/stocks` — §17 (auth-free, tam katalog)
+  Future<Map<String, dynamic>> fetchStocksCatalog() {
+    return get('/api/stocks', auth: false);
+  }
+
   /// `GET /api/stocks/search?q=` — §17 (auth-free)
   Future<Map<String, dynamic>> searchStocks(String query) {
     return get(

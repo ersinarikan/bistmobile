@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../chart_alerts/chart_alerts_screen.dart';
+import '../landing/landing_screen.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../wizard/wizard_screen.dart';
@@ -107,7 +108,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     await session.logout();
     if (!mounted) return;
     context.read<WatchlistController>().clear();
-    Navigator.of(context).pop();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const LandingScreen()),
+      (_) => false,
+    );
   }
 
   Future<void> _deleteAccount() async {
@@ -139,7 +143,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     if (!mounted) return;
     if (deleted) {
       context.read<WatchlistController>().clear();
-      Navigator.of(context).pop();
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (_) => const LandingScreen()),
+        (_) => false,
+      );
     } else if (session.lastError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(session.lastError!)),
