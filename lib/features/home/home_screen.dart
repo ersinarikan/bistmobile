@@ -67,15 +67,13 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'Sonraki sprintler',
+            'Hoş geldiniz',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
           const Text(
-            '• Watchlist listesi ve tahminler\n'
-            '• Hisse detay + Adil Değer\n'
-            '• Google / Apple native auth\n'
-            '• StoreKit / Play Billing (IAP-only paywall)',
+            'BIST analiz araçlarınız burada toplanacak. '
+            'Watchlist ve hisse detayları yakında.',
             style: TextStyle(color: LotlotColors.textSecondary, height: 1.5),
           ),
         ],

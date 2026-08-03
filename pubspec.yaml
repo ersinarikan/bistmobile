@@ -54,10 +54,10 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/branding/app_icon.png
-  adaptive_icon_background: "#0d1117"
-  adaptive_icon_foreground: assets/branding/app_icon.png
+  adaptive_icon_background: "#071610"
+  adaptive_icon_foreground: assets/branding/app_icon_foreground.png
   remove_alpha_ios: true
-  background_color_ios: "#0d1117"
+  background_color_ios: "#071610"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -161,15 +161,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: LotlotColors.textSecondary,
                         ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Abonelik yalnızca App Store / Play Billing ile satılacak.\n'
-                    'Garanti / WebView ödeme yok.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: LotlotColors.textSecondary,
-                        ),
-                  ),
                 ],
               ),
             ),
