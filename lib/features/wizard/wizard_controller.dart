@@ -105,7 +105,23 @@ class WizardController extends ChangeNotifier {
     }
   }
 
+  void markWatched(String symbol) {
+    final sym = symbol.toUpperCase();
+    for (final row in results) {
+      if ((row['symbol']?.toString() ?? '').toUpperCase() == sym) {
+        row['already_watched'] = true;
+      }
+    }
+    notifyListeners();
+  }
+
   String _friendly(ApiException e) {
+    if (e.errorCode == 'email_not_verified' ||
+        e.body?['verification_required'] == true) {
+      return e.message.isNotEmpty
+          ? e.message
+          : 'E-posta doğrulanmadan Sihirbaz kullanılamaz.';
+    }
     if (e.errorCode == 'invalid_selection') {
       final details = e.body?['details'];
       if (details is List && details.isNotEmpty) {

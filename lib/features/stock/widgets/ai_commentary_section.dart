@@ -204,11 +204,24 @@ class _AiCommentarySectionState extends State<AiCommentarySection> {
                 )
               : Text(_text == null ? 'Yorum oluştur' : 'Yenile'),
         ),
+        if (_loading)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: Text(
+              'Birkaç saniye sürebilir…',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ),
         if (_text == null && _error == null && !_loading)
           const Padding(
             padding: EdgeInsets.only(top: 8),
             child: Text(
-              'Sunucu kısa Türkçe teknik yorum üretir.',
+              'Sunucu kısa Türkçe teknik yorum üretir. '
+              'İstek birkaç saniye sürebilir.',
               style: TextStyle(
                 color: LotlotColors.textSecondary,
                 fontSize: 12,

@@ -386,6 +386,19 @@ class _PredictionCard extends StatelessWidget {
   final Map<String, dynamic> pred;
   final WatchlistController wl;
 
+  Color _barColor(String? type) {
+    switch ((type ?? '').toLowerCase()) {
+      case 'buy':
+        return LotlotColors.accent;
+      case 'sell':
+        return LotlotColors.danger;
+      case 'warning':
+        return LotlotColors.warning;
+      default:
+        return LotlotColors.textSecondary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final symbol = pred['symbol']?.toString() ?? '';
@@ -393,8 +406,12 @@ class _PredictionCard extends StatelessWidget {
     final signal = wl.signalFor(pred);
     final label = signal?['label']?.toString();
     final summary = signal?['summary_tr']?.toString();
-    final displayState = signal?['display_state']?.toString();
+    final genel = signal?['genel_confidence_pct'];
+    final barType = signal?['confidence_bar_type']?.toString();
+    final modelHealth = signal?['model_health']?.toString() ??
+        pred['model_health']?.toString();
     final stale = pred['stale'] == true;
+    final current = pred['current_price'];
 
     return InkWell(
       onTap: symbol.isEmpty
@@ -451,13 +468,44 @@ class _PredictionCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (displayState != null) ...[
+            if (genel is num) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: genel.toDouble().clamp(0, 100) / 100.0,
+                        minHeight: 6,
+                        color: _barColor(barType),
+                        backgroundColor: LotlotColors.border,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '%${genel.round()}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      color: _barColor(barType),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            if (current is num || modelHealth != null) ...[
               const SizedBox(height: 6),
               Text(
-                displayState.replaceAll('_', ' '),
+                [
+                  if (current is num)
+                    'Fiyat: ${current.toStringAsFixed(2)}',
+                  ?modelHealth,
+                ].join(' · '),
                 style: const TextStyle(
-                  fontSize: 12,
                   color: LotlotColors.textSecondary,
+                  fontSize: 12,
                 ),
               ),
             ],

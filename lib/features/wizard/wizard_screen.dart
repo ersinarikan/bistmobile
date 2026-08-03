@@ -7,6 +7,7 @@ import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
+import '../watchlist/watchlist_controller.dart';
 import 'wizard_controller.dart';
 
 const _horizonLabels = <String, String>{
@@ -243,7 +244,10 @@ class _WizardScreenState extends State<WizardScreen> {
                       ),
                 ),
                 const SizedBox(height: 8),
-                ...ctrl.results.map((item) => _ResultCard(item: item)),
+                ...ctrl.results.map((item) => _ResultCard(
+                      item: item,
+                      onWatchlistAdded: (sym) => ctrl.markWatched(sym),
+                    )),
               ],
               const SizedBox(height: 16),
               const Text(
@@ -302,9 +306,13 @@ class _LockedCard extends StatelessWidget {
 }
 
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.item});
+  const _ResultCard({
+    required this.item,
+    required this.onWatchlistAdded,
+  });
 
   final Map<String, dynamic> item;
+  final void Function(String symbol) onWatchlistAdded;
 
   Color _signalColor(String signal) {
     switch (signal) {
@@ -314,6 +322,24 @@ class _ResultCard extends StatelessWidget {
         return LotlotColors.danger;
       default:
         return LotlotColors.textSecondary;
+    }
+  }
+
+  Future<void> _addWatchlist(BuildContext context) async {
+    final symbol = item['symbol']?.toString() ?? '';
+    if (symbol.isEmpty) return;
+    final wl = context.read<WatchlistController>();
+    final ok = await wl.addSymbol(symbol);
+    if (!context.mounted) return;
+    if (ok) {
+      onWatchlistAdded(symbol);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$symbol izlemeye eklendi')),
+      );
+    } else if (wl.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(wl.lastError!)),
+      );
     }
   }
 
@@ -332,6 +358,7 @@ class _ResultCard extends StatelessWidget {
     final current = item['current_price'];
     final pred = item['pred_price'];
     final watched = item['already_watched'] == true;
+    final wlBusy = context.watch<WatchlistController>().mutating;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -453,6 +480,20 @@ class _ResultCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: watched || wlBusy || symbol.isEmpty
+                        ? null
+                        : () => _addWatchlist(context),
+                    icon: Icon(
+                      watched ? Icons.bookmark : Icons.bookmark_border,
+                      size: 18,
+                    ),
+                    label: Text(watched ? 'İzleniyor' : 'İzlemeye ekle'),
+                  ),
+                ),
               ],
             ),
           ),
