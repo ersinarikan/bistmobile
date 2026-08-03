@@ -20,14 +20,30 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   bool _patchingPush = false;
   bool _patchingEmail = false;
   bool _refreshing = false;
+  AuthStatus? _lastAuth;
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshIfAuth());
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final session = context.watch<SessionController>();
+    final status = session.status;
+    if (_lastAuth == null) {
+      _lastAuth = status;
+      if (status == AuthStatus.authenticated) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _refreshMe());
+      }
+      return;
+    }
+    if (status != _lastAuth) {
+      final wasAuth = _lastAuth == AuthStatus.authenticated;
+      _lastAuth = status;
+      if (status == AuthStatus.authenticated && !wasAuth) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _refreshMe());
+      }
+    }
   }
 
-  Future<void> _refreshIfAuth() async {
+  Future<void> _refreshMe() async {
     final session = context.read<SessionController>();
     if (session.status != AuthStatus.authenticated) return;
     setState(() => _refreshing = true);
@@ -37,8 +53,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   Future<void> _openLegal(String url) async {
     final uri = Uri.parse(url);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) {
+    try {
+      final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sayfa açılamadı')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Sayfa açılamadı')),
       );
@@ -126,6 +149,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final label = sub?['label']?.toString();
     final limit = sub?['watchlist_limit'];
     final mutRemaining = sub?['monthly_watchlist_mutations_remaining'];
+    final prefsReady = !_refreshing || user != null;
     final pushOn = user?['push_notifications'] == true;
     final emailOn = user?['email_notifications'] == true;
 
@@ -145,96 +169,128 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
               ),
             ),
           if (auth) ...[
-            Text(
-              email ?? 'Hesap',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+            _SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    email ?? 'Hesap',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                   ),
+                  const SizedBox(height: 8),
+                  if (label != null)
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: LotlotColors.accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                      ),
+                    )
+                  else if (_refreshing)
+                    const Text(
+                      'Plan yükleniyor…',
+                      style: TextStyle(
+                        color: LotlotColors.textSecondary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  if (limit != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'İzleme limiti: $limit'
+                      '${mutRemaining != null ? ' · Bu ay kalan değişiklik: $mutRemaining' : ''}',
+                      style: const TextStyle(
+                        color: LotlotColors.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const SizedBox(height: 8),
-            if (label != null)
-              Text(
-                label,
-                style: const TextStyle(
-                  color: LotlotColors.accent,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                ),
-              ),
-            if (limit != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                'İzleme limiti: $limit'
-                '${mutRemaining != null ? ' · Bu ay kalan değişiklik: $mutRemaining' : ''}',
-                style: const TextStyle(
-                  color: LotlotColors.textSecondary,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
             Text(
               'Bildirim tercihleri',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Cihaz bildirimi sonraki sürümde. Bu ayarlar hesap tercihini kaydeder.',
-              style: TextStyle(
-                color: LotlotColors.textSecondary,
-                fontSize: 12,
-                height: 1.35,
+            const SizedBox(height: 8),
+            _SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Cihaz bildirimi sonraki sürümde. Bu ayarlar hesap tercihini kaydeder.',
+                    style: TextStyle(
+                      color: LotlotColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Push bildirimleri'),
+                    value: pushOn,
+                    onChanged: (!prefsReady || _patchingPush) ? null : _setPush,
+                    activeThumbColor: LotlotColors.onAccent,
+                    activeTrackColor: LotlotColors.accent,
+                  ),
+                  if (_patchingPush)
+                    const LinearProgressIndicator(
+                      color: LotlotColors.accent,
+                      minHeight: 2,
+                    ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('E-posta bildirimleri'),
+                    value: emailOn,
+                    onChanged:
+                        (!prefsReady || _patchingEmail) ? null : _setEmail,
+                    activeThumbColor: LotlotColors.onAccent,
+                    activeTrackColor: LotlotColors.accent,
+                  ),
+                  if (_patchingEmail)
+                    const LinearProgressIndicator(
+                      color: LotlotColors.accent,
+                      minHeight: 2,
+                    ),
+                ],
               ),
             ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Push bildirimleri'),
-              value: pushOn,
-              onChanged: _patchingPush ? null : _setPush,
-              activeThumbColor: LotlotColors.onAccent,
-              activeTrackColor: LotlotColors.accent,
-            ),
-            if (_patchingPush)
-              const LinearProgressIndicator(
-                color: LotlotColors.accent,
-                minHeight: 2,
-              ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('E-posta bildirimleri'),
-              value: emailOn,
-              onChanged: _patchingEmail ? null : _setEmail,
-              activeThumbColor: LotlotColors.onAccent,
-              activeTrackColor: LotlotColors.accent,
-            ),
-            if (_patchingEmail)
-              const LinearProgressIndicator(
-                color: LotlotColors.accent,
-                minHeight: 2,
-              ),
             const SizedBox(height: 16),
           ] else ...[
-            const Text(
-              'Yasal belgeler ve hesap işlemleri için giriş yapabilirsiniz.',
-              style: TextStyle(
-                color: LotlotColors.textSecondary,
-                height: 1.4,
+            _SurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Yasal belgeler ve hesap işlemleri için giriş yapabilirsiniz.',
+                    style: TextStyle(
+                      color: LotlotColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) =>
+                              const LoginScreen(popOnSuccess: true),
+                        ),
+                      );
+                    },
+                    child: const Text('Giriş yap'),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const LoginScreen(popOnSuccess: true),
-                  ),
-                );
-              },
-              child: const Text('Giriş yap'),
-            ),
-            const SizedBox(height: 24),
           ],
           Text(
             'Yasal',
@@ -242,23 +298,30 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   fontWeight: FontWeight.w700,
                 ),
           ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Gizlilik / KVKK'),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _openLegal(LegalUrls.gizlilik),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Privacy Policy'),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _openLegal(LegalUrls.privacy),
-          ),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Kullanım koşulları'),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () => _openLegal(LegalUrls.terms),
+          const SizedBox(height: 8),
+          _SurfaceCard(
+            child: Column(
+              children: [
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Gizlilik / KVKK'),
+                  trailing: const Icon(Icons.open_in_new, size: 18),
+                  onTap: () => _openLegal(LegalUrls.gizlilik),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Gizlilik (EN)'),
+                  trailing: const Icon(Icons.open_in_new, size: 18),
+                  onTap: () => _openLegal(LegalUrls.privacy),
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Kullanım koşulları'),
+                  trailing: const Icon(Icons.open_in_new, size: 18),
+                  onTap: () => _openLegal(LegalUrls.terms),
+                ),
+              ],
+            ),
           ),
           if (auth) ...[
             const SizedBox(height: 24),
@@ -285,6 +348,26 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SurfaceCard extends StatelessWidget {
+  const _SurfaceCard({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: LotlotColors.surface,
+        borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+        border: Border.all(color: LotlotColors.border),
+      ),
+      child: child,
     );
   }
 }

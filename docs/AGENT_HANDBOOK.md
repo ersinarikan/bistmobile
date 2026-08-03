@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F4 hesap / yasal)
+> Son güncelleme: 2026-08-03 (F4 cila)
 
 ---
 
@@ -291,6 +291,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v18 (2026-08-03) — F4 cila
+
+- Hesap: auth geçişinde `refreshMe`; yasal `launchUrl` try/catch; yüzey kartları
+- Çıkışta shell Keşfet’e dönüş; “Gizlilik (EN)” etiketi
 
 ### v17 (2026-08-03) — F4 hesap / yasal
 

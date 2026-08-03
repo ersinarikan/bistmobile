@@ -5,6 +5,7 @@ import '../account/account_settings_screen.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../browse/browse_screen.dart';
+import '../watchlist/watchlist_controller.dart';
 import '../watchlist/watchlist_screen.dart';
 
 /// F2 ortak shell: Keşfet | İzleme (guest + auth). F4: Hesap/Bilgi.
@@ -17,6 +18,7 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   var _index = 0;
+  AuthStatus? _lastAuth;
 
   void _openAccount() {
     Navigator.of(context).push(
@@ -24,6 +26,24 @@ class _MainShellState extends State<MainShell> {
         builder: (_) => const AccountSettingsScreen(),
       ),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final session = context.watch<SessionController>();
+    final status = session.status;
+    if (_lastAuth != null &&
+        _lastAuth == AuthStatus.authenticated &&
+        status != AuthStatus.authenticated) {
+      // Çıkış / hesap silme → Keşfet sekmesi
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() => _index = 0);
+        context.read<WatchlistController>().clear();
+      });
+    }
+    _lastAuth = status;
   }
 
   @override
