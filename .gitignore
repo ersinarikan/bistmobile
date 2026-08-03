@@ -56,3 +56,6 @@ ios/Runner/GoogleService-Info.plist
 
 # Local clone of web repo for agent reference
 _ref_bist/
+
+# Cursor rules/skills — local agent config only (do not publish)
+.cursor/

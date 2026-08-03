@@ -238,6 +238,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 
 ## 2. Cursor kuralları (`.cursor/rules/`)
 
+> **Local only:** `.cursor/` gitignore’da; GitHub’a commit edilmez. Makinede agent için kalır.
+
 Hepsi `alwaysApply: true` (özet):
 
 1. **web-server-ssh** — Canlı sunucu www.lotlot.net; SSH ile teşhis (yazma/restart izinsiz yok). Kod referansı için önce BIST repo.
@@ -252,6 +254,8 @@ Hepsi `alwaysApply: true` (özet):
 10. **test-and-review** — **Web incele → geliştir → test/parity**; analyze yetmez.
 
 ## 2b. Agent skills (`.cursor/skills/`)
+
+> **Local only** — `.cursor/skills/` repoda yok; yalnızca geliştirme makinesinde.
 
 Her skill: `SKILL.md` + detay `reference.md`. İlgili konuda otomatik / istenince uygula.
 
