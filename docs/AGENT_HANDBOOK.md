@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (F5 dilim: wizard + AI commentary)
+> Son güncelleme: 2026-08-03 (parity audit + Sezgisel/formasyon + F5 cila)
 
 ---
 
@@ -119,11 +119,13 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Valuation ayrı çağrı; yoksa kart gizli
   - [x] Mum + MA (sade); web drawing suite **yok**
   - [x] Pattern/signal alanları olduğu gibi (auth); `pending` → loading/empty
+  - [x] Sezgisel rozet + haber sheet; formasyonlar + görsel onay (`pattern-analysis`)
+  - [x] Free prune boş → Pro soft gate CTA (auto-pop yok)
   - [x] Disclaimer görünür
   - [x] Browse / watchlist / prediction satırı → `StockDetailScreen`; placeholder kaldırıldı
 - **Pre-dev not (2026-08-03):** Public chart `ohlcv[]` + `time` (unix); valuation/fundamentals/corporate alanları guide ile uyumlu (THYAO canlı GET).
 - **Post-dev matris:** S1 guest THYAO public+CTA; S2 valuation unavailable gizli; S3 auth pattern+levels; S4 pending crash yok; S5 watchlist tap; S6 public `auth:false`; S7 disclaimer.
-- **Dışı:** Fib/Gann/Elliott çizim motoru; chart-alerts (F5); deep link aasa (F7).
+- **Dışı:** Fib/Gann/Elliott çizim motoru; chart formasyon range highlight; chart-alerts (F5); deep link aasa (F7).
 - **Risk:** Cache/`pending` analiz — loading/empty states.
 
 #### F4 — Hesap / yasal / bütünlük
@@ -288,6 +290,15 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v23 (2026-08-03) — Pattern yüzeyi + parity audit
+- Hisse detay: Sezgisel sheet, formasyonlar, görsel onay (`pattern-analysis` cache)
+- Handbook §7.2 guide↔prod; §7.3 F0–F5 parity matrisi
+- Free boş pattern → Pro soft gate CTA
+
+### v22 (2026-08-03) — F5 cila + predictions
+- Wizard: izlemeye ekle; `email_not_verified` mesajı
+- AI: uzun bekleme kopyası; watchlist: confidence bar, ham `display_state` kaldırıldı
 
 ### v21 (2026-08-03) — F5 dilim: wizard + AI
 - Hisse detay: CTA → `POST /api/ai/commentary` → `text` (Pro soft gate)
@@ -458,6 +469,44 @@ Kaynak: prod `api_auth_routes.py` / `login_protection.py` / `api_watchlist_route
 **Critical:** yok.
 
 **Bu turda düzeltilen:** P7 (F3 hisse detay).
+
+### 7.2 Guide ↔ prod fark kaydı (2026-08-03)
+
+Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUIDE.md`. **Guide’a mobil edit yok** — web ekibine iletilecek maddeler.
+
+| ID | Sev | Konu | Guide iddia | Prod gerçek | Mobil etki / öneri |
+|----|-----|------|-------------|-------------|-------------------|
+| G1 | High | Wizard `signal_types` | Örnek `["bullish"]` | `AL` / `SAT` / `TUT` (`SIGNAL_KEYS`) | Mobil prod enum kullanıyor; **guide örneğini düzelt** |
+| G2 | Med | Wizard horizons | Kısmi örnek `1d`,`7d` | `1d,3d,7d,14d,30d` | Mobil tam set; guide tabloya yaz |
+| G3 | Med | Wizard 400 | `validation_errors` vurgusu | `error: invalid_selection` + `details[]` | Mobil `invalid_selection` mapli; guide hizala |
+| G4 | Med | AI success body | Yok | `status,symbol,model,text,cached,duration_s` | Mobil `text` okuyor; **guide’a success örneği ekle** |
+| G5 | Med | AI 429 | `rate_limited` / `busy` | rate 6/60s + busy→429 | OK; guide metinleri netleştir |
+| G6 | Med | Sezgisel / görsel onay | `news_context` kısmen; UI adı yok | FINGPT + `news_context` + `confirmation_sources` | Mobil UI eklendi; guide’a Sezgisel/görsel onay notu |
+| G7 | Low | `user/predictions`, `pattern-summary` | §18.1 listeli | Prod var | Mobil client **yok** (bilinçli; backlog) |
+| G8 | Low | Batch pattern | §15.1 | Prod var | Mobil yok (bilinçli) |
+
+**Web ekibine özet:** G1–G6 guide düzeltme; G7–G8 isteğe bağlı mobil sonraki faz.
+
+### 7.3 F0–F5 web ↔ mobil parity matrisi (2026-08-03)
+
+| Alan | Web | Mobil | Durum |
+|------|-----|-------|--------|
+| Auth e-posta + Turnstile | Lazy köprü | Aynı | **ok** |
+| Google/Apple | Native → mobile endpoints | Var | **ok** |
+| Guest browse | Public stocks | Keşfet | **ok** |
+| Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
+| Predictions kart | label, güç çubuğu, stale | label/summary + `genel_confidence_pct` bar; ham `display_state` yok | **ok** (cila) |
+| Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
+| Chart + levels | Detay chart | Mum + S/R | **ok** / partial (formasyon range highlight yok) |
+| Sezgisel + haber sheet | 💡 portal | Rozet + bottom sheet | **ok** (bu tur) |
+| Formasyonlar + görsel onay | Liste + badge | Liste + `görsel onay` | **ok** (bu tur) |
+| Chart formasyon highlight | range hover | — | **bilinçli dışı** |
+| AI commentary | Pro | CTA → `text` | **ok** |
+| Hisse Sihirbazı | Premium modal | Form + izlemeye ekle | **ok** |
+| Chart alerts | Pro+ | Hesap → ekran | **ok** |
+| Soft gate / IAP | Web paywall | Soft gate (IAP F6) | **partial** (bilinçli) |
+| FCM push | — | Optional Firebase | **ok** / no-op configsız |
+| `pattern-summary` UI | Var/özet | Yok | **gap** (backlog) |
 
 ## 8. Dokunulmaması gerekenler
 
