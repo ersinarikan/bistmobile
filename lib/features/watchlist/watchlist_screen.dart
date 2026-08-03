@@ -5,12 +5,12 @@ import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
-import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
 import '../stock/widgets/horizon_chips.dart';
 import '../stocks/stocks_search_screen.dart';
 import '../wizard/wizard_screen.dart';
 import 'watchlist_controller.dart';
+import 'widgets/watchlist_signal_tile.dart';
 
 class WatchlistScreen extends StatefulWidget {
   const WatchlistScreen({super.key});
@@ -169,18 +169,32 @@ class _AuthWatchlistBody extends StatelessWidget {
               ),
             )
           else
-            ...wl.items.map((item) => _WatchlistTile(item: item)),
+            ...wl.items.map((item) => WatchlistSignalTile(item: item)),
           const SizedBox(height: 24),
-          Text(
-            'Tahmin özeti',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Tahmin özeti',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                 ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           HorizonChips(
             selected: wl.selectedHorizon,
             onSelected: wl.setHorizon,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Ufuk seçimi listedeki kartları da günceller.',
+            style: TextStyle(
+              color: LotlotColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 8),
           if (wl.predictions.isEmpty)
@@ -254,149 +268,13 @@ class _QuotaBar extends StatelessWidget {
   }
 }
 
-class _WatchlistTile extends StatelessWidget {
-  const _WatchlistTile({required this.item});
-
-  final Map<String, dynamic> item;
-
-  @override
-  Widget build(BuildContext context) {
-    final symbol = item['symbol']?.toString() ?? '';
-    final name = item['name']?.toString();
-    final active = item['active'] != false;
-    final reason = item['disabled_reason']?.toString();
-    final alertOn = item['alert_enabled'] == true;
-    final session = context.watch<SessionController>();
-    final wl = context.watch<WatchlistController>();
-    final pred = symbol.isEmpty ? null : wl.predictionForSymbol(symbol);
-    final signal = pred != null ? wl.signalFor(pred) : null;
-    final current = pred?['current_price'];
-    final signalLabel = signal?['label']?.toString();
-    final action = signal?['action']?.toString() ??
-        signal?['action_type']?.toString();
-
-    final subtitleParts = <String>[
-      if (name != null && name.isNotEmpty) name,
-      if (current is num) current.toStringAsFixed(2),
-      if (signalLabel != null && signalLabel.isNotEmpty)
-        signalLabel
-      else if (action != null && action.isNotEmpty)
-        action,
-      if (!active && reason != null) 'Pasif ($reason)',
-      if (alertOn) 'Sinyal uyarısı açık',
-    ];
-
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        symbol,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: active ? LotlotColors.textPrimary : LotlotColors.textSecondary,
-        ),
-      ),
-      subtitle: Text(
-        subtitleParts.join(' · '),
-        style: const TextStyle(color: LotlotColors.textSecondary),
-      ),
-      onTap: symbol.isEmpty
-          ? null
-          : () => openStockDetail(context, symbol: symbol, name: name),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: alertOn ? 'Sinyal uyarısını kapat' : 'Sinyal uyarısını aç',
-            icon: Icon(
-              alertOn ? Icons.notifications_active : Icons.notifications_none,
-              color: alertOn ? LotlotColors.accent : LotlotColors.textSecondary,
-            ),
-            onPressed: symbol.isEmpty || wl.mutating
-                ? null
-                : () async {
-                    if (!session.isPremium) {
-                      await showSoftGateSheet(
-                        context,
-                        kind: SoftGateKind.premium,
-                      );
-                      return;
-                    }
-                    final turningOn = !alertOn;
-                    final ok = await wl.setAlertEnabled(symbol, !alertOn);
-                    if (!context.mounted) return;
-                    if (!ok) {
-                      final apiErr = wl.lastApiError;
-                      if (apiErr != null &&
-                          tryShowSoftGateForApiError(context, apiErr)) {
-                        return;
-                      }
-                      if (wl.lastError != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(wl.lastError!)),
-                        );
-                      }
-                      return;
-                    }
-                    if (turningOn && !session.pushNotificationsOn) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Sinyal uyarısı açıldı; cihaz push için '
-                            'Hesap → Push bildirimlerini açın.',
-                          ),
-                          duration: Duration(seconds: 5),
-                        ),
-                      );
-                    }
-                  },
-          ),
-          IconButton(
-            tooltip: 'Kaldır',
-            icon: const Icon(
-              Icons.remove_circle_outline,
-              color: LotlotColors.danger,
-            ),
-            onPressed: symbol.isEmpty
-                ? null
-                : () async {
-                    final ok = await context
-                        .read<WatchlistController>()
-                        .removeSymbol(symbol);
-                    if (!context.mounted) return;
-                    if (!ok) {
-                      final err = context.read<WatchlistController>().lastError;
-                      if (err != null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(err)),
-                        );
-                      }
-                    }
-                  },
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PredictionCard extends StatelessWidget {
   const _PredictionCard({required this.pred, required this.wl});
 
   final Map<String, dynamic> pred;
   final WatchlistController wl;
 
-  Color _barColor(String? type) {
-    switch ((type ?? '').toLowerCase()) {
-      case 'buy':
-        return LotlotColors.accent;
-      case 'sell':
-        return LotlotColors.danger;
-      case 'warning':
-        return LotlotColors.warning;
-      default:
-        return LotlotColors.textSecondary;
-    }
-  }
+  Color _barColor(String? type) => confidenceBarColor(type);
 
   String _overallLabel(String? raw) {
     switch ((raw ?? '').toLowerCase()) {
@@ -424,6 +302,10 @@ class _PredictionCard extends StatelessWidget {
         pred['model_health']?.toString();
     final stale = pred['stale'] == true;
     final current = pred['current_price'];
+    final delta = formatDeltaPct(signal?['delta_pct']);
+    final session = context.watch<SessionController>();
+    final muted = isMutedActionable(signal, session.isPro);
+    final pill = actionPill(signal);
 
     return InkWell(
       onTap: symbol.isEmpty
@@ -456,7 +338,20 @@ class _PredictionCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (overall != null)
+                if (pill != null)
+                  Opacity(
+                    opacity: muted ? 0.45 : 1,
+                    child: Text(
+                      pill,
+                      style: TextStyle(
+                        color: pill == 'SAT'
+                            ? LotlotColors.danger
+                            : LotlotColors.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  )
+                else if (overall != null)
                   Text(
                     _overallLabel(overall),
                     style: const TextStyle(
@@ -466,9 +361,15 @@ class _PredictionCard extends StatelessWidget {
                   ),
               ],
             ),
-            if (label != null) ...[
+            if (label != null || delta != null) ...[
               const SizedBox(height: 6),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                [
+                  ?label,
+                  if (delta != null) 'Δ $delta',
+                ].join(' · '),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
             ],
             if (summary != null) ...[
               const SizedBox(height: 4),
@@ -482,6 +383,15 @@ class _PredictionCard extends StatelessWidget {
             ],
             if (genel is num) ...[
               const SizedBox(height: 8),
+              const Text(
+                'Genel Sinyal Gücü',
+                style: TextStyle(
+                  color: LotlotColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
               Row(
                 children: [
                   Expanded(
@@ -490,7 +400,9 @@ class _PredictionCard extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: genel.toDouble().clamp(0, 100) / 100.0,
                         minHeight: 6,
-                        color: _barColor(barType),
+                        color: muted
+                            ? LotlotColors.textSecondary
+                            : _barColor(barType),
                         backgroundColor: LotlotColors.border,
                       ),
                     ),
@@ -501,7 +413,9 @@ class _PredictionCard extends StatelessWidget {
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
-                      color: _barColor(barType),
+                      color: muted
+                          ? LotlotColors.textSecondary
+                          : _barColor(barType),
                     ),
                   ),
                 ],
@@ -511,8 +425,7 @@ class _PredictionCard extends StatelessWidget {
               const SizedBox(height: 6),
               Text(
                 [
-                  if (current is num)
-                    'Fiyat: ${current.toStringAsFixed(2)}',
+                  if (current is num) 'Fiyat: ${current.toStringAsFixed(2)}',
                   ?modelHealth,
                 ].join(' · '),
                 style: const TextStyle(

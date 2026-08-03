@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (v28 web↔mobil analiz parity)
+> Son güncelleme: 2026-08-03 (v33 web↔mobil full parity A–E)
 
 ---
 
@@ -101,9 +101,9 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Guest → hisse satırına dokununca F3 detay açılır
   - [x] Guest’te watchlist mutation / predictions → net “Giriş yap” / kayıt CTA (sessiz 401 yok)
   - [x] Auth: watchlist CRUD + hata/403/kota mesajları sunucudan
-  - [x] Auth: predictions listesi render-only (`label` / confidence; ham `display_state` yok)
+  - [x] Auth: predictions listesi — seçili ufuk `label` / Δ% / Genel Sinyal Gücü bar; Free muted `display_state` (web kart parity)
   - [x] Email verified gate uyumu (watchlist yazma)
-  - [x] Splash: bootstrap → **Landing** (auth olsa da); logout → Landing; shell’de Keşfet yok
+  - [x] Splash: bootstrap → **Landing**; logout → Landing; shell **İzleme | Keşfet** (+ AppBar katalog arama)
 - **Dışı:** Admin cache-report UI (zorunlu değil); Pro gated kartlar (F5).
 - **Risk:** Aylık mutation kotası client’ta uydurulmaz; guest’te Bearer gönderme.
 
@@ -117,17 +117,19 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Acceptance:**
   - [x] Guest hisse detay: public kartlar + grafik teaser; auth-only bloklarda “Giriş yap” CTA
   - [x] Valuation ayrı çağrı; yoksa kart gizli
-  - [x] Mum + MA (sade); web drawing suite **yok**
+  - [x] Mum + MA20 + hacim pane + bar chip (Sade); Detaylı: EMA50/BB/RSI/öngörü; Pro formasyon shade (soft gate); web drawing suite **yok**
   - [x] Pattern/signal alanları olduğu gibi (auth); `pending` → loading/empty
   - [x] Sezgisel rozet + haber sheet; formasyonlar + görsel onay (`pattern-analysis`)
   - [x] Ufuk chip’leri + `signals_by_horizon` Genel Sinyal Gücü + `ml_unified` tahmin özeti
   - [x] Formasyon durum etiketleri (web `_patternStatus` hizası) + sıralama
+  - [x] Hacim segmenti + ort. hacim (`/volume-tier`) + `volatility_regime` meta kartı (yoksa gizli)
+  - [x] Auth chart `forecasts` polyline (Free’de sunucu boş — client uydurmaz)
   - [x] Free prune boş → Pro soft gate CTA (auto-pop yok)
   - [x] Disclaimer görünür
   - [x] Browse / watchlist / prediction satırı → `StockDetailScreen`; placeholder kaldırıldı
 - **Pre-dev not (2026-08-03):** Public chart `ohlcv[]` + `time` (unix); valuation/fundamentals/corporate alanları guide ile uyumlu (THYAO canlı GET).
-- **Post-dev matris:** S1 guest THYAO public+CTA; S2 valuation unavailable gizli; S3 auth pattern+levels; S4 pending crash yok; S5 watchlist tap; S6 public `auth:false`; S7 disclaimer.
-- **Dışı:** Fib/Gann/Elliott çizim motoru; chart formasyon range highlight; chart-alerts (F5); deep link aasa (F7).
+- **Post-dev matris:** S1 guest THYAO public+CTA; S2 valuation unavailable gizli; S3 auth pattern+levels; S4 pending crash yok; S5 watchlist tap; S6 public `auth:false`; S7 disclaimer; M1–M3 volume-tier; G1–G3 hacim/bar.
+- **Dışı:** Fib/Gann/Elliott çizim motoru; chart-alerts (F5); deep link aasa (F7).
 - **Risk:** Cache/`pending` analiz — loading/empty states.
 
 #### F4 — Hesap / yasal / bütünlük
@@ -301,6 +303,15 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v33 (2026-08-03) — Web↔mobil full parity (A–E)
+- **A** İzleme: `WatchlistSignalTile` — AL/SAT pill, Δ%, Genel Sinyal Gücü, Free muted `display_state`
+- **B** Detay: `MarketMetaCard` + `GET /api/stocks/<sym>/volume-tier` + pattern `volatility_regime`
+- **C1** Grafik: hacim pane + bar chip’leri (60/120/200/300); Sade varsayılan
+- **D** `MainShell`: İzleme | Keşfet (`BrowseScreen`); AppBar → katalog arama
+- **C2–C3** Detaylı: EMA50, Bollinger, RSI mini, `forecasts` polyline, Pro formasyon shade (soft gate)
+- Bilinçli dışı: Fib/Gann/Elliott drawing; Garanti/WebView
+- Plan: `docs/WEB_MOBILE_FULL_PARITY_PLAN.md`; handbook §7.3 güncellendi
 
 ### v28 (2026-08-03) — Web↔mobil analiz parity
 - Hisse detay `PatternSection`: ufuk chip’leri, Genel Sinyal Gücü (`confidence_bar_type`), `ml_unified` tahmin özeti
@@ -527,29 +538,31 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 
 **Web ekibine özet:** G1–G6, G9 guide düzeltme; G7–G8 isteğe bağlı mobil sonraki faz.
 
-### 7.3 F0–F5 web ↔ mobil parity matrisi (2026-08-03)
+### 7.3 F0–F5 web ↔ mobil parity matrisi (2026-08-03, v33)
 
 | Alan | Web | Mobil | Durum |
 |------|-----|-------|--------|
 | Auth e-posta + Turnstile | Lazy köprü | Aynı | **ok** |
 | Google/Apple | Native → mobile endpoints | Var | **ok** |
-| Guest browse | Public stocks | Keşfet | **ok** |
+| Guest browse | Public stocks / screener | Keşfet sekmesi + Landing | **ok** (v32) |
 | Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
-| Watchlist satır teaser | Fiyat + sinyal | Fiyat + seçili ufuk `label` (predictions) | **ok** (v28) |
-| Predictions kart | label, güç çubuğu, stale | label/summary + `genel_confidence_pct` bar; ham `display_state` yok | **ok** (cila) |
+| Watchlist satır teaser | Pill + Δ% + güç + fiyat | `WatchlistSignalTile` | **ok** (v29) |
+| Predictions kart | label, güç çubuğu, muted Free | Δ%/pill/`display_state` muted | **ok** (v29) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
-| Chart + levels | Lightweight Charts | Özel mum + MA20 + S/R + dokununca OHLCV | **ok** (sade; drawing suite yok) |
+| Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
+| Chart + levels | Lightweight Charts | Sade: mum+MA20+hacim+S/R; Detaylı: +EMA50/BB/RSI/öngörü | **ok** (v31–v33) |
+| Chart formasyon highlight | range shade | Detaylı + Pro soft gate | **ok** (v33; drawing suite yok) |
 | Sezgisel + haber sheet | 💡 portal | Rozet + bottom sheet | **ok** |
 | Ufuk + Genel Sinyal | Detay modal ufuk | Chip + `signals_by_horizon` | **ok** (v28) |
-| ML / öngörü özeti | `detailMlUnified` | `ml_unified[horizon]` kart | **ok** (v28; chart çizgisi yok) |
+| ML / öngörü özeti | `detailMlUnified` + chart forecasts | `ml_unified` kart + chart polyline | **ok** (v28/v33) |
 | Formasyonlar + görsel onay | Liste + durum badge | Durum + `görsel onay` + sıralama | **ok** (v28) |
-| Chart formasyon highlight | range hover | — | **bilinçli dışı** |
 | AI commentary | Pro | CTA → `text` | **ok** |
 | Hisse Sihirbazı | Premium modal | Form + izlemeye ekle | **ok** |
 | Chart alerts | Pro+ | Hesap → ekran | **ok** |
 | Soft gate / IAP | Web paywall | Soft gate → `PaywallScreen` (prod Apple enabled) | **istemci ok** |
 | FCM push | — | Optional Firebase | **ok** / no-op configsız |
 | `pattern-summary` UI | Var/özet | Yok | **gap** (backlog) |
+| Drawing suite | Fib/Gann/Elliott | — | **bilinçli dışı** |
 
 ## 8. Dokunulmaması gerekenler
 

@@ -348,6 +348,14 @@ class ApiClient {
     return get('/api/watchlist/predictions');
   }
 
+  /// `GET /api/stocks/<sym>/volume-tier` — auth-free (§17 / guide)
+  Future<Map<String, dynamic>> fetchVolumeTier(String symbol) {
+    return get(
+      '/api/stocks/${Uri.encodeComponent(symbol)}/volume-tier',
+      auth: false,
+    );
+  }
+
   /// `GET /api/public/stocks/<sym>/valuation` — §17.2 (auth-free)
   Future<Map<String, dynamic>> fetchPublicValuation(String symbol) {
     return get(

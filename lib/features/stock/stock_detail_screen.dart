@@ -10,9 +10,33 @@ import 'stock_detail_controller.dart';
 import 'widgets/ai_commentary_section.dart';
 import 'widgets/corporate_card.dart';
 import 'widgets/fundamentals_card.dart';
+import 'widgets/market_meta_card.dart';
 import 'widgets/pattern_section.dart';
 import 'widgets/simple_candle_chart.dart';
 import 'widgets/valuation_card.dart';
+
+List<({int start, int end, bool bullish})> _patternRangesFrom(
+  Map<String, dynamic>? pattern,
+) {
+  final raw = pattern?['patterns'];
+  if (raw is! List) return const [];
+  final out = <({int start, int end, bool bullish})>[];
+  const skip = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
+  for (final item in raw) {
+    if (item is! Map) continue;
+    final src = item['source']?.toString() ?? '';
+    if (skip.contains(src)) continue;
+    final range = item['range'];
+    if (range is! Map) continue;
+    final s = range['start_index'];
+    final e = range['end_index'];
+    if (s is! num || e is! num) continue;
+    final signal = (item['signal'] ?? '').toString().toLowerCase();
+    final bullish = signal.contains('bull') || signal == 'buy' || signal == 'al';
+    out.add((start: s.round(), end: e.round(), bullish: bullish));
+  }
+  return out;
+}
 
 class StockDetailScreen extends StatefulWidget {
   const StockDetailScreen({
@@ -191,7 +215,13 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                     child: SimpleCandleChart(
                       bars: ctrl.bars,
                       levels: ctrl.levels,
+                      forecasts: ctrl.forecasts,
+                      patternRanges: _patternRangesFrom(ctrl.pattern),
                     ),
+                  ),
+                  MarketMetaCard(
+                    volumeTier: ctrl.volumeTier,
+                    volatilityRegime: ctrl.volatilityRegime,
                   ),
                   if (ctrl.levels != null &&
                       (ctrl.levels!['support'] != null ||

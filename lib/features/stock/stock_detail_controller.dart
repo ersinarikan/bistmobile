@@ -72,10 +72,18 @@ class StockDetailController extends ChangeNotifier {
   Map<String, dynamic>? valuation;
   Map<String, dynamic>? fundamentals;
   Map<String, dynamic>? corporate;
+  Map<String, dynamic>? volumeTier;
   List<OhlcvBar> bars = [];
   Map<String, dynamic>? levels;
   Map<String, dynamic>? pattern;
+  List<Map<String, dynamic>> forecasts = [];
   bool patternPending = false;
+
+  String? get volatilityRegime {
+    final raw = pattern?['volatility_regime']?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    return raw;
+  }
 
   bool get isAuthenticated =>
       _session.status == AuthStatus.authenticated;
@@ -101,6 +109,7 @@ class StockDetailController extends ChangeNotifier {
         _loadFundamentals(),
         _loadCorporate(),
         _loadPublicChart(),
+        _loadVolumeTier(),
       ]);
     } catch (e) {
       error = e.toString();
@@ -115,6 +124,7 @@ class StockDetailController extends ChangeNotifier {
       pattern = null;
       patternPending = false;
       levels = null;
+      forecasts = [];
       _notify();
     }
   }
@@ -159,11 +169,21 @@ class StockDetailController extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadVolumeTier() async {
+    try {
+      final data = await _api.fetchVolumeTier(symbol);
+      volumeTier = Map<String, dynamic>.from(data);
+    } on ApiException {
+      volumeTier = null;
+    }
+  }
+
   Future<void> _loadPublicChart() async {
     try {
       final data = await _api.fetchPublicChartData(symbol, bars: 180);
       bars = _parseBars(data);
       levels = null;
+      forecasts = [];
     } on ApiException {
       bars = [];
     }
@@ -184,6 +204,7 @@ class StockDetailController extends ChangeNotifier {
       if (authBars.isNotEmpty) bars = authBars;
       final lv = chart['levels'];
       levels = lv is Map ? Map<String, dynamic>.from(lv) : null;
+      forecasts = _parseForecasts(chart);
 
       pattern = results[1];
       patternPending = pattern?['status']?.toString() == 'pending';
@@ -192,6 +213,7 @@ class StockDetailController extends ChangeNotifier {
       if (e.statusCode == 401) {
         pattern = null;
         levels = null;
+        forecasts = [];
       } else {
         pattern = null;
         // public chart kalır
@@ -200,6 +222,15 @@ class StockDetailController extends ChangeNotifier {
       loadingAuth = false;
       _notify();
     }
+  }
+
+  List<Map<String, dynamic>> _parseForecasts(Map<String, dynamic> data) {
+    final raw = data['forecasts'];
+    if (raw is! List) return [];
+    return raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
   }
 
   List<OhlcvBar> _parseBars(Map<String, dynamic> data) {

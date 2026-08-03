@@ -261,7 +261,7 @@ class LandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 36),
                       Text(
-                        'BIST 30 ÖZET SAYFALARI',
+                        'KEŞFET / BIST ÖZET',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: LotlotColors.textSecondary,
@@ -271,8 +271,8 @@ class LandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Endeks özetleri için uygulamada BIST Hisseleri → '
-                        'BIST 30 / BIST 100 filtrelerini kullanın.',
+                        'Giriş sonrası Keşfet sekmesinde BIST 30 / 100 skorlu '
+                        'tarama; BIST Hisseleri ile tam katalog arama.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: LotlotColors.textSecondary,
