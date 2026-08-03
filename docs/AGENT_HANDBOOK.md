@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (P3–P5 Medium polish)
+> Son güncelleme: 2026-08-03 (F3 polish: login return + auth reload)
 
 ---
 
@@ -284,6 +284,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v16 (2026-08-03) — F3 cila
+
+- Login `popOnSuccess`: detay/watchlist/shell’den girişte ekran korunur
+- Hisse detay: auth geçişinde pattern/levels yeniden yükleme; dispose-safe notify
+- SMA etiketi; destek/direnç jargonsuz; Adil Değer bar ±5 hizası; guest bookmark → giriş
 
 ### v15 (2026-08-03) — F3 hisse detay
 

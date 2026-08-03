@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../watchlist/watchlist_controller.dart';
 import 'stock_detail_controller.dart';
@@ -28,18 +29,38 @@ class StockDetailScreen extends StatefulWidget {
 
 class _StockDetailScreenState extends State<StockDetailScreen> {
   StockDetailController? _ctrl;
+  AuthStatus? _lastAuth;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_ctrl != null) return;
-    _ctrl = StockDetailController(
-      apiClient: context.read<ApiClient>(),
-      session: context.read<SessionController>(),
-      symbol: widget.symbol.toUpperCase(),
-      name: widget.name,
-    );
-    _ctrl!.load();
+    final session = context.watch<SessionController>();
+    if (_ctrl == null) {
+      _ctrl = StockDetailController(
+        apiClient: context.read<ApiClient>(),
+        session: session,
+        symbol: widget.symbol.toUpperCase(),
+        name: widget.name,
+      );
+      _lastAuth = session.status;
+      _ctrl!.load();
+      return;
+    }
+
+    final status = session.status;
+    if (status != _lastAuth) {
+      final wasAuth = _lastAuth == AuthStatus.authenticated;
+      _lastAuth = status;
+      if (status == AuthStatus.authenticated && !wasAuth) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _ctrl?.ensureAuthExtras();
+        });
+      } else if (status != AuthStatus.authenticated && wasAuth) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _ctrl?.load();
+        });
+      }
+    }
   }
 
   @override
@@ -55,11 +76,18 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
     );
   }
 
-  Future<void> _toggleWatchlist() async {
-    final wl = context.read<WatchlistController>();
+  Future<void> _onWatchlistPressed() async {
     final session = context.read<SessionController>();
-    if (session.status != AuthStatus.authenticated) return;
+    if (session.status != AuthStatus.authenticated) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => const LoginScreen(popOnSuccess: true),
+        ),
+      );
+      return;
+    }
 
+    final wl = context.read<WatchlistController>();
     final messenger = ScaffoldMessenger.of(context);
     final sym = widget.symbol.toUpperCase();
     final inList = _inWatchlist(wl);
@@ -93,22 +121,24 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
         final wl = context.watch<WatchlistController>();
         final auth = session.status == AuthStatus.authenticated;
         final inList = auth && _inWatchlist(wl);
-        final lastClose =
-            ctrl.bars.isNotEmpty ? ctrl.bars.last.close : null;
+        final headerPrice = ctrl.valuation?['current_price'] is num
+            ? (ctrl.valuation!['current_price'] as num).toDouble()
+            : (ctrl.bars.isNotEmpty ? ctrl.bars.last.close : null);
 
         return Scaffold(
           appBar: AppBar(
             title: Text(widget.symbol.toUpperCase()),
             actions: [
-              if (auth)
-                IconButton(
-                  tooltip: inList ? 'Listeden çıkar' : 'Listeye ekle',
-                  onPressed: wl.mutating ? null : _toggleWatchlist,
-                  icon: Icon(
-                    inList ? Icons.bookmark : Icons.bookmark_border,
-                    color: LotlotColors.accent,
-                  ),
+              IconButton(
+                tooltip: !auth
+                    ? 'Listeye eklemek için giriş yap'
+                    : (inList ? 'Listeden çıkar' : 'Listeye ekle'),
+                onPressed: wl.mutating ? null : _onWatchlistPressed,
+                icon: Icon(
+                  inList ? Icons.bookmark : Icons.bookmark_border,
+                  color: LotlotColors.accent,
                 ),
+              ),
             ],
           ),
           body: RefreshIndicator(
@@ -130,11 +160,11 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                             fontSize: 14,
                           ),
                         ),
-                      if (lastClose != null) ...[
+                      if (headerPrice != null) ...[
                         const SizedBox(height: 6),
                         Text(
-                          lastClose.toStringAsFixed(
-                            lastClose >= 100 ? 1 : 2,
+                          headerPrice.toStringAsFixed(
+                            headerPrice >= 100 ? 1 : 2,
                           ),
                           style: const TextStyle(
                             fontSize: 28,
@@ -168,7 +198,7 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                     const Padding(
                       padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
                       child: Text(
-                        'Kesik çizgi: destek / direnç (auth grafik)',
+                        'Kesik çizgi: destek / direnç',
                         style: TextStyle(
                           fontSize: 11,
                           color: LotlotColors.textSecondary,

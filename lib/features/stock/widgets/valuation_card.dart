@@ -27,10 +27,14 @@ class ValuationCard extends StatelessWidget {
     if (key == 'premium') barColor = LotlotColors.warning;
     if (key == 'fair') barColor = LotlotColors.textSecondary;
 
-    // Bar position: discount left, fair mid, premium right (±5% band).
+    // Guide §17.2: fair band ±%5; marker travels on ±20% visual span.
     double pos = 0.5;
     if (premium is num) {
-      pos = ((premium.toDouble() + 25) / 50).clamp(0.05, 0.95);
+      pos = ((premium.toDouble() + 20) / 40).clamp(0.05, 0.95);
+    } else if (key == 'discount') {
+      pos = 0.2;
+    } else if (key == 'premium') {
+      pos = 0.8;
     }
 
     return _StockSection(

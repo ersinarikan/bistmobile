@@ -14,7 +14,13 @@ import 'turnstile_bridge_screen.dart';
 import 'verify_email_pending_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({
+    super.key,
+    this.popOnSuccess = false,
+  });
+
+  /// true: giriş sonrası stack’i silme — önceki ekrana dön (ör. hisse detay).
+  final bool popOnSuccess;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -35,13 +41,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _goShellIfOk(LoginResult result) async {
     if (!mounted) return;
-    if (result == LoginResult.success) {
-      context.read<WatchlistController>().refresh();
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (_) => const MainShell()),
-        (_) => false,
-      );
+    if (result != LoginResult.success) return;
+    context.read<WatchlistController>().refresh();
+    if (widget.popOnSuccess && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop(true);
+      return;
     }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (_) => const MainShell()),
+      (_) => false,
+    );
   }
 
   Future<void> _submit() async {

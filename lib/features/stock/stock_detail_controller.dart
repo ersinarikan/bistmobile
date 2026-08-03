@@ -67,6 +67,7 @@ class StockDetailController extends ChangeNotifier {
   bool loadingPublic = false;
   bool loadingAuth = false;
   String? error;
+  bool _disposed = false;
 
   Map<String, dynamic>? valuation;
   Map<String, dynamic>? fundamentals;
@@ -79,16 +80,20 @@ class StockDetailController extends ChangeNotifier {
   bool get isAuthenticated =>
       _session.status == AuthStatus.authenticated;
 
-  bool get showValuation {
-    if (valuation == null) return false;
-    final fv = valuation!['fair_value'];
-    return fv != null;
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 
   Future<void> load() async {
     loadingPublic = true;
     error = null;
-    notifyListeners();
+    _notify();
 
     try {
       await Future.wait([
@@ -101,12 +106,23 @@ class StockDetailController extends ChangeNotifier {
       error = e.toString();
     } finally {
       loadingPublic = false;
-      notifyListeners();
+      _notify();
     }
 
     if (isAuthenticated) {
       await _loadAuthExtras();
+    } else {
+      pattern = null;
+      patternPending = false;
+      levels = null;
+      _notify();
     }
+  }
+
+  /// Login sonrası aynı ekranda auth chart + pattern çek.
+  Future<void> ensureAuthExtras() async {
+    if (!isAuthenticated || _disposed) return;
+    await _loadAuthExtras();
   }
 
   Future<void> _loadValuation() async {
@@ -156,12 +172,13 @@ class StockDetailController extends ChangeNotifier {
   Future<void> _loadAuthExtras() async {
     loadingAuth = true;
     patternPending = false;
-    notifyListeners();
+    _notify();
     try {
       final results = await Future.wait([
         _api.fetchChartData(symbol, bars: 420),
         _api.fetchPatternAnalysis(symbol),
       ]);
+      if (_disposed) return;
       final chart = results[0];
       final authBars = _parseBars(chart);
       if (authBars.isNotEmpty) bars = authBars;
@@ -171,15 +188,17 @@ class StockDetailController extends ChangeNotifier {
       pattern = results[1];
       patternPending = pattern?['status']?.toString() == 'pending';
     } on ApiException catch (e) {
+      if (_disposed) return;
       if (e.statusCode == 401) {
         pattern = null;
+        levels = null;
       } else {
         pattern = null;
         // public chart kalır
       }
     } finally {
       loadingAuth = false;
-      notifyListeners();
+      _notify();
     }
   }
 

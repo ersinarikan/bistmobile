@@ -63,58 +63,74 @@ class SimpleCandleChart extends StatelessWidget {
         ),
     ];
 
-    return SizedBox(
-      height: 240,
-      child: Stack(
-        children: [
-          CandlestickChart(
-            CandlestickChartData(
-              minY: minY,
-              maxY: maxY,
-              candlestickSpots: candleSpots,
-              candlestickPainter: DefaultCandlestickPainter(
-                candlestickStyleProvider: (spot, _) {
-                  final c = spot.isUp
-                      ? LotlotColors.accent
-                      : LotlotColors.danger;
-                  return CandlestickStyle(
-                    lineColor: c,
-                    lineWidth: 1.2,
-                    bodyStrokeColor: c,
-                    bodyStrokeWidth: 0,
-                    bodyFillColor: c,
-                    bodyWidth: 5,
-                    bodyRadius: 0,
-                  );
-                },
-              ),
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                getDrawingHorizontalLine: (_) => const FlLine(
-                  color: LotlotColors.border,
-                  strokeWidth: 0.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 8, bottom: 4),
+          child: Text(
+            'Gri çizgi: 20 günlük ortalama',
+            style: TextStyle(
+              fontSize: 11,
+              color: LotlotColors.textSecondary,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 240,
+          child: Stack(
+            children: [
+              CandlestickChart(
+                CandlestickChartData(
+                  minY: minY,
+                  maxY: maxY,
+                  candlestickSpots: candleSpots,
+                  candlestickPainter: DefaultCandlestickPainter(
+                    candlestickStyleProvider: (spot, _) {
+                      final c = spot.isUp
+                          ? LotlotColors.accent
+                          : LotlotColors.danger;
+                      return CandlestickStyle(
+                        lineColor: c,
+                        lineWidth: 1.2,
+                        bodyStrokeColor: c,
+                        bodyStrokeWidth: 0,
+                        bodyFillColor: c,
+                        bodyWidth: 5,
+                        bodyRadius: 0,
+                      );
+                    },
+                  ),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: LotlotColors.border,
+                      strokeWidth: 0.5,
+                    ),
+                  ),
+                  titlesData: const FlTitlesData(show: false),
+                  borderData: FlBorderData(show: false),
+                  candlestickTouchData: CandlestickTouchData(enabled: false),
                 ),
               ),
-              titlesData: const FlTitlesData(show: false),
-              borderData: FlBorderData(show: false),
-              candlestickTouchData: CandlestickTouchData(enabled: false),
-            ),
-          ),
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _OverlayPainter(
-                minY: minY,
-                maxY: maxY,
-                barCount: display.length,
-                ma: ma,
-                support: support is num ? support.toDouble() : null,
-                resistance: resistance is num ? resistance.toDouble() : null,
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _OverlayPainter(
+                    minY: minY,
+                    maxY: maxY,
+                    barCount: display.length,
+                    ma: ma,
+                    support: support is num ? support.toDouble() : null,
+                    resistance:
+                        resistance is num ? resistance.toDouble() : null,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

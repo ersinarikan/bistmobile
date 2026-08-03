@@ -70,7 +70,9 @@ class _MainShellState extends State<MainShell> {
             TextButton(
               onPressed: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LoginScreen(popOnSuccess: true),
+                  ),
                 );
               },
               child: const Text('Giriş'),

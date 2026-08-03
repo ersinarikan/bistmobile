@@ -74,7 +74,9 @@ class _GuestWatchlistCta extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const LoginScreen(popOnSuccess: true),
+                ),
               );
             },
             child: const Text('Giriş yap'),
@@ -326,7 +328,11 @@ class _PredictionCard extends StatelessWidget {
     return InkWell(
       onTap: symbol.isEmpty
           ? null
-          : () => openStockDetail(context, symbol: symbol),
+          : () => openStockDetail(
+                context,
+                symbol: symbol,
+                name: pred['name']?.toString(),
+              ),
       borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),

@@ -60,7 +60,9 @@ class PatternSection extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const LoginScreen()),
+                MaterialPageRoute<void>(
+                  builder: (_) => const LoginScreen(popOnSuccess: true),
+                ),
               );
             },
             child: const Text('Giriş yap'),
