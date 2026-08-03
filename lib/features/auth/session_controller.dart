@@ -60,16 +60,23 @@ class SessionController extends ChangeNotifier {
       status = AuthStatus.authenticated;
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
+        await _tokens.clear();
         status = AuthStatus.unauthenticated;
         user = null;
         subscription = null;
       } else {
+        // Geçici ağ/5xx: token’ı silme; guest shell’e düşür ama sonraki denemede
+        // token durur (splash tekrar / login yenileme). Soft degrade.
         lastError = e.message;
         status = AuthStatus.unauthenticated;
+        user = null;
+        subscription = null;
       }
     } catch (e) {
       lastError = e.toString();
       status = AuthStatus.unauthenticated;
+      user = null;
+      subscription = null;
     }
     notifyListeners();
   }
@@ -304,6 +311,10 @@ class SessionController extends ChangeNotifier {
         return 'Kayıt şu an tamamlanamadı. Biraz sonra tekrar deneyin.';
       case 'invalid_oauth_token':
         return 'Apple/Google doğrulanamadı. Biraz sonra tekrar deneyin.';
+      case 'oauth_failed':
+        return 'Sosyal giriş tamamlanamadı. Tekrar deneyin.';
+      case 'token_issue_failed':
+        return 'Oturum açılamadı. Biraz sonra tekrar deneyin.';
       case 'id_token_required':
         return 'OAuth token eksik.';
       case 'identity_token_required':
@@ -314,6 +325,10 @@ class SessionController extends ChangeNotifier {
         return 'Güvenlik doğrulaması geçersiz veya süresi doldu. Tekrar deneyin.';
       case 'captcha_required':
         return 'Güvenlik doğrulaması gerekli. Lütfen tekrar deneyin.';
+      case 'email_not_verified':
+        return e.message.isNotEmpty
+            ? e.message
+            : 'E-posta henüz doğrulanmadı.';
       default:
         return e.message.isNotEmpty ? e.message : 'İstek başarısız';
     }

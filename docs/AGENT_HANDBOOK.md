@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (register error map + verification_email_sent UX)
+> Son güncelleme: 2026-08-03 (F0–F2 web↔mobil parity review)
 
 ---
 
@@ -381,6 +381,31 @@ sonar-scanner
 - [x] F2: guest browse + watchlist — bkz. **§0**
 - [ ] F3+: hisse detay, hesap, Pro/push, IAP — bkz. **§0**
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
+
+### 7.1 Parity review (2026-08-03) — F0–F2
+
+Kaynak: prod `api_auth_routes.py` / `login_protection.py` / `api_watchlist_routes.py` + mobil `lib/features/**`.
+
+| ID | Sev | Alan | Web/API beklenen | Mobil | Durum |
+|----|-----|------|------------------|-------|-------|
+| P1 | High | Login Turnstile retry | Token sonrası hata görünür | Tekrar `needsTurnstile` / fail sessiz kalabilirdi | **fixed** — login_screen (register ile aynı) |
+| P2 | High | Bootstrap 401 | Geçersiz oturum wipe | 401’de token clear eksikti | **fixed** — `bootstrap` `_tokens.clear()` |
+| P3 | Med | Bootstrap 5xx/ağ | Soft retry / “yeniden dene” | Guest shell + token kalır; splash retry yok | deferred |
+| P4 | Med | Login `invalid_credentials`+`captcha_required` | Guide: köprü aç | Köprü açılır; yanlış şifre metni bazen atlanır | deferred (guide uyumlu; UX iyileştirme) |
+| P5 | Med | `email_already_registered` CTA | Web: girişe yönlendir | Mesaj var, tek tık Giriş butonu yok | deferred |
+| P6 | Med | Watchlist alert/PATCH | Web alert alanları | F2 MVP add/delete only; PATCH API var UI yok | deferred (F5) |
+| P7 | Med | Hisse detay | Web `/hisse/...` | Placeholder sheet | deferred (**F3**) |
+| P8 | Low | `oauth_failed` / `token_issue_failed` map | Anlaşılır mesaj | Ham/genel | **fixed** — friendly map |
+| P9 | Low | Browse yoğunluk | Web `/stocks` zengin | Screener+search yeterli F2 | OK / F3 zenginleştirir |
+| P10 | — | Guest Bearer | Public `auth:false` | search/screener `auth:false` | OK |
+| P11 | — | Register error map | §5 kodları | invalid_email/weak/409/sent bayrağı | OK (v11) |
+| P12 | — | Logout | Session wipe | Shell’de kalır (guest) | OK (F2) |
+| P13 | — | Predictions | Render-only | `display_state`/`label` | OK |
+| P14 | — | Token log | Yok | Grep temiz | OK |
+
+**Critical:** yok (F3 geçiş blocker yok).
+
+**Bu turda düzeltilen:** P1, P2, P8.
 
 ## 8. Dokunulmaması gerekenler
 

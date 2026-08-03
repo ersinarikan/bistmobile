@@ -65,6 +65,13 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _password.text,
         turnstileToken: token,
       );
+      // Token sonrası tekrar köprü sinyali = sessiz no-op olmasın (parity)
+      if (result == LoginResult.needsTurnstile) {
+        session.setError(
+          'Güvenlik doğrulaması yenilenmeli. Lütfen tekrar deneyin.',
+        );
+        result = LoginResult.failed;
+      }
     }
 
     if (!mounted) return;
@@ -82,6 +89,13 @@ class _LoginScreenState extends State<LoginScreen> {
             email: _email.text.trim(),
           ),
         ),
+      );
+      return;
+    }
+
+    if (result == LoginResult.failed && session.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(session.lastError!)),
       );
     }
   }
