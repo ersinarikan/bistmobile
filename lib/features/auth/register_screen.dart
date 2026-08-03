@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
+import 'login_screen.dart';
 import 'session_controller.dart';
 import 'turnstile_bridge_screen.dart';
 import 'verify_email_pending_screen.dart';
@@ -84,9 +85,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (result == RegisterResult.failed && session.lastError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(session.lastError!)),
+        SnackBar(
+          content: Text(session.lastError!),
+          action: _isAlreadyRegistered(session.lastErrorCode)
+              ? SnackBarAction(
+                  label: 'Giriş',
+                  onPressed: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LoginScreen(),
+                      ),
+                    );
+                  },
+                )
+              : null,
+        ),
       );
     }
+  }
+
+  bool _isAlreadyRegistered(String? code) {
+    return code == 'email_already_registered' ||
+        code == 'email_exists' ||
+        code == 'already_registered';
   }
 
   @override
@@ -181,6 +202,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       session.lastError!,
                       style: const TextStyle(color: LotlotColors.danger),
                     ),
+                    if (_isAlreadyRegistered(session.lastErrorCode)) ...[
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _loading
+                            ? null
+                            : () {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                );
+                              },
+                        child: const Text('Giriş yap'),
+                      ),
+                    ],
                   ],
                   const SizedBox(height: 24),
                   ElevatedButton(

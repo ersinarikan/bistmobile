@@ -34,17 +34,22 @@ class SessionController extends ChangeNotifier {
   Map<String, dynamic>? subscription;
   String? lastError;
 
+  /// Son API `error` kodu (UI CTA için — örn. email_already_registered).
+  String? lastErrorCode;
+
   /// Son register/resend yanıtındaki `verification_email_sent` (§5).
   bool? lastVerificationEmailSent;
 
-  void setError(String? message) {
+  void setError(String? message, {String? errorCode}) {
     lastError = message;
+    lastErrorCode = errorCode;
     notifyListeners();
   }
 
   Future<void> bootstrap() async {
     status = AuthStatus.unknown;
     lastError = null;
+    lastErrorCode = null;
     notifyListeners();
 
     final access = await _tokens.readAccessToken();
@@ -65,19 +70,31 @@ class SessionController extends ChangeNotifier {
         user = null;
         subscription = null;
       } else {
-        // Geçici ağ/5xx: token’ı silme; guest shell’e düşür ama sonraki denemede
-        // token durur (splash tekrar / login yenileme). Soft degrade.
-        lastError = e.message;
-        status = AuthStatus.unauthenticated;
+        // Geçici ağ/5xx: token kalsın; splash’ta Yeniden dene (P3).
+        lastError = e.message.isNotEmpty
+            ? e.message
+            : 'Bağlantı kurulamadı. Tekrar deneyin.';
+        lastErrorCode = e.errorCode;
+        status = AuthStatus.unknown;
         user = null;
         subscription = null;
       }
     } catch (e) {
-      lastError = e.toString();
-      status = AuthStatus.unauthenticated;
+      lastError = 'Bağlantı kurulamadı. Tekrar deneyin.';
+      status = AuthStatus.unknown;
       user = null;
       subscription = null;
     }
+    notifyListeners();
+  }
+
+  /// Splash soft-fail: token silmeden misafir shell (P3).
+  void continueAsGuestKeepingTokens() {
+    status = AuthStatus.unauthenticated;
+    user = null;
+    subscription = null;
+    lastError = null;
+    lastErrorCode = null;
     notifyListeners();
   }
 
@@ -87,6 +104,7 @@ class SessionController extends ChangeNotifier {
     String? turnstileToken,
   }) async {
     lastError = null;
+    lastErrorCode = null;
     notifyListeners();
     try {
       final data = await _api.login(
@@ -102,8 +120,17 @@ class SessionController extends ChangeNotifier {
       return LoginResult.success;
     } on ApiException catch (e) {
       final code = e.errorCode;
-      if (code == 'captcha_required' || e.body?['captcha_required'] == true) {
-        lastError = null;
+      final captchaFlag = e.body?['captcha_required'] == true;
+      // Pure captcha_required (400) veya invalid_credentials + bayrak → köprü (guide §6).
+      if (code == 'captcha_required' || captchaFlag) {
+        if (code == 'invalid_credentials') {
+          // P4: köprü açılırken yanlış şifre mesajını koru
+          lastError = _friendlyAuthMessage(e);
+          lastErrorCode = code;
+        } else {
+          lastError = null;
+          lastErrorCode = code;
+        }
         notifyListeners();
         return LoginResult.needsTurnstile;
       }
@@ -112,14 +139,17 @@ class SessionController extends ChangeNotifier {
         lastError = e.message.isNotEmpty
             ? e.message
             : 'E-posta henüz doğrulanmadı.';
+        lastErrorCode = code;
         notifyListeners();
         return LoginResult.emailNotVerified;
       }
       lastError = _friendlyAuthMessage(e);
+      lastErrorCode = code;
       notifyListeners();
       return LoginResult.failed;
     } catch (e) {
       lastError = e.toString();
+      lastErrorCode = null;
       notifyListeners();
       return LoginResult.failed;
     }
@@ -133,6 +163,7 @@ class SessionController extends ChangeNotifier {
     String? turnstileToken,
   }) async {
     lastError = null;
+    lastErrorCode = null;
     lastVerificationEmailSent = null;
     notifyListeners();
     try {
@@ -163,10 +194,12 @@ class SessionController extends ChangeNotifier {
         return RegisterResult.needsTurnstile;
       }
       lastError = _friendlyAuthMessage(e);
+      lastErrorCode = e.errorCode;
       notifyListeners();
       return RegisterResult.failed;
     } catch (e) {
       lastError = e.toString();
+      lastErrorCode = null;
       notifyListeners();
       return RegisterResult.failed;
     }

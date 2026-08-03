@@ -6,7 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../auth/session_controller.dart';
 import '../shell/main_shell.dart';
 
-/// Splash: token → `/me` → MainShell (guest veya auth). Guide §4 + F2 guest.
+/// Splash: token → `/me` → MainShell. Ağ/5xx: Yeniden dene (P3).
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,6 +15,9 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  var _booting = true;
+  String? _retryError;
+
   @override
   void initState() {
     super.initState();
@@ -22,9 +25,22 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _boot() async {
+    setState(() {
+      _booting = true;
+      _retryError = null;
+    });
     final session = context.read<SessionController>();
     await session.bootstrap();
     if (!mounted) return;
+
+    // Token var ama /me geçici hata → shell’e guest düşme; retry (P3).
+    if (session.status == AuthStatus.unknown && session.lastError != null) {
+      setState(() {
+        _booting = false;
+        _retryError = session.lastError;
+      });
+      return;
+    }
 
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => const MainShell()),
@@ -72,14 +88,40 @@ class _SplashScreenState extends State<SplashScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-                const SizedBox(
-                  width: 28,
-                  height: 28,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: LotlotColors.accent,
+                if (_booting)
+                  const SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: LotlotColors.accent,
+                    ),
+                  )
+                else if (_retryError != null) ...[
+                  Text(
+                    _retryError!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: LotlotColors.danger),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _boot,
+                    child: const Text('Yeniden dene'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      context
+                          .read<SessionController>()
+                          .continueAsGuestKeepingTokens();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const MainShell(),
+                        ),
+                      );
+                    },
+                    child: const Text('Misafir devam et'),
+                  ),
+                ],
               ],
             ),
           ),
