@@ -236,7 +236,7 @@ class BillingController extends ChangeNotifier {
       return _iap.lastError ?? 'Mağaza bu cihazda kullanılamıyor.';
     }
     if (!_platformOk) {
-      return 'Bu platform için IAP henüz etkin değil.';
+      return 'Bu mağazada uygulama içi satın alma henüz etkin değil.';
     }
     return 'Satın alma şu an kullanılamıyor.';
   }

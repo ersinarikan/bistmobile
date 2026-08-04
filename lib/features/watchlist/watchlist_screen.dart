@@ -150,6 +150,14 @@ class _AuthWatchlistBody extends StatelessWidget {
               wl.lastError!,
               style: const TextStyle(color: LotlotColors.danger),
             ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () =>
+                    context.read<WatchlistController>().refresh(),
+                child: const Text('Yeniden dene'),
+              ),
+            ),
           ],
           const SizedBox(height: 16),
           Text(
@@ -173,11 +181,27 @@ class _AuthWatchlistBody extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           if (wl.items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                'Listeniz boş — arama ile hisse ekleyin.',
-                style: TextStyle(color: LotlotColors.textSecondary),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Listeniz boş. Takip etmek istediğiniz hisseyi ekleyin.',
+                    style: TextStyle(color: LotlotColors.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const StocksSearchScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Hisse ekle'),
+                  ),
+                ],
               ),
             )
           else

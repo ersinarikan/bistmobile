@@ -6,6 +6,7 @@ import '../../core/legal/legal_urls.dart';
 import '../../core/push/push_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
+import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
 import '../billing/billing_controller.dart';
 import '../billing/paywall_screen.dart';
@@ -290,8 +291,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Cihaz bildirimi Premium + bu tercih açıkken FCM ile kaydedilir. '
-                    'Firebase config yoksa kayıt atlanır.',
+                    'Premium’da cihaz bildirimleri açılabilir. Sistem izni gerekir.',
                     style: TextStyle(
                       color: LotlotColors.textSecondary,
                       fontSize: 12,
@@ -355,7 +355,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Yasal belgeler ve hesap işlemleri için giriş yapabilirsiniz.',
+                    'Yasal belgeler ve hesap işlemleri için giriş yapın '
+                    'veya ücretsiz hesap oluşturun.',
                     style: TextStyle(
                       color: LotlotColors.textSecondary,
                       height: 1.4,
@@ -372,6 +373,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       );
                     },
                     child: const Text('Giriş yap'),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const RegisterScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Ücretsiz başla'),
                   ),
                 ],
               ),

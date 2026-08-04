@@ -16,12 +16,10 @@ Future<void> showSoftGateSheet(
   required SoftGateKind kind,
 }) {
   final title =
-      kind == SoftGateKind.pro ? 'Pro gerekir' : 'Premium gerekir';
+      kind == SoftGateKind.pro ? 'Pro ile açılır' : 'Premium ile açılır';
   final body = kind == SoftGateKind.pro
-      ? 'Bu özellik Pro abonelik ile kullanılabilir. '
-          'Uygulama içi satın alma App Store / Google Play üzerinden yapılır.'
-      : 'Bu özellik Premium abonelik ile kullanılabilir. '
-          'Push uyarıları ve gelişmiş kanallar Premium’dadır.';
+      ? 'AI yorum, grafik uyarıları ve geniş analiz Pro planında.'
+      : 'Push bildirimleri, Hisse Sihirbazı ve daha yüksek kota Premium’da.';
 
   return showModalBottomSheet<void>(
     context: context,
@@ -53,6 +51,15 @@ Future<void> showSoftGateSheet(
                 height: 1.45,
               ),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Satın alma App Store veya Google Play üzerinden yapılır.',
+              style: TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
@@ -80,7 +87,7 @@ Future<void> showSoftGateSheet(
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Tamam'),
+              child: const Text('Şimdilik değil'),
             ),
             TextButton(
               onPressed: () async {
@@ -90,7 +97,13 @@ Future<void> showSoftGateSheet(
                 } catch (_) {}
                 if (ctx.mounted) Navigator.pop(ctx);
               },
-              child: const Text('Web hesabını aç'),
+              child: const Text(
+                'Web hesabını aç',
+                style: TextStyle(
+                  color: LotlotColors.textSecondary,
+                  fontSize: 13,
+                ),
+              ),
             ),
           ],
         ),

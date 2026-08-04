@@ -67,10 +67,24 @@ class _BrowseScreenState extends State<BrowseScreen> {
           ),
         if (browse.error != null)
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              browse.error!,
-              style: const TextStyle(color: LotlotColors.danger),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  browse.error!,
+                  style: const TextStyle(color: LotlotColors.danger),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () =>
+                        context.read<BrowseController>().retry(),
+                    child: const Text('Yeniden dene'),
+                  ),
+                ),
+              ],
             ),
           ),
         Expanded(
@@ -142,15 +156,20 @@ class _SearchBody extends StatelessWidget {
     }
     if (browse.searchResults.isEmpty) {
       return const Center(
-        child: Text(
-          'Sonuç bulunamadı',
-          style: TextStyle(color: LotlotColors.textSecondary),
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text(
+            'Sonuç bulunamadı. Sembol veya şirket adı deneyin.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: LotlotColors.textSecondary, height: 1.4),
+          ),
         ),
       );
     }
     return ListView.separated(
       itemCount: browse.searchResults.length,
-      separatorBuilder: (_, _) => const Divider(height: 1, color: LotlotColors.border),
+      separatorBuilder: (_, _) =>
+          const Divider(height: 1, color: LotlotColors.border),
       itemBuilder: (context, i) {
         final row = browse.searchResults[i];
         final symbol = row['symbol']?.toString() ?? '';
@@ -195,13 +214,26 @@ class _ScreenerBody extends StatelessWidget {
       );
     }
     if (browse.screenerRows.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            'Özet henüz hazır değil. Biraz sonra tekrar deneyin.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: LotlotColors.textSecondary),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Özet henüz hazır değil. Biraz sonra tekrar deneyin.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: LotlotColors.textSecondary),
+              ),
+              if (browse.error == null) ...[
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () =>
+                      context.read<BrowseController>().retry(),
+                  child: const Text('Yeniden dene'),
+                ),
+              ],
+            ],
           ),
         ),
       );
@@ -209,7 +241,8 @@ class _ScreenerBody extends StatelessWidget {
     final horizon = browse.defaultHorizon ?? '30d';
     return ListView.separated(
       itemCount: browse.screenerRows.length,
-      separatorBuilder: (_, _) => const Divider(height: 1, color: LotlotColors.border),
+      separatorBuilder: (_, _) =>
+          const Divider(height: 1, color: LotlotColors.border),
       itemBuilder: (context, i) {
         final row = browse.screenerRows[i];
         final symbol = row['symbol']?.toString() ?? '';

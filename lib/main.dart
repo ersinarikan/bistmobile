@@ -58,9 +58,14 @@ class _LotlotAppState extends State<LotlotApp> {
     _session = SessionController(tokenStorage: _tokens, apiClient: _api);
     _push = PushService(apiClient: _api)
       ..firebaseReady = widget.firebaseReady
-      ..statusMessage = widget.firebaseReady
-          ? null
-          : 'Firebase yapılandırılmadı (google-services / GoogleService-Info).';
+      ..statusMessage =
+          widget.firebaseReady ? null : 'Bildirimler şu an kurulamadı.';
+    if (!widget.firebaseReady) {
+      debugPrint(
+        'Firebase init skipped earlier; push registration unavailable '
+        '(google-services / GoogleService-Info).',
+      );
+    }
     if (widget.firebaseReady) {
       _push.attachMessagingHandlers();
       _push.addListener(_onPushTokenRefresh);

@@ -88,8 +88,8 @@ class PushService extends ChangeNotifier {
         return false;
       }
       if (!firebaseReady) {
-        statusMessage =
-            'Firebase yapılandırılmadı; cihaz kaydı atlandı.';
+        statusMessage = 'Bildirimler şu an kurulamadı.';
+        debugPrint('PushService: Firebase not ready; device register skipped');
         notifyListeners();
         return false;
       }
@@ -101,14 +101,15 @@ class PushService extends ChangeNotifier {
       }
       final token = await fetchToken();
       if (token == null || token.length < 20) {
-        statusMessage = 'FCM token alınamadı.';
+        statusMessage = 'Bildirimler şu an kurulamadı.';
+        debugPrint('PushService: token missing or too short');
         notifyListeners();
         return false;
       }
       try {
         final platform = Platform.isIOS ? 'ios' : 'android';
         await _api.registerDevice(token: token, platform: platform);
-        statusMessage = 'Cihaz kaydı tamam.';
+        statusMessage = 'Bildirim kaydı tamam.';
         lastError = null;
         notifyListeners();
         return true;

@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v36 TF smoke + F6 sandbox hazırlık + F7 checklist)
+> Son güncelleme: 2026-08-04 (v37 UX cila)
 
 ---
 
@@ -49,7 +49,7 @@ flowchart TD
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
 | **F6** | IAP paywall | İstemci + prod Apple config canlı; sandbox matris I1–I4 (cihazda I1/I2 ASC Sandbox Apple ID ile) | **Evet** |
-| **F7** | Mağaza teslimi | Checklist + Review notes hazır; **Add for Review** = P1 blocker kapalı + P2 sandbox yeşil (veya bilinçli not) | Hazırlık |
+| **F7** | Mağaza teslimi | Checklist + Review notes + **post-P3 UX cila (v37)**; Add for Review = sandbox I1/I2 veya bilinçli not | Hazırlık |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
 
@@ -274,7 +274,7 @@ Guest can browse Keşfet / BIST catalog; watchlist and Pro features require logi
 - Subtitle: BIST analiz & sinyaller
 - Keywords (TR odaklı, boşluk yok ASC kurallarına uy): bist,hisse,analiz,sinyal,borsa,…
 
-**PM go/no-go (2026-08-04):** Kod + TF smoke matris (kod yolu) + IAP config canlı. **Add for Review:** cihaz I1/I2 sandbox veya Review notes’ta bilinçli sandbox notu sonrası.
+**PM go/no-go (2026-08-04):** Kod + TF smoke matris (kod yolu) + IAP config canlı + **v37 UX cila**. **Add for Review:** cihaz I1/I2 sandbox veya Review notes’ta bilinçli sandbox notu sonrası.
 
 ---
 
@@ -356,6 +356,15 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v37 (2026-08-04) — Post-P3 UX cila
+- Hesap/push: FCM/Firebase kullanıcı kopyası kaldırıldı
+- Keşfet: hata + boş özet → **Yeniden dene**; boş arama ipucu
+- İzleme: boş → **Hisse ekle**; `lastError` → Yeniden dene
+- Soft gate: fayda dili; **Şimdilik değil**; Planları gör birincil
+- Paywall: “IAP” jargon yok; Pro/Premium madde listeleri
+- Guest Hesap: **Ücretsiz başla**; Landing “BIST’i keşfet” + CTA hiyerarşisi
+- Matris C1–C6; build **1.0.0+37**
 
 ### v36 (2026-08-04) — TF smoke P1 + F6/F7 hazırlık
 - **P1 T6 blocker:** Guest Landing → **Keşfet** (`MainShell(initialTab: 1)`); menü + CTA

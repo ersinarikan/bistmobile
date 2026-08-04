@@ -119,9 +119,6 @@ class LandingScreen extends StatelessWidget {
       ),
       textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
     );
-    final outlineAccent = outline.copyWith(
-      foregroundColor: const WidgetStatePropertyAll(LotlotColors.accent),
-    );
 
     return Scaffold(
       body: Stack(
@@ -259,7 +256,7 @@ class LandingScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton(
-                          style: outlineAccent,
+                          style: outline,
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute<void>(
@@ -272,7 +269,7 @@ class LandingScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                       ],
                       OutlinedButton(
-                        style: outlineAccent,
+                        style: outline,
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
@@ -284,21 +281,21 @@ class LandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 36),
                       Text(
-                        'KEŞFET / BIST ÖZET',
+                        'BIST’i keşfet',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: LotlotColors.textSecondary,
-                              letterSpacing: 1.1,
-                              fontWeight: FontWeight.w700,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: LotlotColors.textPrimary,
+                              fontWeight: FontWeight.w800,
                             ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 8),
                       Text(
-                        'Keşfet sekmesinde BIST 30 / 100 skorlu tarama; '
-                        'BIST Hisseleri ile tam katalog arama. İzleme için giriş.',
+                        'BIST 30 / 100 taraması ve katalog arama. '
+                        'İzleme listesi için giriş gerekir.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: LotlotColors.textSecondary,
+                              height: 1.4,
                             ),
                       ),
                     ],

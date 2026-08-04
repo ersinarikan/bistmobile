@@ -99,6 +99,17 @@ class BrowseController extends ChangeNotifier {
     }
   }
 
+  Future<void> retry() async {
+    if (isSearching) {
+      loadingSearch = true;
+      error = null;
+      notifyListeners();
+      await _runSearch(searchQuery.trim());
+    } else {
+      await loadScreener();
+    }
+  }
+
   double _score(Map<String, dynamic> row, String horizon) {
     final scores = row['lotlot_scores'];
     if (scores is Map && scores[horizon] != null) {

@@ -177,7 +177,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 const SizedBox(height: 20),
                 _PlanCard(
                   title: 'Pro',
-                  subtitle: 'Geniş analiz, AI yorum, grafik alarmları',
+                  subtitle: 'Günlük analiz için ideal',
+                  bullets: const [
+                    'AI yorum ve geniş analiz',
+                    'Grafik uyarıları',
+                    'Detaylı grafik göstergeleri',
+                  ],
                   price: billing.priceLabel(kIapProductPro),
                   highlighted: !highlightPremium,
                   enabled: billing.canPurchase && !billing.busy,
@@ -186,7 +191,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 const SizedBox(height: 12),
                 _PlanCard(
                   title: 'Premium',
-                  subtitle: 'Push, Hisse Sihirbazı, geniş kota',
+                  subtitle: 'Tam deneyim',
+                  bullets: const [
+                    'Push bildirimleri',
+                    'Hisse Sihirbazı',
+                    'Daha yüksek izleme kotası',
+                  ],
                   price: billing.priceLabel(kIapProductPremium),
                   highlighted: highlightPremium,
                   enabled: billing.canPurchase && !billing.busy,
@@ -225,6 +235,7 @@ class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.title,
     required this.subtitle,
+    required this.bullets,
     required this.price,
     required this.highlighted,
     required this.enabled,
@@ -233,6 +244,7 @@ class _PlanCard extends StatelessWidget {
 
   final String title;
   final String subtitle;
+  final List<String> bullets;
   final String? price;
   final bool highlighted;
   final bool enabled;
@@ -283,7 +295,34 @@ class _PlanCard extends StatelessWidget {
                 height: 1.35,
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
+            ...bullets.map(
+              (b) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '·  ',
+                      style: TextStyle(
+                        color: LotlotColors.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        b,
+                        style: const TextStyle(
+                          color: LotlotColors.textSecondary,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: enabled ? onBuy : null,
               child: Text('$title’a geç'),
