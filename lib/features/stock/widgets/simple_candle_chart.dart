@@ -196,7 +196,8 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
 
     final volH = _showVolume ? 56.0 : 0.0;
     final rsiH = _showRsi ? 48.0 : 0.0;
-    final candleH = _showRsi || _showVolume ? 220.0 : 260.0;
+    const dateH = 18.0;
+    final candleH = _showRsi || _showVolume ? 210.0 : 250.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
@@ -337,7 +338,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: candleH + volH + rsiH + 8,
+            height: candleH + dateH + volH + rsiH + 8,
             child: LayoutBuilder(
               builder: (context, constraints) {
                 return GestureDetector(
@@ -357,7 +358,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                   child: CustomPaint(
                     size: Size(
                       constraints.maxWidth,
-                      candleH + volH + rsiH + 8,
+                      candleH + dateH + volH + rsiH + 8,
                     ),
                     painter: _ChartPainter(
                       bars: display,
@@ -379,6 +380,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                           ? resistance.toDouble()
                           : null,
                       candleHeight: candleH,
+                      dateHeight: dateH,
                       volumeHeight: volH,
                       rsiHeight: rsiH,
                       showVolume: _showVolume,
@@ -515,28 +517,95 @@ class _BarInfo extends StatelessWidget {
         .toLocal();
     final date =
         '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+    final change = bar.close - bar.open;
+    final changePct = bar.open == 0 ? 0.0 : (change / bar.open) * 100;
+    final tone = up ? LotlotColors.accent : LotlotColors.danger;
     final m20Label = detailed ? 'EMA20' : 'MA20';
-    final m50Label = 'EMA50';
-    return Text(
-      [
-        '$date  O ${_fmt(bar.open)}  H ${_fmt(bar.high)}  '
-            'L ${_fmt(bar.low)}  C ${_fmt(bar.close)}',
-        if (ma20 != null) '$m20Label ${_fmt(ma20!)}',
-        if (ma50 != null) '$m50Label ${_fmt(ma50!)}',
-        if (rsi != null) 'RSI ${rsi!.toStringAsFixed(0)}',
-        if (bar.volume != null) 'V ${_fmtVol(bar.volume!)}',
-      ].join('  · '),
-      style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: up ? LotlotColors.accent : LotlotColors.danger,
-        height: 1.35,
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: LotlotColors.surface,
+        borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+        border: Border.all(color: tone.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                date,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${change >= 0 ? '+' : ''}${_fmt(change)}  '
+                '(${changePct >= 0 ? '+' : ''}${changePct.toStringAsFixed(2)}%)',
+                style: TextStyle(
+                  color: tone,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 10,
+            runSpacing: 4,
+            children: [
+              _kv('O', _fmt(bar.open)),
+              _kv('H', _fmt(bar.high)),
+              _kv('L', _fmt(bar.low)),
+              _kv('C', _fmt(bar.close), emphasize: true, color: tone),
+              if (bar.volume != null) _kv('Hacim', _fmtVol(bar.volume!)),
+              if (ma20 != null) _kv(m20Label, _fmt(ma20!)),
+              if (ma50 != null) _kv('EMA50', _fmt(ma50!)),
+              if (rsi != null) _kv('RSI', rsi!.toStringAsFixed(0)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _kv(
+    String k,
+    String v, {
+    bool emphasize = false,
+    Color? color,
+  }) {
+    return Text.rich(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '$k ',
+            style: const TextStyle(
+              color: LotlotColors.textSecondary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          TextSpan(
+            text: v,
+            style: TextStyle(
+              color: color ?? LotlotColors.textPrimary,
+              fontSize: emphasize ? 13 : 12,
+              fontWeight: emphasize ? FontWeight.w800 : FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   static String _fmt(double v) {
-    if (v >= 1000) return v.toStringAsFixed(1);
+    if (v.abs() >= 1000) return v.toStringAsFixed(1);
     return v.toStringAsFixed(2);
   }
 
@@ -561,6 +630,7 @@ class _ChartPainter extends CustomPainter {
     required this.maxY,
     required this.selected,
     required this.candleHeight,
+    required this.dateHeight,
     required this.volumeHeight,
     required this.rsiHeight,
     required this.showVolume,
@@ -584,6 +654,7 @@ class _ChartPainter extends CustomPainter {
   final double maxY;
   final int selected;
   final double candleHeight;
+  final double dateHeight;
   final double volumeHeight;
   final double rsiHeight;
   final bool showVolume;
@@ -605,18 +676,25 @@ class _ChartPainter extends CustomPainter {
       size.width - _right,
       candleHeight,
     );
+    final datePlot = Rect.fromLTRB(
+      _left,
+      candleHeight,
+      size.width - _right,
+      candleHeight + dateHeight,
+    );
+    final volTop = candleHeight + dateHeight + 4;
     final volPlot = Rect.fromLTRB(
       _left,
-      candleHeight + 4,
+      volTop,
       size.width - _right,
-      candleHeight + volumeHeight,
+      volTop + volumeHeight,
     );
     final rsiPlot = rsiHeight > 0
         ? Rect.fromLTRB(
             _left,
-            candleHeight + volumeHeight + 8,
+            volTop + volumeHeight + 8,
             size.width - _right,
-            candleHeight + volumeHeight + rsiHeight + 8,
+            volTop + volumeHeight + rsiHeight + 8,
           )
         : null;
     if (bars.isEmpty || candlePlot.width <= 0) return;
@@ -648,6 +726,7 @@ class _ChartPainter extends CustomPainter {
     _drawCandles(canvas, candlePlot);
     if (showForecast) _drawForecasts(canvas, candlePlot);
     _drawSelected(canvas, candlePlot, volPlot, rsiPlot);
+    _drawDateLabels(canvas, datePlot);
     if (showVolume && volumeHeight > 0) _drawVolume(canvas, volPlot);
     if (rsiPlot != null) _drawRsi(canvas, rsiPlot);
     _drawYLabels(canvas, candlePlot);
@@ -940,17 +1019,85 @@ class _ChartPainter extends CustomPainter {
   ) {
     final n = bars.length;
     if (selected < 0 || selected >= n) return;
+    final bar = bars[selected];
     final cx = _x(candle, selected, n);
-    final paint = Paint()
-      ..color = LotlotColors.textPrimary.withValues(alpha: 0.2)
-      ..strokeWidth = 1;
-    canvas.drawLine(Offset(cx, candle.top), Offset(cx, vol.bottom), paint);
+    final cy = _y(candle, bar.close);
+    final up = bar.close >= bar.open;
+    final tone = up ? LotlotColors.accent : LotlotColors.danger;
+
+    final vPaint = Paint()
+      ..color = LotlotColors.textPrimary.withValues(alpha: 0.28)
+      ..strokeWidth = 1.2;
+    final bottom = volumeHeight > 0 ? vol.bottom : candle.bottom;
+    canvas.drawLine(Offset(cx, candle.top), Offset(cx, bottom), vPaint);
     if (rsiPlot != null) {
       canvas.drawLine(
         Offset(cx, rsiPlot.top),
         Offset(cx, rsiPlot.bottom),
-        paint,
+        vPaint,
       );
+    }
+
+    final hPaint = Paint()
+      ..color = tone.withValues(alpha: 0.55)
+      ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(candle.left, cy),
+      Offset(candle.right, cy),
+      hPaint,
+    );
+    canvas.drawCircle(
+      Offset(cx, cy),
+      3.5,
+      Paint()..color = tone,
+    );
+
+    final tp = TextPainter(textDirection: TextDirection.ltr);
+    tp.text = TextSpan(
+      text: _priceLabel(bar.close),
+      style: const TextStyle(
+        color: LotlotColors.onAccent,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+    tp.layout();
+    final tagTop = (cy - tp.height / 2).clamp(candle.top, candle.bottom - tp.height);
+    final bg = RRect.fromRectAndRadius(
+      Rect.fromLTWH(2, tagTop - 2, _left - 4, tp.height + 4),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(bg, Paint()..color = tone);
+    tp.paint(canvas, Offset(4, tagTop));
+  }
+
+  void _drawDateLabels(Canvas canvas, Rect plot) {
+    if (bars.isEmpty || plot.height <= 0) return;
+    final n = bars.length;
+    final count = n <= 40 ? 3 : (n <= 120 ? 4 : 5);
+    final tp = TextPainter(textDirection: TextDirection.ltr);
+    for (var i = 0; i < count; i++) {
+      final idx = count == 1
+          ? 0
+          : ((n - 1) * i / (count - 1)).round().clamp(0, n - 1);
+      final dt = DateTime.fromMillisecondsSinceEpoch(
+        bars[idx].time * 1000,
+        isUtc: true,
+      ).toLocal();
+      final label =
+          '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}';
+      tp.text = TextSpan(
+        text: label,
+        style: const TextStyle(
+          color: LotlotColors.textSecondary,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+      tp.layout();
+      final x = _x(plot, idx, n) - tp.width / 2;
+      final clampedX = x.clamp(plot.left, plot.right - tp.width);
+      tp.paint(canvas, Offset(clampedX, plot.top + 2));
     }
   }
 

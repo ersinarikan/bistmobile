@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
 import '../account/account_settings_screen.dart';
 import '../auth/auth_screen.dart';
 import '../auth/session_controller.dart';
 import '../browse/browse_screen.dart';
+import '../landing/landing_screen.dart';
 import '../stocks/stocks_search_screen.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../watchlist/watchlist_screen.dart';
@@ -29,6 +31,14 @@ class _MainShellState extends State<MainShell> {
   void initState() {
     super.initState();
     _tab = widget.initialTab.clamp(0, 1);
+  }
+
+  void _openLanding() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const LandingScreen(),
+      ),
+    );
   }
 
   void _openAccount() {
@@ -62,7 +72,18 @@ class _MainShellState extends State<MainShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('LOTLOT.NET'),
+        titleSpacing: 12,
+        title: Tooltip(
+          message: 'Ana sayfa',
+          child: InkWell(
+            onTap: _openLanding,
+            borderRadius: BorderRadius.circular(8),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+              child: BrandWordmark(height: 28, maxWidth: 168),
+            ),
+          ),
+        ),
         actions: [
           IconButton(
             tooltip: 'BIST kataloğu',

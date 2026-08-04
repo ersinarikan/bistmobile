@@ -131,34 +131,17 @@ class LandingScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
                   child: Row(
                     children: [
-                      const BrandLogo(width: 36, height: 32),
-                      const SizedBox(width: 10),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'LOTLOT',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: LotlotColors.textPrimary,
-                                    letterSpacing: 0.6,
-                                  ),
-                            ),
-                            TextSpan(
-                              text: '.NET',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w800,
-                                    color: LotlotColors.accent,
-                                    letterSpacing: 0.6,
-                                  ),
-                            ),
-                          ],
+                      Tooltip(
+                        message: 'Ana sayfa',
+                        child: InkWell(
+                          onTap: () {
+                            // Already on landing — no-op / scroll top later
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 4),
+                            child: BrandWordmark(height: 30, maxWidth: 180),
+                          ),
                         ),
                       ),
                       const Spacer(),

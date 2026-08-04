@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v46 büyük grafik toggle + spark formasyon cila)
+> Son güncelleme: 2026-08-04 (v47 AppBar wordmark + grafik tarih/dokunuş)
 
 ---
 
@@ -297,10 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+46` · tag `v46` — büyük grafik indikatör toggle + spark formasyon/değer cila.  
+**Build (kod):** `1.0.0+47` · tag `v47` — AppBar wordmark → Landing; grafik tarih ekseni + dokunuş kartı.  
 **Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **46+** tercih.
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **47+** tercih.
 
 #### P1 smoke (cihaz TF 42)
 
@@ -413,6 +413,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v47 (2026-08-04) — Marka header + grafik tarih/dokunuş
+- AppBar: `BrandWordmark` (CDN `lotlot-wide`) → Landing; Landing header aynı
+- Büyük grafik: alt tarih etiketleri; dokunuşta OHLCV kartı + çapraz çizgi/fiyat etiketi
+- Build **1.0.0+47**
 
 ### v46 (2026-08-04) — Büyük grafik / Detay spark cila
 - Büyük grafik: Hacim/EMA20/EMA50/BB/RSI/S/R/Formasyon/Öngörü tek tek toggle; Sade/Detaylı preset (web)
@@ -828,6 +833,8 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | D-S1 | Spark: Bar/min/max + Y etiketleri | PASS (kod) |
 | D-P1 | Formasyon tık → sarı vurgu; çoklu bant görünür | PASS (kod) |
 | D-Y1 | `görsel onay` yalnız VISUAL_YOLO confirmation; tooltip | PASS (kod) |
+| C-D1 | Büyük grafik alt tarih etiketleri + dokunuş OHLCV kartı | PASS (kod) |
+| B-W1 | AppBar wordmark → Landing | PASS (kod) |
 
 ## 8. Dokunulmaması gerekenler
 
