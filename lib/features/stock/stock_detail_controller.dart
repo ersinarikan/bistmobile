@@ -65,6 +65,8 @@ class StockDetailController extends ChangeNotifier {
   final String? name;
 
   bool loadingPublic = false;
+  /// Grafik henüz gelmedi — tam sayfa yerine yalnızca chart alanı.
+  bool loadingChart = false;
   bool loadingAuth = false;
   String? error;
   bool _disposed = false;
@@ -100,23 +102,37 @@ class StockDetailController extends ChangeNotifier {
 
   Future<void> load() async {
     loadingPublic = true;
+    loadingChart = true;
     error = null;
+    valuation = null;
+    fundamentals = null;
+    corporate = null;
+    volumeTier = null;
+    bars = [];
+    levels = null;
+    forecasts = [];
+    pattern = null;
+    patternPending = false;
     _notify();
 
+    // Hepsi paralel; UI chart + valuation geldikçe güncellenir.
+    final chartF = _loadPublicChart();
+    final valF = _loadValuation();
+    final fundF = _loadFundamentals();
+    final corpF = _loadCorporate();
+    final volF = _loadVolumeTier();
+
     try {
-      await Future.wait([
-        _loadValuation(),
-        _loadFundamentals(),
-        _loadCorporate(),
-        _loadPublicChart(),
-        _loadVolumeTier(),
-      ]);
+      await chartF;
     } catch (e) {
       error = e.toString();
     } finally {
+      loadingChart = false;
       loadingPublic = false;
       _notify();
     }
+
+    await Future.wait([valF, fundF, corpF, volF]);
 
     if (isAuthenticated) {
       await _loadAuthExtras();
@@ -170,6 +186,8 @@ class StockDetailController extends ChangeNotifier {
       corporate = c is Map ? Map<String, dynamic>.from(c) : null;
     } on ApiException {
       corporate = null;
+    } finally {
+      _notify();
     }
   }
 
@@ -179,6 +197,8 @@ class StockDetailController extends ChangeNotifier {
       volumeTier = Map<String, dynamic>.from(data);
     } on ApiException {
       volumeTier = null;
+    } finally {
+      _notify();
     }
   }
 
@@ -190,6 +210,8 @@ class StockDetailController extends ChangeNotifier {
       forecasts = [];
     } on ApiException {
       bars = [];
+    } finally {
+      _notify();
     }
   }
 

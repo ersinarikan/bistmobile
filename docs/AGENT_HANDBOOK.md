@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v51 Guest public hisse `/hisse` parity)
+> Son güncelleme: 2026-08-04 (v52 Landing/BIST cila + forgot UX)
 
 ---
 
@@ -86,7 +86,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Register → `pending_verification` + resend UX
   - [x] `email_not_verified` → doğrulama bekleyen ekran
   - [x] Apple native E2E (prod `APPLE_MOBILE_CLIENT_IDS=com.lotlot.lotlotnetMobile` + web `APPLE_CLIENT_ID`)
-  - [x] Şifremi unuttum → sistem tarayıcısı `/login?panel=forgot-password` (405 yok; R1–R4)
+  - [x] Şifremi unuttum → bilgilendirme + in-app browser `/login?panel=forgot-password` (WEB_ONLY; R1–R4)
 - **Dışı:** Web session cookie auth; mobil `POST /api/auth/forgot-password`. Guest shell F2’de (F1 sonrası splash hâlâ login’e düşebilir; F2’de browse’a açılır).
 - **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_MOBILE_CLIENT_IDS`, `TURNSTILE_SITE_KEY`. Google Cloud OAuth client’ları + iOS URL scheme. Reset: enumeration yok, hash’li token, rate/Turnstile web’de.
 
@@ -413,6 +413,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v52 (2026-08-04) — Landing/BIST cila + şifre sıfırlama UX
+- BIST katalog: Keşfet dilinde accent satırlar; boş/hata shell
+- Landing guest: **Keşfet CTA kaldırıldı** (menü dahil); shell **Keşfet tab** kalır
+- BIST Hisseleri outline **Giriş’ten kalın** (2.1 vs 1.2)
+- Şifremi unuttum: bilgilendirme + **in-app browser** (WEB_ONLY; mobil JSON forgot yok — §6.1)
+- Progressive hisse detay (chart öncelikli) önceki oturumda cihaza gitti
+- Build **1.0.0+52**
 
 ### v51 (2026-08-04) — Guest public hisse (`/hisse` parity)
 - Guest detay: Pattern/AI “Giriş yap” kartları kaldırıldı; tek **Daha Detaylı Analiz** paneli (`Analiz İçin Tıklayın` → login)
@@ -741,6 +749,7 @@ sonar-scanner
 - [x] F6 istemci + prod Apple config + I3/I4 — bkz. **§0**; I1/I2 cihaz sandbox
 - [ ] F7 Add for Review — bkz. **§0.7** go/no-go
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
+- [ ] Native JSON şifre sıfırlama (`POST /api/auth/forgot-password`) — guide §6.1 WEB_ONLY; web ekibi sözleşmesi gerekir
 
 ### 7.1 Parity review (2026-08-03) — F0–F2
 

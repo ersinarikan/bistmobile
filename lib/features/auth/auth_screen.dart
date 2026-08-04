@@ -245,14 +245,48 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _forgotPassword() async {
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: LotlotColors.surfaceElevated,
+        title: const Text(
+          'Şifre sıfırlama',
+          style: TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: const Text(
+          'Şifre sıfırlama lotlot.net üzerinde tamamlanır. '
+          'Yeni şifreyi kaydettikten sonra bu ekrandan giriş yapın.',
+          style: TextStyle(height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Devam'),
+          ),
+        ],
+      ),
+    );
+    if (go != true || !mounted) return;
+
     final uri = Uri.parse(AuthWebUrls.forgotPassword);
     try {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+      if (!ok) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sayfa açılamadı')),
-      );
+      try {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sayfa açılamadı')),
+        );
+      }
     }
   }
 

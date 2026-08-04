@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/lotlot_accent_card.dart';
 import '../account/account_settings_screen.dart';
 import '../stock/stock_detail_screen.dart';
 import 'stocks_catalog_controller.dart';
@@ -115,18 +116,21 @@ class _StocksSearchScreenState extends State<StocksSearchScreen> {
                   if (catalog.error != null)
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Column(
-                        children: [
-                          Text(
-                            catalog.error!,
-                            style: const TextStyle(color: LotlotColors.danger),
-                            textAlign: TextAlign.center,
-                          ),
-                          TextButton(
-                            onPressed: catalog.reload,
-                            child: const Text('Yeniden dene'),
-                          ),
-                        ],
+                      child: LotlotAccentCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              catalog.error!,
+                              style: const TextStyle(color: LotlotColors.danger),
+                              textAlign: TextAlign.center,
+                            ),
+                            TextButton(
+                              onPressed: catalog.reload,
+                              child: const Text('Yeniden dene'),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   else if (catalog.loading)
@@ -140,11 +144,15 @@ class _StocksSearchScreenState extends State<StocksSearchScreen> {
                     )
                   else if (rows.isEmpty)
                     const Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Center(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: LotlotAccentCard(
                         child: Text(
-                          'Sonuç bulunamadı',
-                          style: TextStyle(color: LotlotColors.textSecondary),
+                          'Sonuç bulunamadı. Sembol, şirket adı veya sektör deneyin.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: LotlotColors.textSecondary,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ),
@@ -155,10 +163,8 @@ class _StocksSearchScreenState extends State<StocksSearchScreen> {
           if (!catalog.loading && catalog.error == null && rows.isNotEmpty)
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              sliver: SliverList.separated(
+              sliver: SliverList.builder(
                 itemCount: rows.length,
-                separatorBuilder: (_, _) =>
-                    const Divider(height: 1, color: LotlotColors.border),
                 itemBuilder: (context, i) {
                   final row = rows[i];
                   return _StockTile(
@@ -271,9 +277,23 @@ class _ControlsCard extends StatelessWidget {
             TextField(
               controller: search,
               onChanged: catalog.setQuery,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Sembol, şirket adı veya kısaltma',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: LotlotColors.surface,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+                  borderSide: const BorderSide(color: LotlotColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+                  borderSide: const BorderSide(color: LotlotColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+                  borderSide: const BorderSide(color: LotlotColors.accent),
+                ),
               ),
             ),
             const SizedBox(height: 14),
@@ -360,9 +380,10 @@ class _IndexChip extends StatelessWidget {
             selected ? LotlotColors.accent : LotlotColors.textPrimary,
         side: BorderSide(
           color: selected ? LotlotColors.accent : LotlotColors.border,
+          width: selected ? 1.4 : 1,
         ),
         backgroundColor: selected
-            ? LotlotColors.accent.withValues(alpha: 0.12)
+            ? LotlotColors.accent.withValues(alpha: 0.18)
             : Colors.transparent,
         minimumSize: const Size(0, 40),
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -370,7 +391,12 @@ class _IndexChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
       ),
-      child: Text(label),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+        ),
+      ),
     );
   }
 }
@@ -389,26 +415,62 @@ class _StockTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (symbol.isEmpty) return const SizedBox.shrink();
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        symbol,
-        style: const TextStyle(fontWeight: FontWeight.w800),
-      ),
-      subtitle: Text(
-        [?name, ?sector].join(' · '),
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(color: LotlotColors.textSecondary),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: LotlotColors.textSecondary,
-      ),
+    return LotlotAccentCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(12, 12, 10, 12),
       onTap: () => openStockDetail(
         context,
         symbol: symbol,
         name: name,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  symbol,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    height: 1.2,
+                  ),
+                ),
+                if (name != null && name!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    name!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: LotlotColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                if (sector != null &&
+                    sector!.isNotEmpty &&
+                    sector != 'N/A') ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    sector!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: LotlotColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Icon(
+            Icons.chevron_right,
+            color: LotlotColors.textSecondary,
+          ),
+        ],
       ),
     );
   }

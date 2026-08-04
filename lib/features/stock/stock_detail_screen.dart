@@ -232,16 +232,23 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                     ],
                   ),
                 ),
-                if (ctrl.loadingPublic && ctrl.bars.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(48),
+                if (ctrl.bars.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 48),
                     child: Center(
-                      child: CircularProgressIndicator(
-                        color: LotlotColors.accent,
-                      ),
+                      child: ctrl.loadingChart
+                          ? const CircularProgressIndicator(
+                              color: LotlotColors.accent,
+                            )
+                          : const Text(
+                              'Grafik verisi yok',
+                              style: TextStyle(
+                                color: LotlotColors.textSecondary,
+                              ),
+                            ),
                     ),
                   )
-                else ...[
+                else
                   Padding(
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                     child: SimpleCandleChart(
@@ -255,39 +262,37 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                       onPublicTap: auth ? null : _openLogin,
                     ),
                   ),
-                  MarketMetaCard(
-                    volumeTier: ctrl.volumeTier,
-                    volatilityRegime:
-                        auth ? ctrl.volatilityRegime : null,
-                  ),
-                  if (auth &&
-                      ctrl.levels != null &&
-                      (ctrl.levels!['support'] != null ||
-                          ctrl.levels!['resistance'] != null))
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
-                      child: Text(
-                        'Kesik çizgi: yeşil destek · sarı direnç (girişli grafik)',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: LotlotColors.textSecondary,
-                        ),
+                MarketMetaCard(
+                  volumeTier: ctrl.volumeTier,
+                  volatilityRegime: auth ? ctrl.volatilityRegime : null,
+                ),
+                if (auth &&
+                    ctrl.levels != null &&
+                    (ctrl.levels!['support'] != null ||
+                        ctrl.levels!['resistance'] != null))
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    child: Text(
+                      'Kesik çizgi: yeşil destek · sarı direnç (girişli grafik)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: LotlotColors.textSecondary,
                       ),
                     ),
-                  ValuationCard(valuation: ctrl.valuation),
-                  FundamentalsCard(fundamentals: ctrl.fundamentals),
-                  CorporateCard(corporate: ctrl.corporate),
-                  if (auth) ...[
-                    PatternSection(
-                      isAuthenticated: true,
-                      loading: ctrl.loadingAuth,
-                      pending: ctrl.patternPending,
-                      pattern: ctrl.pattern,
-                    ),
-                    AiCommentarySection(symbol: widget.symbol),
-                  ] else
-                    PublicAnalysisGatePanel(symbol: widget.symbol),
-                ],
+                  ),
+                ValuationCard(valuation: ctrl.valuation),
+                FundamentalsCard(fundamentals: ctrl.fundamentals),
+                CorporateCard(corporate: ctrl.corporate),
+                if (auth) ...[
+                  PatternSection(
+                    isAuthenticated: true,
+                    loading: ctrl.loadingAuth,
+                    pending: ctrl.patternPending,
+                    pattern: ctrl.pattern,
+                  ),
+                  AiCommentarySection(symbol: widget.symbol),
+                ] else
+                  PublicAnalysisGatePanel(symbol: widget.symbol),
                 if (ctrl.error != null)
                   Padding(
                     padding: const EdgeInsets.all(16),

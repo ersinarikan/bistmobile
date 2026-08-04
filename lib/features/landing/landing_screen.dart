@@ -64,17 +64,6 @@ class LandingScreen extends StatelessWidget {
                     );
                   },
                 ),
-                ListTile(
-                  title: const Text('Keşfet'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const MainShell(initialTab: 1),
-                      ),
-                    );
-                  },
-                ),
               ],
               ListTile(
                 title: const Text('BIST Hisseleri'),
@@ -110,9 +99,18 @@ class LandingScreen extends StatelessWidget {
     final authenticated =
         context.watch<SessionController>().status == AuthStatus.authenticated;
 
-    final outline = OutlinedButton.styleFrom(
+    final outlineLogin = OutlinedButton.styleFrom(
       foregroundColor: LotlotColors.textPrimary,
       side: const BorderSide(color: LotlotColors.accent, width: 1.2),
+      minimumSize: const Size.fromHeight(52),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+      ),
+      textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+    );
+    final outlineBist = OutlinedButton.styleFrom(
+      foregroundColor: LotlotColors.textPrimary,
+      side: const BorderSide(color: LotlotColors.accent, width: 2.1),
       minimumSize: const Size.fromHeight(52),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
@@ -225,7 +223,7 @@ class LandingScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton(
-                          style: outline,
+                          style: outlineLogin,
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute<void>(
@@ -238,21 +236,9 @@ class LandingScreen extends StatelessWidget {
                           child: const Text('Giriş Yap'),
                         ),
                         const SizedBox(height: 12),
-                        OutlinedButton(
-                          style: outline,
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const MainShell(initialTab: 1),
-                              ),
-                            );
-                          },
-                          child: const Text('Keşfet'),
-                        ),
-                        const SizedBox(height: 12),
                       ],
                       OutlinedButton(
-                        style: outline,
+                        style: outlineBist,
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
@@ -264,7 +250,7 @@ class LandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 36),
                       Text(
-                        'BIST’i keşfet',
+                        'BIST hisselerini incele',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: LotlotColors.textPrimary,
@@ -273,8 +259,8 @@ class LandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'BIST 30 / 100 taraması ve katalog arama. '
-                        'İzleme listesi için giriş gerekir.',
+                        'Tam katalogda sembol ve sektörle arayın. '
+                        'İzleme listesi ve skorlu tarama için uygulamaya girin.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: LotlotColors.textSecondary,
