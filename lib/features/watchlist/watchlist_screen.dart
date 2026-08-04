@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/lotlot_accent_card.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
@@ -10,6 +12,8 @@ import '../stocks/stocks_search_screen.dart';
 import '../wizard/wizard_screen.dart';
 import 'watchlist_controller.dart';
 import 'widgets/add_watchlist_sheet.dart';
+import 'widgets/first_stock_guide_dialog.dart';
+import 'widgets/watchlist_empty_onboarding.dart';
 import 'widgets/watchlist_signal_tile.dart';
 
 class WatchlistScreen extends StatefulWidget {
@@ -50,63 +54,87 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
   }
 }
 
+Future<void> _openAddAndMaybeGuide(BuildContext context) async {
+  final wl = context.read<WatchlistController>();
+  final first = await showAddWatchlistSheet(context);
+  if (!context.mounted || !first) return;
+  await showFirstStockGuideDialog(
+    context,
+    horizonLabel: horizonShortLabel(wl.selectedHorizon),
+  );
+}
+
 class _GuestWatchlistCta extends StatelessWidget {
   const _GuestWatchlistCta();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Icon(Icons.bookmark_border, size: 48, color: LotlotColors.accent),
-          const SizedBox(height: 16),
-          Text(
-            'İzleme listeniz burada',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Giriş yaparak hisseleri takip edin ve tahmin özetlerini görün. '
-            'Keşfet sekmesinde BIST 30/100 taraması; üstteki arama ile tam katalog.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: LotlotColors.textSecondary, height: 1.45),
-          ),
-          const SizedBox(height: 28),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const LoginScreen(popOnSuccess: true),
+      padding: const EdgeInsets.all(20),
+      child: Center(
+        child: SingleChildScrollView(
+          child: LotlotAccentCard(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Center(child: BrandLogo(width: 72, height: 72)),
+                const SizedBox(height: 16),
+                Text(
+                  'İzleme listeniz burada',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
-              );
-            },
-            child: const Text('Giriş yap'),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const RegisterScreen()),
-              );
-            },
-            child: const Text('Hesap oluştur'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const StocksSearchScreen(),
+                const SizedBox(height: 8),
+                const Text(
+                  'Giriş yaparak hisseleri takip edin ve tahmin özetlerini görün. '
+                  'Keşfet sekmesinde BIST 30/100 taraması; üstteki arama ile tam katalog.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: LotlotColors.textSecondary,
+                    height: 1.45,
+                  ),
                 ),
-              );
-            },
-            child: const Text('BIST Hisseleri'),
+                const SizedBox(height: 22),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LoginScreen(popOnSuccess: true),
+                      ),
+                    );
+                  },
+                  child: const Text('Giriş yap'),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const RegisterScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Hesap oluştur'),
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const StocksSearchScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('BIST Hisseleri'),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -133,27 +161,46 @@ class _AuthWatchlistBody extends StatelessWidget {
         children: [
           _QuotaBar(wl: wl),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
+          Align(
+            alignment: Alignment.centerLeft,
             child: ElevatedButton.icon(
               onPressed: wl.mutating
                   ? null
-                  : () => showAddWatchlistSheet(context),
-              icon: const Icon(Icons.add, size: 20),
+                  : () => _openAddAndMaybeGuide(context),
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(0, 40),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              icon: const Icon(Icons.add, size: 18),
               label: const Text('Hisse Ekle'),
             ),
           ),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const WizardScreen(),
-                ),
-              );
-            },
-            icon: const Icon(Icons.auto_awesome, size: 18),
-            label: const Text('Hisse Sihirbazı'),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const WizardScreen(),
+                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, 40),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: const Icon(Icons.auto_awesome, size: 16),
+              label: const Text('Hisse Sihirbazı'),
+            ),
           ),
           if (wl.lastError != null) ...[
             const SizedBox(height: 8),
@@ -182,34 +229,10 @@ class _AuthWatchlistBody extends StatelessWidget {
             selected: wl.selectedHorizon,
             onSelected: wl.setHorizon,
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Ufuk: karttaki AL/SAT, Δ% ve sinyal gücünü günceller. '
-            'Detay → özet panel; küçük grafik → büyük mum + Öngörü / AI.',
-            style: TextStyle(
-              color: LotlotColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
           const SizedBox(height: 12),
           if (wl.items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 28),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Listeniz boş. Yukarıdan Hisse Ekle ile sembol arayın.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: LotlotColors.textSecondary),
-                  ),
-                  const SizedBox(height: 14),
-                  OutlinedButton(
-                    onPressed: () => showAddWatchlistSheet(context),
-                    child: const Text('Sembol ara'),
-                  ),
-                ],
-              ),
+            WatchlistEmptyOnboarding(
+              onAddStock: () => _openAddAndMaybeGuide(context),
             )
           else
             ...wl.items.map((item) => WatchlistSignalTile(item: item)),

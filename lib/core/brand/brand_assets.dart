@@ -18,6 +18,14 @@ class BrandAssets {
       '${ApiConfig.baseUrl}/static/img/brand/lotlot-wide.png';
   static const String pwaIcon512 =
       '${ApiConfig.baseUrl}/static/pwa/icon-512.png';
+  /// AI yorum popup — web `lotlot-llm-icon-transparent.png`.
+  static const String llmIcon =
+      '${ApiConfig.baseUrl}/static/img/brand/lotlot-llm-icon-transparent.png';
+  /// Boş izleme onboarding hero — web `lotlot-hero-transparent`.
+  static const String heroTransparentWebp =
+      '${ApiConfig.baseUrl}/static/img/brand/lotlot-hero-transparent.webp';
+  static const String heroTransparentPng =
+      '${ApiConfig.baseUrl}/static/img/brand/lotlot-hero-transparent.png';
 }
 
 /// Lotlot ikonu — CDN'den.

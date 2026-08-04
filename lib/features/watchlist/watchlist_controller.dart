@@ -19,6 +19,15 @@ class WatchlistController extends ChangeNotifier {
   String? lastError;
   ApiException? lastApiError;
 
+  /// Son başarılı ekleme liste 0→1 ise true; [takePendingFirstStockGuide] ile alınır.
+  bool _pendingFirstStockGuide = false;
+
+  bool takePendingFirstStockGuide() {
+    final v = _pendingFirstStockGuide;
+    _pendingFirstStockGuide = false;
+    return v;
+  }
+
   int? get activeCount {
     final v = subscription?['watchlist_active_count'];
     if (v is num) return v.toInt();
@@ -121,6 +130,7 @@ class WatchlistController extends ChangeNotifier {
     mutating = true;
     lastError = null;
     notifyListeners();
+    final wasEmpty = items.isEmpty;
     try {
       final data = await _api.addWatchlist(
         symbol: symbol.toUpperCase(),
@@ -130,6 +140,7 @@ class WatchlistController extends ChangeNotifier {
         subscription = Map<String, dynamic>.from(data['subscription'] as Map);
       }
       await refresh();
+      _pendingFirstStockGuide = wasEmpty;
       return true;
     } on ApiException catch (e) {
       lastError = _friendly(e);

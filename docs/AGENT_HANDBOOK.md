@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v49 Hisse Ekle sheet + Detay butonu)
+> Son güncelleme: 2026-08-04 (v50 İlk giriş yönlendirme + Keşfet premium)
 
 ---
 
@@ -413,6 +413,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v50 (2026-08-04) — İlk giriş yönlendirme + Keşfet premium
+- Auth boş izleme: web `İlk 3 dakika` paneli (hero + 3 adım + CTA → Hisse Ekle sheet)
+- Liste 0→1: `İlk bakılacaklar` dialog (ufuk / Genel Sinyal Gücü / Detay); wizard eklemede de
+- Ortak `LotlotAccentCard`; izleme kartı DRY; guest CTA accent + BrandLogo
+- Keşfet: accent satırlar, ₺ fiyat, skor/etiket; boş/hata accent shell
+- Geliştirici ufuk yardım metni kaldırıldı
+- Build **1.0.0+50**
 
 ### v49 (2026-08-04) — Hisse Ekle + kart CTA cila
 - İzleme: yeşil **+ Hisse Ekle** (web `#addStockModal` sheet: ara + Ekle + bildirim diyaloğu)

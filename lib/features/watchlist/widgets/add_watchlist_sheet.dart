@@ -9,8 +9,9 @@ import '../watchlist_controller.dart';
 import 'add_watchlist_alert_dialog.dart';
 
 /// Web `#addStockModal` — sembol ara + izlemeye ekle.
-Future<void> showAddWatchlistSheet(BuildContext context) {
-  return showModalBottomSheet<void>(
+/// Dönüş: ilk hisse (0→1) eklendiyse `true`.
+Future<bool> showAddWatchlistSheet(BuildContext context) async {
+  final first = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
     backgroundColor: LotlotColors.surface,
@@ -21,6 +22,7 @@ Future<void> showAddWatchlistSheet(BuildContext context) {
     ),
     builder: (ctx) => const _AddWatchlistSheet(),
   );
+  return first == true;
 }
 
 class _AddWatchlistSheet extends StatefulWidget {
@@ -111,7 +113,8 @@ class _AddWatchlistSheetState extends State<_AddWatchlistSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$symbol izlemeye eklendi')),
     );
-    Navigator.pop(context);
+    final first = wl.takePendingFirstStockGuide();
+    Navigator.pop(context, first);
   }
 
   @override

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/session_controller.dart';
 import '../../chart_alerts/create_chart_alert_sheet.dart';
 import '../../pro/soft_gate_sheet.dart';
 import '../../stock/stock_detail_controller.dart';
+import '../../stock/widgets/ai_commentary_flow.dart';
 import '../../stock/widgets/simple_candle_chart.dart';
 
 /// Web `#chartModal` — Öngörü tick + AI footer.
@@ -31,8 +31,7 @@ class WatchlistBigChartScreen extends StatefulWidget {
 class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
   bool _showForecast = false;
   bool _aiLoading = false;
-  String? _aiText;
-  String? _aiError;
+  bool _aiDoneOnce = false;
 
   List<({int start, int end, bool bullish})> get _ranges =>
       _patternRangesFrom(widget.controller.pattern);
@@ -75,74 +74,14 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
   }
 
   Future<void> _runAi() async {
-    final session = context.read<SessionController>();
-    if (session.status != AuthStatus.authenticated) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const LoginScreen(popOnSuccess: true),
-        ),
-      );
-      return;
-    }
-    if (!session.isPro) {
-      await showSoftGateSheet(context, kind: SoftGateKind.pro);
-      return;
-    }
+    if (_aiLoading) return;
+    setState(() => _aiLoading = true);
+    await runAiCommentaryFlow(context, symbol: widget.symbol);
+    if (!mounted) return;
     setState(() {
-      _aiLoading = true;
-      _aiError = null;
+      _aiLoading = false;
+      _aiDoneOnce = true;
     });
-    try {
-      final res = await context.read<ApiClient>().fetchAiCommentary(
-            symbol: widget.symbol,
-          );
-      if (!mounted) return;
-      final text = res['text']?.toString();
-      if (res['status']?.toString() == 'success' &&
-          text != null &&
-          text.isNotEmpty) {
-        setState(() {
-          _aiText = text;
-          _aiLoading = false;
-        });
-        if (!mounted) return;
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            backgroundColor: LotlotColors.surface,
-            title: const Text('lotlot.net Yorumu'),
-            content: SingleChildScrollView(child: Text(text)),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Kapat'),
-              ),
-            ],
-          ),
-        );
-      } else {
-        setState(() {
-          _aiError = res['message']?.toString() ?? 'Yorum alınamadı';
-          _aiLoading = false;
-        });
-      }
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (e.statusCode == 403 && tryShowSoftGateForApiError(context, e)) {
-        setState(() => _aiLoading = false);
-        return;
-      }
-      setState(() {
-        _aiLoading = false;
-        _aiError = e.message;
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _aiLoading = false;
-        _aiError = 'Yorum alınamadı; tekrar deneyin.';
-      });
-    }
   }
 
   @override
@@ -188,14 +127,6 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
                         forecastEnabled: _showForecast,
                         onForecastChanged: _toggleForecast,
                       ),
-                    if (_aiError != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          _aiError!,
-                          style: const TextStyle(color: LotlotColors.danger),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -207,17 +138,11 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: _aiLoading ? null : _runAi,
-                      icon: _aiLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.psychology, size: 20),
+                      icon: const Icon(Icons.psychology, size: 20),
                       label: Text(
-                        _aiText == null
-                            ? 'lotlot.net Yorumu'
-                            : 'Yorumu yenile',
+                        _aiDoneOnce
+                            ? 'Yorumu yenile'
+                            : 'lotlot.net Yorumu',
                       ),
                     ),
                   ),

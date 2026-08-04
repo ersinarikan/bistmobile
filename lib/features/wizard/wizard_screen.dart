@@ -9,6 +9,7 @@ import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../watchlist/widgets/add_watchlist_alert_dialog.dart';
+import '../watchlist/widgets/first_stock_guide_dialog.dart';
 import 'wizard_controller.dart';
 
 const _horizonLabels = <String, String>{
@@ -342,10 +343,19 @@ class _ResultCard extends StatelessWidget {
     final ok = await wl.addSymbol(symbol, alertEnabled: alertEnabled);
     if (!context.mounted) return;
     if (ok) {
+      final first = wl.takePendingFirstStockGuide();
       onWatchlistAdded(symbol);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('$symbol izlemeye eklendi')),
       );
+      if (first) {
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+        if (!context.mounted) return;
+        await showFirstStockGuideDialog(
+          context,
+          horizonLabel: horizonShortLabel(wl.selectedHorizon),
+        );
+      }
     } else if (wl.lastError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(wl.lastError!)),

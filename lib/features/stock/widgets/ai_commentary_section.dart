@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/session_controller.dart';
 import '../../pro/soft_gate_sheet.dart';
+import 'ai_commentary_flow.dart';
 
-/// Pro AI commentary — CTA → POST /api/ai/commentary → `text`.
+/// Pro AI commentary — CTA → loader overlay + sonuç diyaloğu (web parity).
 class AiCommentarySection extends StatefulWidget {
   const AiCommentarySection({super.key, required this.symbol});
 
@@ -19,88 +19,17 @@ class AiCommentarySection extends StatefulWidget {
 
 class _AiCommentarySectionState extends State<AiCommentarySection> {
   bool _loading = false;
-  String? _text;
-  String? _error;
+  bool _doneOnce = false;
 
   Future<void> _run() async {
-    final session = context.read<SessionController>();
-    if (session.status != AuthStatus.authenticated) {
-      await Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => const LoginScreen(popOnSuccess: true),
-        ),
-      );
-      return;
-    }
-    if (!session.isPro) {
-      await showSoftGateSheet(context, kind: SoftGateKind.pro);
-      return;
-    }
-
+    if (_loading) return;
+    setState(() => _loading = true);
+    await runAiCommentaryFlow(context, symbol: widget.symbol);
+    if (!mounted) return;
     setState(() {
-      _loading = true;
-      _error = null;
+      _loading = false;
+      _doneOnce = true;
     });
-    try {
-      final res = await context.read<ApiClient>().fetchAiCommentary(
-            symbol: widget.symbol,
-          );
-      if (!mounted) return;
-      final text = res['text']?.toString();
-      if (res['status']?.toString() == 'success' &&
-          text != null &&
-          text.isNotEmpty) {
-        setState(() {
-          _text = text;
-          _loading = false;
-        });
-      } else {
-        setState(() {
-          _error = res['message']?.toString() ?? 'Yorum alınamadı';
-          _loading = false;
-        });
-      }
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (e.statusCode == 403 && tryShowSoftGateForApiError(context, e)) {
-        setState(() => _loading = false);
-        return;
-      }
-      setState(() {
-        _loading = false;
-        _error = _friendly(e);
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Yorum alınamadı; tekrar deneyin.';
-      });
-    }
-  }
-
-  String _friendly(ApiException e) {
-    final code = (e.errorCode ?? '').toLowerCase();
-    final status = e.body?['status']?.toString().toLowerCase();
-    if (code == 'rate_limited' ||
-        code == 'busy' ||
-        status == 'busy' ||
-        e.statusCode == 429) {
-      if (status == 'busy' || code == 'busy') {
-        return e.message.isNotEmpty
-            ? e.message
-            : 'Model meşgul; biraz sonra tekrar deneyin.';
-      }
-      return e.message.isNotEmpty
-          ? e.message
-          : 'Çok sık istek; lütfen biraz bekleyin.';
-    }
-    if (e.statusCode == 502 || e.statusCode == 500) {
-      return e.message.isNotEmpty
-          ? e.message
-          : 'Yorum üretilemedi; tekrar deneyin.';
-    }
-    return e.message;
   }
 
   @override
@@ -114,7 +43,7 @@ class _AiCommentarySectionState extends State<AiCommentarySection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'AI yorum',
+            aiCommentaryTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -164,7 +93,7 @@ class _AiCommentarySectionState extends State<AiCommentarySection> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'AI yorum Pro planda açılır.',
+            'Yapay zeka yorumu Pro planda açılır.',
             style: TextStyle(color: LotlotColors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: 12),
@@ -180,48 +109,19 @@ class _AiCommentarySectionState extends State<AiCommentarySection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_text != null) ...[
-          Text(
-            _text!,
-            style: const TextStyle(height: 1.45),
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (_error != null) ...[
-          Text(
-            _error!,
-            style: const TextStyle(color: LotlotColors.danger, height: 1.4),
-          ),
-          const SizedBox(height: 12),
-        ],
-        ElevatedButton(
+        ElevatedButton.icon(
           onPressed: _loading ? null : _run,
-          child: _loading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(_text == null ? 'Yorum oluştur' : 'Yenile'),
-        ),
-        if (_loading)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-              'Birkaç saniye sürebilir…',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: LotlotColors.textSecondary,
-                fontSize: 12,
-              ),
-            ),
+          icon: const Icon(Icons.psychology, size: 20),
+          label: Text(
+            _doneOnce ? 'Yorumu yenile' : 'lotlot.net Yorumu',
           ),
-        if (_text == null && _error == null && !_loading)
+        ),
+        if (!_loading)
           const Padding(
             padding: EdgeInsets.only(top: 8),
             child: Text(
               'Sunucu kısa Türkçe teknik yorum üretir. '
-              'İstek birkaç saniye sürebilir.',
+              'Analiz birkaç dakika sürebilir.',
               style: TextStyle(
                 color: LotlotColors.textSecondary,
                 fontSize: 12,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/lotlot_accent_card.dart';
 import '../../auth/session_controller.dart';
 import '../../stock/widgets/formation_status.dart';
 import '../watchlist_controller.dart';
@@ -129,21 +130,9 @@ class WatchlistSignalTile extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: LotlotColors.surface,
-        borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-            border: const Border(
-              left: BorderSide(color: LotlotColors.accent, width: 5),
-              top: BorderSide(color: LotlotColors.border),
-              right: BorderSide(color: LotlotColors.border),
-              bottom: BorderSide(color: LotlotColors.border),
-            ),
-          ),
-          child: Column(
+      child: LotlotAccentCard(
+        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -159,8 +148,9 @@ class WatchlistSignalTile extends StatelessWidget {
                               child: Text(
                                 symbol,
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 17,
+                                  height: 1.2,
                                   color: active
                                       ? LotlotColors.textPrimary
                                       : LotlotColors.textSecondary,
@@ -197,17 +187,26 @@ class WatchlistSignalTile extends StatelessWidget {
                   ),
                   if (current is num)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2, right: 4),
+                      padding: const EdgeInsets.only(top: 10),
                       child: Text(
-                        current.toStringAsFixed(2),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                        '₺${current.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                          height: 1.2,
+                          color: active
+                              ? LotlotColors.textPrimary
+                              : LotlotColors.textSecondary,
                         ),
                       ),
                     ),
                   IconButton(
                     tooltip: 'Kaldır',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
                     visualDensity: VisualDensity.compact,
                     icon: const Icon(
                       Icons.remove_circle_outline,
@@ -357,8 +356,8 @@ class WatchlistSignalTile extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
+              Align(
+                alignment: Alignment.centerRight,
                 child: ElevatedButton.icon(
                   onPressed: symbol.isEmpty
                       ? null
@@ -367,13 +366,24 @@ class WatchlistSignalTile extends StatelessWidget {
                             symbol: symbol,
                             name: name,
                           ),
-                  icon: const Icon(Icons.list_alt, size: 18),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, 36),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    textStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  icon: const Icon(Icons.list_alt, size: 16),
                   label: const Text('Detay'),
                 ),
               ),
             ],
           ),
-        ),
       ),
     );
   }
