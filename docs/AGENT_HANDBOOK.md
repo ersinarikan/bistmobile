@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v39 izleme web tek-kart + Detay/grafik)
+> Son güncelleme: 2026-08-04 (v40 Detay spark formasyon renklendirme)
 
 ---
 
@@ -359,6 +359,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ## 4. Yapılanlar (kronoloji)
 
+### v40 (2026-08-04) — Detay spark formasyon cila
+- Küçük chart: web Chart.js parity — dolgu + Pro/Premium formasyon segment (kırmızı) + bant overlay
+- Index normalize (`data_points` / range offset); ML/FINGPT hariç
+- Spark yüksekliği ~200; Free: düz accent çizgi (web gibi formasyon kapalı)
+- Build **1.0.0+40**
+
 ### v39 (2026-08-04) — İzleme web tek-kart + Detay/grafik
 - Kök neden: Listem + Tahmin özeti → N hisse = 2N kart
 - Tek kart / sembol; `predictions` yalnız hydrate; 1G…30G teaser
@@ -657,7 +663,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
 | Watchlist satır teaser | Pill + Δ% + güç + fiyat + 1G…30G | `WatchlistSignalTile` + Detay | **ok** (v39 tek kart) |
 | Predictions hydrate | Aynı kart (`pred-{SYM}`) | Aynı kart; ikinci liste **yok** | **ok** (v39; eski çift liste bug kapandı) |
-| Detay modal | `#detailModal` | `showWatchlistDetailSheet` | **ok** (v39) |
+| Detay modal | `#detailModal` + spark formasyon segment | `showWatchlistDetailSheet` + renkli spark (v40) | **ok** (v39–40) |
 | Büyük grafik + Öngörü + AI | `#chartModal` | `WatchlistBigChartScreen` | **ok** (v39) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
