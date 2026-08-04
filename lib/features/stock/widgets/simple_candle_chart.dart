@@ -44,8 +44,12 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
   int _barCount = 60;
   ChartDetailMode _mode = ChartDetailMode.simple;
   bool _showFormationShade = false;
+  bool _localShowForecast = false;
 
   static const _barOptions = [60, 100, 200, 300, 400];
+
+  bool get _forecastEnabled =>
+      widget.showForecastToggle ? widget.forecastEnabled : _localShowForecast;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +88,12 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
           maxY = math.max(maxY, v);
         }
       }
+    }
+    final session = context.watch<SessionController>();
+    final detailed = widget.forceDetailed || _mode == ChartDetailMode.detailed;
+    final showForecastLine =
+        session.isPro && widget.forecasts.isNotEmpty && _forecastEnabled;
+    if (showForecastLine) {
       for (final f in widget.forecasts) {
         final p = f['price'] ?? f['close'] ?? f['value'];
         if (p is num) {
@@ -99,10 +109,6 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
 
     final selIdx = (_selected ?? display.length - 1).clamp(0, display.length - 1);
     final sel = display[selIdx];
-    final detailed = widget.forceDetailed || _mode == ChartDetailMode.detailed;
-    final showForecastLine =
-        widget.forecasts.isNotEmpty && (detailed || widget.forecastEnabled);
-    final session = context.watch<SessionController>();
 
     final localRanges = <({int start, int end, bool bullish})>[];
     if (_showFormationShade && session.isPro) {
@@ -213,21 +219,34 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                   ),
                   backgroundColor: LotlotColors.surface,
                 ),
-              if (widget.showForecastToggle)
+              if (detailed || widget.showForecastToggle)
                 FilterChip(
                   label: const Text('Öngörü'),
-                  selected: widget.forecastEnabled,
-                  onSelected: (v) => widget.onForecastChanged?.call(v),
+                  selected: _forecastEnabled,
+                  onSelected: (v) async {
+                    if (v && !session.isPro) {
+                      await showSoftGateSheet(
+                        context,
+                        kind: SoftGateKind.pro,
+                      );
+                      return;
+                    }
+                    if (widget.showForecastToggle) {
+                      widget.onForecastChanged?.call(v);
+                    } else {
+                      setState(() => _localShowForecast = v);
+                    }
+                  },
                   visualDensity: VisualDensity.compact,
                   selectedColor: LotlotColors.accent.withValues(alpha: 0.25),
                   labelStyle: TextStyle(
                     fontSize: 12,
-                    color: widget.forecastEnabled
+                    color: _forecastEnabled
                         ? LotlotColors.accent
                         : LotlotColors.textSecondary,
                   ),
                   side: BorderSide(
-                    color: widget.forecastEnabled
+                    color: _forecastEnabled
                         ? LotlotColors.accent
                         : LotlotColors.border,
                   ),

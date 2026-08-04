@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v40 Detay spark formasyon renklendirme)
+> Son güncelleme: 2026-08-04 (v41 Free/Pro/Premium yetki parity)
 
 ---
 
@@ -276,7 +276,22 @@ Guest can browse Keşfet / BIST catalog; watchlist and Pro features require logi
 - Subtitle: BIST analiz & sinyaller
 - Keywords (TR odaklı, boşluk yok ASC kurallarına uy): bist,hisse,analiz,sinyal,borsa,…
 
-**PM go/no-go (2026-08-04):** Kod + TF smoke matris (kod yolu) + IAP config canlı + **v37 UX cila**. **Add for Review:** cihaz I1/I2 sandbox veya Review notes’ta bilinçli sandbox notu sonrası.
+### 0.8 Free / Pro / Premium yetki matrisi (web parity)
+
+Kaynak: `subscription.is_pro` / `is_premium` (`GET /me`); client uydurmaz.
+
+| Özellik | Free | Pro | Premium |
+|---------|------|-----|---------|
+| İzleme CRUD + muted AL/SAT | Evet | Evet | Evet |
+| Kart sinyal bildirimi (`alert_enabled`) | Salt metin; ON → soft gate; OFF downgrade OK | Aynı | Toggle |
+| Hesap Push ON | Soft gate Premium | Soft gate Premium | Evet (+ FCM) |
+| E-posta bildirimi | Evet | Evet | Evet |
+| AI yorum / Öngörü / Formasyon shade | Soft gate Pro | Evet | Evet |
+| Chart alerts | Soft gate Pro | Evet (e-posta) | Evet (+ push kanalı) |
+| Hisse Sihirbazı | Soft gate Premium | Soft gate Premium | Evet |
+| Pattern formasyon / Sezgisel / ML kart | Gizli + CTA | Evet | Evet |
+
+Matris T-F1…T-D1 (v41).
 
 ---
 
@@ -358,6 +373,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v41 (2026-08-04) — Free/Pro/Premium yetki web parity
+- İzleme zili: Premium toggle; Free/Pro ON → soft gate; downgrade OFF serbest
+- Stock detail Öngörü: Pro gate (Detaylı chip); Free’de forecast çizilmez
+- PatternSection: Free’de formasyon/Sezgisel/ML gizli + Pro CTA; sinyal özeti kalır
+- Hesap push ON Premium (doğrulandı); handbook §0.8 matrisi
+- Build **1.0.0+41**
 
 ### v40 (2026-08-04) — Detay spark formasyon cila
 - Küçük chart: web Chart.js parity — dolgu + Pro/Premium formasyon segment (kırmızı) + bant overlay
@@ -680,6 +702,19 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | FCM push | — | Optional Firebase | **ok** / no-op configsız |
 | `pattern-summary` UI | Var/özet | Yok | **gap** (backlog) |
 | Drawing suite | Fib/Gann/Elliott | — | **bilinçli dışı** |
+| Kart bildirim zili | Salt metin Açık/Kapalı | Premium toggle; Free/Pro OFF downgrade + ON soft gate | **ok** (v41) |
+| Stock Öngörü çizimi | Pro | Detaylı chip + `isPro`; Free çizmez | **ok** (v41) |
+| Pattern Free savunma | Server prune | Client gizle + Pro CTA | **ok** (v41) |
+
+### 7.3.1 Tier gate smoke matrisi (v41)
+
+| ID | Senaryo | Beklenen |
+|----|---------|----------|
+| T-F1 | Free: kart zili ON denemesi; Hesap Push ON | Premium soft gate |
+| T-F2 | Free: AL/SAT muted; AI / Öngörü / Formasyon / Wizard | Soft gate (Pro veya Premium) |
+| T-P1 | Pro: AI / Öngörü / Formasyon / chart alerts | OK; Wizard + sinyal push → Premium gate |
+| T-M1 | Premium: alert toggle + Push ON + Wizard | OK |
+| T-D1 | Downgrade: `alert_enabled` true iken Free/Pro | OFF serbest (gate yok) |
 
 ## 8. Dokunulmaması gerekenler
 

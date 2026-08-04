@@ -305,10 +305,13 @@ class _PatternSectionState extends State<PatternSection> {
       );
     }
 
+    // Free: sinyal özeti (watchlist parity); formasyon / sezgisel / ML kartı Pro.
+    final proLayers = session.isPro;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (hasSignals || hasMl) ...[
+        if (hasSignals || (proLayers && hasMl)) ...[
           HorizonChips(
             selected: _horizon,
             onSelected: (h) => setState(() => _horizon = h),
@@ -379,18 +382,18 @@ class _PatternSectionState extends State<PatternSection> {
             ),
           ),
         ],
-        if (mlHorizon != null || hasMl) ...[
+        if (proLayers && (mlHorizon != null || hasMl)) ...[
           const SizedBox(height: 14),
           _MlSummaryCard(horizon: _horizon, horizonMl: mlHorizon),
         ],
-        if (hasSezgisel) ...[
+        if (proLayers && hasSezgisel) ...[
           const SizedBox(height: 12),
           _SezgiselChip(
             fingpt: fingpt,
             newsContext: newsContext,
           ),
         ],
-        if (formations.isNotEmpty) ...[
+        if (proLayers && formations.isNotEmpty) ...[
           const SizedBox(height: 14),
           const Text(
             'Formasyonlar',
@@ -399,7 +402,7 @@ class _PatternSectionState extends State<PatternSection> {
           const SizedBox(height: 6),
           for (final item in formations.take(12))
             _FormationRow(item: item),
-        ] else if (session.isPro && !hasSezgisel) ...[
+        ] else if (proLayers && !hasSezgisel) ...[
           const SizedBox(height: 10),
           const Text(
             'Formasyon tespit edilemedi.',
@@ -407,6 +410,19 @@ class _PatternSectionState extends State<PatternSection> {
               color: LotlotColors.textSecondary,
               fontSize: 13,
             ),
+          ),
+        ],
+        if (!proLayers) ...[
+          const SizedBox(height: 14),
+          const Text(
+            'Formasyonlar, Sezgisel ve ML tahmin özeti Pro planda açılır.',
+            style: TextStyle(color: LotlotColors.textSecondary, height: 1.4),
+          ),
+          const SizedBox(height: 10),
+          ElevatedButton(
+            onPressed: () =>
+                showSoftGateSheet(context, kind: SoftGateKind.pro),
+            child: const Text('Planları gör'),
           ),
         ],
       ],

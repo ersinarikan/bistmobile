@@ -208,29 +208,56 @@ class WatchlistSignalTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                  IconButton(
-                    tooltip: alertOn
-                        ? 'Sinyal uyarısını kapat'
-                        : 'Sinyal uyarısını aç',
-                    visualDensity: VisualDensity.compact,
-                    icon: Icon(
-                      alertOn
-                          ? Icons.notifications_active
-                          : Icons.notifications_none,
-                      color: alertOn
-                          ? LotlotColors.accent
-                          : LotlotColors.textSecondary,
+                  // Web: kartta zil yok — Premium toggle; Free/Pro salt metin (+ OFF downgrade).
+                  if (session.isPremium)
+                    IconButton(
+                      tooltip: alertOn
+                          ? 'Sinyal uyarısını kapat'
+                          : 'Sinyal uyarısını aç',
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(
+                        alertOn
+                            ? Icons.notifications_active
+                            : Icons.notifications_none,
+                        color: alertOn
+                            ? LotlotColors.accent
+                            : LotlotColors.textSecondary,
+                      ),
+                      onPressed: symbol.isEmpty || wl.mutating
+                          ? null
+                          : () => _toggleAlert(
+                                context,
+                                wl,
+                                session,
+                                symbol,
+                                alertOn,
+                              ),
+                    )
+                  else if (alertOn)
+                    IconButton(
+                      tooltip: 'Sinyal uyarısını kapat',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(
+                        Icons.notifications_active,
+                        color: LotlotColors.accent,
+                      ),
+                      onPressed: symbol.isEmpty || wl.mutating
+                          ? null
+                          : () => _setAlertOff(context, wl, symbol),
+                    )
+                  else
+                    IconButton(
+                      tooltip: 'Bildirim Premium',
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(
+                        Icons.notifications_none,
+                        color: LotlotColors.textSecondary,
+                      ),
+                      onPressed: () => showSoftGateSheet(
+                        context,
+                        kind: SoftGateKind.premium,
+                      ),
                     ),
-                    onPressed: symbol.isEmpty || wl.mutating
-                        ? null
-                        : () => _toggleAlert(
-                              context,
-                              wl,
-                              session,
-                              symbol,
-                              alertOn,
-                            ),
-                  ),
                   IconButton(
                     tooltip: 'Kaldır',
                     visualDensity: VisualDensity.compact,
@@ -365,10 +392,7 @@ class WatchlistSignalTile extends StatelessWidget {
     String symbol,
     bool alertOn,
   ) async {
-    if (!session.isPremium) {
-      await showSoftGateSheet(context, kind: SoftGateKind.premium);
-      return;
-    }
+    // Premium-only ON/OFF path (caller already Premium).
     final turningOn = !alertOn;
     final ok = await wl.setAlertEnabled(symbol, !alertOn);
     if (!context.mounted) return;
@@ -393,6 +417,21 @@ class WatchlistSignalTile extends StatelessWidget {
           ),
           duration: Duration(seconds: 5),
         ),
+      );
+    }
+  }
+
+  /// Downgrade: Free/Pro kullanıcı önceki Premium `alert_enabled` kapatabilir.
+  Future<void> _setAlertOff(
+    BuildContext context,
+    WatchlistController wl,
+    String symbol,
+  ) async {
+    final ok = await wl.setAlertEnabled(symbol, false);
+    if (!context.mounted) return;
+    if (!ok && wl.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(wl.lastError!)),
       );
     }
   }
