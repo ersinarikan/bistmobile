@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-03 (v33 web↔mobil full parity A–E)
+> Son güncelleme: 2026-08-04 (v35 TestFlight + export compliance)
 
 ---
 
@@ -48,8 +48,8 @@ flowchart TD
 | **F3** | Hisse detay | Tamam (+ ufuk/ML/formasyon durum parity) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
-| **F6** | IAP paywall | İstemci tamam (prod Apple `IAP_ENABLED=1`; Google SA yok) | **Evet** |
-| **F7** | Mağaza teslimi | Bekliyor | Hazır olmalı |
+| **F6** | IAP paywall | İstemci tamam (prod Apple `IAP_ENABLED=1`; Google SA yok); **sandbox E2E açık** | **Evet** |
+| **F7** | Mağaza teslimi | TestFlight build 35 (LotLot.net); App Privacy / screenshot / Review bekliyor | Hazır olmalı |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
 
@@ -303,6 +303,16 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v35 (2026-08-04) — TestFlight + LaunchImage + export compliance
+- App Store Connect uygulaması **LotLot.net** (`com.lotlot.lotlotnetMobile`); Transporter upload build **1.0.0 (35)**
+- Internal Testing grubu `serdarersin`; ikon processing sonrası görünür
+- LaunchImage marka ikonundan üretildi; `ITSAppUsesNonExemptEncryption=false` (HTTPS-only)
+- `ios/ExportOptions.plist` (app-store-connect, team `86RM3QTWCS`)
+- F6 sandbox E2E ve F7 Review checklist hâlâ açık (sıradaki dilimler)
+
+### v34 (2026-08-03) — Post-login parity polish
+- Splash: auth → MainShell; Premium mute; EMA20/50; bar chip’leri web hizası; build numarası 34
 
 ### v33 (2026-08-03) — Web↔mobil full parity (A–E)
 - **A** İzleme: `WatchlistSignalTile` — AL/SAT pill, Δ%, Genel Sinyal Gücü, Free muted `display_state`
