@@ -13,6 +13,7 @@ import 'widgets/corporate_card.dart';
 import 'widgets/fundamentals_card.dart';
 import 'widgets/market_meta_card.dart';
 import 'widgets/pattern_section.dart';
+import 'widgets/public_analysis_gate_panel.dart';
 import 'widgets/simple_candle_chart.dart';
 import 'widgets/valuation_card.dart';
 
@@ -142,6 +143,14 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
     );
   }
 
+  Future<void> _openLogin() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const LoginScreen(popOnSuccess: true),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ctrl = _ctrl;
@@ -201,12 +210,22 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                       if (headerPrice != null) ...[
                         const SizedBox(height: 6),
                         Text(
-                          headerPrice.toStringAsFixed(
+                          '₺${headerPrice.toStringAsFixed(
                             headerPrice >= 100 ? 1 : 2,
-                          ),
+                          )}',
                           style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                      if (!auth) ...[
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Yatırım tavsiyesi değildir.',
+                          style: TextStyle(
+                            color: LotlotColors.textSecondary,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -227,16 +246,22 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
                     child: SimpleCandleChart(
                       bars: ctrl.bars,
-                      levels: ctrl.levels,
-                      forecasts: ctrl.forecasts,
-                      patternRanges: _patternRangesFrom(ctrl.pattern),
+                      levels: auth ? ctrl.levels : null,
+                      forecasts: auth ? ctrl.forecasts : const [],
+                      patternRanges: auth
+                          ? _patternRangesFrom(ctrl.pattern)
+                          : const [],
+                      publicPreview: !auth,
+                      onPublicTap: auth ? null : _openLogin,
                     ),
                   ),
                   MarketMetaCard(
                     volumeTier: ctrl.volumeTier,
-                    volatilityRegime: ctrl.volatilityRegime,
+                    volatilityRegime:
+                        auth ? ctrl.volatilityRegime : null,
                   ),
-                  if (ctrl.levels != null &&
+                  if (auth &&
+                      ctrl.levels != null &&
                       (ctrl.levels!['support'] != null ||
                           ctrl.levels!['resistance'] != null))
                     const Padding(
@@ -252,13 +277,16 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                   ValuationCard(valuation: ctrl.valuation),
                   FundamentalsCard(fundamentals: ctrl.fundamentals),
                   CorporateCard(corporate: ctrl.corporate),
-                  PatternSection(
-                    isAuthenticated: auth,
-                    loading: ctrl.loadingAuth,
-                    pending: ctrl.patternPending,
-                    pattern: ctrl.pattern,
-                  ),
-                  AiCommentarySection(symbol: widget.symbol),
+                  if (auth) ...[
+                    PatternSection(
+                      isAuthenticated: true,
+                      loading: ctrl.loadingAuth,
+                      pending: ctrl.patternPending,
+                      pattern: ctrl.pattern,
+                    ),
+                    AiCommentarySection(symbol: widget.symbol),
+                  ] else
+                    PublicAnalysisGatePanel(symbol: widget.symbol),
                 ],
                 if (ctrl.error != null)
                   Padding(

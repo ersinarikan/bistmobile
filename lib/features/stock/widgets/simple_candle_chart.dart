@@ -22,6 +22,8 @@ class SimpleCandleChart extends StatefulWidget {
     this.showForecastToggle = false,
     this.forecastEnabled = false,
     this.onForecastChanged,
+    this.publicPreview = false,
+    this.onPublicTap,
   });
 
   final List<OhlcvBar> bars;
@@ -34,6 +36,10 @@ class SimpleCandleChart extends StatefulWidget {
   final bool showForecastToggle;
   final bool forecastEnabled;
   final ValueChanged<bool?>? onForecastChanged;
+
+  /// Web `/hisse` guest chart — view-only; tap → [onPublicTap] (login).
+  final bool publicPreview;
+  final VoidCallback? onPublicTap;
 
   @override
   State<SimpleCandleChart> createState() => _SimpleCandleChartState();
@@ -126,7 +132,10 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
       );
     }
 
-    final take = math.min(_barCount, widget.bars.length);
+    final take = math.min(
+      widget.publicPreview ? 180 : _barCount,
+      widget.bars.length,
+    );
     final display = widget.bars.sublist(widget.bars.length - take);
     final offset = widget.bars.length - display.length;
     final closes = display.map((b) => b.close).toList();
@@ -157,8 +166,19 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
       }
     }
     final session = context.watch<SessionController>();
-    final showForecastLine =
-        session.isPro && widget.forecasts.isNotEmpty && _forecastEnabled;
+    final publicPreview = widget.publicPreview;
+    final showVolume = publicPreview ? true : _showVolume;
+    final showEma20 = publicPreview ? false : _showEma20;
+    final showEma50 = publicPreview ? false : _showEma50;
+    final showBb = publicPreview ? false : _showBb;
+    final showRsi = publicPreview ? false : _showRsi;
+    final showSr = publicPreview ? false : _showSr;
+    final showFormationShade =
+        publicPreview ? false : _showFormationShade;
+    final showForecastLine = !publicPreview &&
+        session.isPro &&
+        widget.forecasts.isNotEmpty &&
+        _forecastEnabled;
     if (showForecastLine) {
       for (final f in widget.forecasts) {
         final p = f['target_price'] ??
@@ -181,7 +201,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
     final sel = display[selIdx];
 
     final localRanges = <({int start, int end, bool bullish})>[];
-    if (_showFormationShade && session.isPro) {
+    if (showFormationShade && session.isPro) {
       for (final r in widget.patternRanges) {
         final s = r.start - offset;
         final e = r.end - offset;
@@ -194,153 +214,213 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
       }
     }
 
-    final volH = _showVolume ? 56.0 : 0.0;
-    final rsiH = _showRsi ? 48.0 : 0.0;
+    final volH = showVolume ? 56.0 : 0.0;
+    final rsiH = showRsi ? 48.0 : 0.0;
     const dateH = 18.0;
-    final candleH = _showRsi || _showVolume ? 210.0 : 250.0;
+    final candleH = showRsi || showVolume ? 210.0 : 250.0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BarInfo(
-            bar: sel,
-            ma20: _showEma20 ? ema20[selIdx] : null,
-            ma50: _showEma50 ? ema50[selIdx] : null,
-            rsi: _showRsi ? rsi[selIdx] : null,
-            detailed: _showEma20 || _showEma50 || _showRsi,
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              SegmentedButton<ChartDetailMode>(
-                segments: const [
-                  ButtonSegment(
-                    value: ChartDetailMode.simple,
-                    label: Text('Sade'),
+          if (!publicPreview) ...[
+            _BarInfo(
+              bar: sel,
+              ma20: showEma20 ? ema20[selIdx] : null,
+              ma50: showEma50 ? ema50[selIdx] : null,
+              rsi: showRsi ? rsi[selIdx] : null,
+              detailed: showEma20 || showEma50 || showRsi,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                SegmentedButton<ChartDetailMode>(
+                  segments: const [
+                    ButtonSegment(
+                      value: ChartDetailMode.simple,
+                      label: Text('Sade'),
+                    ),
+                    ButtonSegment(
+                      value: ChartDetailMode.detailed,
+                      label: Text('Detaylı'),
+                    ),
+                  ],
+                  selected: {_mode},
+                  onSelectionChanged: (s) {
+                    if (s.isEmpty) return;
+                    setState(() => _applyPreset(s.first));
+                  },
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    foregroundColor:
+                        WidgetStateProperty.resolveWith((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return LotlotColors.accent;
+                      }
+                      return LotlotColors.textSecondary;
+                    }),
                   ),
-                  ButtonSegment(
-                    value: ChartDetailMode.detailed,
-                    label: Text('Detaylı'),
-                  ),
-                ],
-                selected: {_mode},
-                onSelectionChanged: (s) {
-                  if (s.isEmpty) return;
-                  setState(() => _applyPreset(s.first));
-                },
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return LotlotColors.accent;
+                ),
+                ..._barOptions.map((n) {
+                  final selN = _barCount == n;
+                  return ChoiceChip(
+                    label: Text('$n'),
+                    selected: selN,
+                    onSelected: (_) => setState(() => _barCount = n),
+                    visualDensity: VisualDensity.compact,
+                    selectedColor:
+                        LotlotColors.accent.withValues(alpha: 0.25),
+                    labelStyle: TextStyle(
+                      fontSize: 12,
+                      color: selN
+                          ? LotlotColors.accent
+                          : LotlotColors.textSecondary,
+                      fontWeight:
+                          selN ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                    side: BorderSide(
+                      color:
+                          selN ? LotlotColors.accent : LotlotColors.border,
+                    ),
+                    backgroundColor: LotlotColors.surface,
+                  );
+                }),
+                _toggleChip(
+                  label: 'Hacim',
+                  selected: _showVolume,
+                  onSelected: (v) => setState(() => _showVolume = v),
+                ),
+                _toggleChip(
+                  label: 'EMA20',
+                  selected: _showEma20,
+                  onSelected: (v) => setState(() => _showEma20 = v),
+                ),
+                _toggleChip(
+                  label: 'EMA50',
+                  selected: _showEma50,
+                  onSelected: (v) => setState(() => _showEma50 = v),
+                ),
+                _toggleChip(
+                  label: 'Bollinger',
+                  selected: _showBb,
+                  onSelected: (v) => setState(() => _showBb = v),
+                ),
+                _toggleChip(
+                  label: 'RSI',
+                  selected: _showRsi,
+                  onSelected: (v) => setState(() => _showRsi = v),
+                ),
+                _toggleChip(
+                  label: 'S/R',
+                  selected: _showSr,
+                  onSelected: (v) => setState(() => _showSr = v),
+                ),
+                _toggleChip(
+                  label: 'Formasyon',
+                  selected: _showFormationShade,
+                  onSelected: (v) async {
+                    if (v && !session.isPro) {
+                      await showSoftGateSheet(
+                        context,
+                        kind: SoftGateKind.pro,
+                      );
+                      return;
                     }
-                    return LotlotColors.textSecondary;
-                  }),
+                    setState(() => _showFormationShade = v);
+                  },
+                ),
+                _toggleChip(
+                  label: 'Öngörü',
+                  selected: _forecastEnabled,
+                  onSelected: (v) async {
+                    if (v && !session.isPro) {
+                      await showSoftGateSheet(
+                        context,
+                        kind: SoftGateKind.pro,
+                      );
+                      return;
+                    }
+                    if (widget.showForecastToggle) {
+                      widget.onForecastChanged?.call(v);
+                    } else {
+                      setState(() => _localShowForecast = v);
+                    }
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _legendText(showForecastLine: showForecastLine),
+              style: const TextStyle(
+                fontSize: 11,
+                color: LotlotColors.textSecondary,
+                height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 8),
+          ] else ...[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Detaylı analiz için giriş yapın',
+                style: TextStyle(
+                  color: LotlotColors.accent,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
                 ),
               ),
-              ..._barOptions.map((n) {
-                final selN = _barCount == n;
-                return ChoiceChip(
-                  label: Text('$n'),
-                  selected: selN,
-                  onSelected: (_) => setState(() => _barCount = n),
-                  visualDensity: VisualDensity.compact,
-                  selectedColor: LotlotColors.accent.withValues(alpha: 0.25),
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    color: selN
-                        ? LotlotColors.accent
-                        : LotlotColors.textSecondary,
-                    fontWeight: selN ? FontWeight.w700 : FontWeight.w500,
-                  ),
-                  side: BorderSide(
-                    color: selN ? LotlotColors.accent : LotlotColors.border,
-                  ),
-                  backgroundColor: LotlotColors.surface,
-                );
-              }),
-              _toggleChip(
-                label: 'Hacim',
-                selected: _showVolume,
-                onSelected: (v) => setState(() => _showVolume = v),
-              ),
-              _toggleChip(
-                label: 'EMA20',
-                selected: _showEma20,
-                onSelected: (v) => setState(() => _showEma20 = v),
-              ),
-              _toggleChip(
-                label: 'EMA50',
-                selected: _showEma50,
-                onSelected: (v) => setState(() => _showEma50 = v),
-              ),
-              _toggleChip(
-                label: 'Bollinger',
-                selected: _showBb,
-                onSelected: (v) => setState(() => _showBb = v),
-              ),
-              _toggleChip(
-                label: 'RSI',
-                selected: _showRsi,
-                onSelected: (v) => setState(() => _showRsi = v),
-              ),
-              _toggleChip(
-                label: 'S/R',
-                selected: _showSr,
-                onSelected: (v) => setState(() => _showSr = v),
-              ),
-              _toggleChip(
-                label: 'Formasyon',
-                selected: _showFormationShade,
-                onSelected: (v) async {
-                  if (v && !session.isPro) {
-                    await showSoftGateSheet(
-                      context,
-                      kind: SoftGateKind.pro,
-                    );
-                    return;
-                  }
-                  setState(() => _showFormationShade = v);
-                },
-              ),
-              _toggleChip(
-                label: 'Öngörü',
-                selected: _forecastEnabled,
-                onSelected: (v) async {
-                  if (v && !session.isPro) {
-                    await showSoftGateSheet(
-                      context,
-                      kind: SoftGateKind.pro,
-                    );
-                    return;
-                  }
-                  if (widget.showForecastToggle) {
-                    widget.onForecastChanged?.call(v);
-                  } else {
-                    setState(() => _localShowForecast = v);
-                  }
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _legendText(showForecastLine: showForecastLine),
-            style: const TextStyle(
-              fontSize: 11,
-              color: LotlotColors.textSecondary,
-              height: 1.35,
             ),
-          ),
-          const SizedBox(height: 8),
+          ],
           SizedBox(
             height: candleH + dateH + volH + rsiH + 8,
             child: LayoutBuilder(
               builder: (context, constraints) {
+                final chart = CustomPaint(
+                  size: Size(
+                    constraints.maxWidth,
+                    candleH + dateH + volH + rsiH + 8,
+                  ),
+                  painter: _ChartPainter(
+                    bars: display,
+                    ma20: showEma20 ? ema20 : const [],
+                    ma50: showEma50 ? ema50 : const [],
+                    bbLower: showBb ? bb.$1 : const [],
+                    bbUpper: showBb ? bb.$2 : const [],
+                    rsi: showRsi ? rsi : const [],
+                    forecasts:
+                        showForecastLine ? widget.forecasts : const [],
+                    patternRanges: localRanges,
+                    minY: minY,
+                    maxY: maxY,
+                    selected: publicPreview ? display.length - 1 : selIdx,
+                    support: showSr && support is num
+                        ? support.toDouble()
+                        : null,
+                    resistance: showSr && resistance is num
+                        ? resistance.toDouble()
+                        : null,
+                    candleHeight: candleH,
+                    dateHeight: dateH,
+                    volumeHeight: volH,
+                    rsiHeight: rsiH,
+                    showVolume: showVolume,
+                    showBb: showBb,
+                    showEma20: showEma20,
+                    showEma50: showEma50,
+                    showForecast: showForecastLine,
+                  ),
+                );
+                if (publicPreview) {
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: widget.onPublicTap,
+                    child: chart,
+                  );
+                }
                 return GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTapDown: (d) => _pick(
@@ -355,45 +435,23 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                     display.length,
                     reserveForecast: showForecastLine,
                   ),
-                  child: CustomPaint(
-                    size: Size(
-                      constraints.maxWidth,
-                      candleH + dateH + volH + rsiH + 8,
-                    ),
-                    painter: _ChartPainter(
-                      bars: display,
-                      ma20: _showEma20 ? ema20 : const [],
-                      ma50: _showEma50 ? ema50 : const [],
-                      bbLower: _showBb ? bb.$1 : const [],
-                      bbUpper: _showBb ? bb.$2 : const [],
-                      rsi: _showRsi ? rsi : const [],
-                      forecasts:
-                          showForecastLine ? widget.forecasts : const [],
-                      patternRanges: localRanges,
-                      minY: minY,
-                      maxY: maxY,
-                      selected: selIdx,
-                      support: _showSr && support is num
-                          ? support.toDouble()
-                          : null,
-                      resistance: _showSr && resistance is num
-                          ? resistance.toDouble()
-                          : null,
-                      candleHeight: candleH,
-                      dateHeight: dateH,
-                      volumeHeight: volH,
-                      rsiHeight: rsiH,
-                      showVolume: _showVolume,
-                      showBb: _showBb,
-                      showEma20: _showEma20,
-                      showEma50: _showEma50,
-                      showForecast: showForecastLine,
-                    ),
-                  ),
+                  child: chart,
                 );
               },
             ),
           ),
+          if (publicPreview)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                'Sadece geçmiş fiyat verisi. Yatırım tavsiyesi değildir.',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: LotlotColors.textSecondary,
+                  height: 1.35,
+                ),
+              ),
+            ),
         ],
       ),
     );

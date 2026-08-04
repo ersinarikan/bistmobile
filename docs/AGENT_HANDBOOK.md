@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v50 İlk giriş yönlendirme + Keşfet premium)
+> Son güncelleme: 2026-08-04 (v51 Guest public hisse `/hisse` parity)
 
 ---
 
@@ -413,6 +413,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v51 (2026-08-04) — Guest public hisse (`/hisse` parity)
+- Guest detay: Pattern/AI “Giriş yap” kartları kaldırıldı; tek **Daha Detaylı Analiz** paneli (`Analiz İçin Tıklayın` → login)
+- Public grafik: view-only + tap → login (Planlar soft gate yok); overlay “Detaylı analiz için giriş yapın”
+- Auth: Pattern + AI + Formasyon/Öngörü Pro soft gate aynı
+- Build **1.0.0+51**
 
 ### v50 (2026-08-04) — İlk giriş yönlendirme + Keşfet premium
 - Auth boş izleme: web `İlk 3 dakika` paneli (hero + 3 adım + CTA → Hisse Ekle sheet)
