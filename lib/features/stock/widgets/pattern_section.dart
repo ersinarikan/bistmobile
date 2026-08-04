@@ -294,7 +294,7 @@ class _PatternSectionState extends State<PatternSection> {
             ElevatedButton(
               onPressed: () =>
                   showSoftGateSheet(context, kind: SoftGateKind.pro),
-              child: const Text('Detay'),
+              child: const Text('Planları gör'),
             ),
           ],
         );

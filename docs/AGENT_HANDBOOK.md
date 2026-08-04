@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v41 Free/Pro/Premium yetki parity)
+> Son güncelleme: 2026-08-04 (v42 yetki UX cila)
 
 ---
 
@@ -373,6 +373,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v42 (2026-08-04) — Yetki UX cila
+- Free/Pro kapalı zil → “Bildirim (Premium)” TextButton (toggle yanılsaması yok)
+- Soft gate CTA: “Detay” → “Planları gör” (AI / Pattern / chart alerts)
+- Soft gate kopya: Pro → Öngörü/formasyon; Premium → izleme sinyal bildirimi
+- Detaylı grafik legend: Free’de “öngörü” iddiası yok
+- Build **1.0.0+42**
 
 ### v41 (2026-08-04) — Free/Pro/Premium yetki web parity
 - İzleme zili: Premium toggle; Free/Pro ON → soft gate; downgrade OFF serbest

@@ -257,7 +257,9 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
           const SizedBox(height: 8),
           Text(
             detailed
-                ? 'Mum · EMA20/50 · BB · hacim · RSI · öngörü'
+                ? (session.isPro
+                    ? 'Mum · EMA20/50 · BB · hacim · RSI · öngörü'
+                    : 'Mum · EMA20/50 · BB · hacim · RSI')
                 : 'Mum · MA20 · hacim · S/R',
             style: const TextStyle(
               fontSize: 11,

@@ -167,7 +167,7 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
               ElevatedButton(
                 onPressed: () =>
                     showSoftGateSheet(context, kind: SoftGateKind.pro),
-                child: const Text('Detay'),
+                child: const Text('Planları gör'),
               ),
             ],
           ),

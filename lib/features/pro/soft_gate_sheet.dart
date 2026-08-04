@@ -18,8 +18,8 @@ Future<void> showSoftGateSheet(
   final title =
       kind == SoftGateKind.pro ? 'Pro ile açılır' : 'Premium ile açılır';
   final body = kind == SoftGateKind.pro
-      ? 'AI yorum, grafik uyarıları ve geniş analiz Pro planında.'
-      : 'Push bildirimleri, Hisse Sihirbazı ve daha yüksek kota Premium’da.';
+      ? 'AI yorum, Öngörü, formasyon vurgusu ve grafik uyarıları Pro planında.'
+      : 'İzleme sinyal bildirimi, cihaz push, Hisse Sihirbazı ve daha yüksek kota Premium’da.';
 
   return showModalBottomSheet<void>(
     context: context,

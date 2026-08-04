@@ -208,7 +208,8 @@ class WatchlistSignalTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                  // Web: kartta zil yok — Premium toggle; Free/Pro salt metin (+ OFF downgrade).
+                  // Web: kartta zil yok. Premium toggle; Free/Pro: salt metin +
+                  // isteğe bağlı “Bildirim (Premium)”; Açık’ta OFF (downgrade).
                   if (session.isPremium)
                     IconButton(
                       tooltip: alertOn
@@ -246,16 +247,20 @@ class WatchlistSignalTile extends StatelessWidget {
                           : () => _setAlertOff(context, wl, symbol),
                     )
                   else
-                    IconButton(
-                      tooltip: 'Bildirim Premium',
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(
-                        Icons.notifications_none,
-                        color: LotlotColors.textSecondary,
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () => showSoftGateSheet(
                         context,
                         kind: SoftGateKind.premium,
+                      ),
+                      child: const Text(
+                        'Bildirim (Premium)',
+                        style: TextStyle(fontSize: 11),
                       ),
                     ),
                   IconButton(

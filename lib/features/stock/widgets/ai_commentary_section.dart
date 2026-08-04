@@ -171,7 +171,7 @@ class _AiCommentarySectionState extends State<AiCommentarySection> {
           ElevatedButton(
             onPressed: () =>
                 showSoftGateSheet(context, kind: SoftGateKind.pro),
-            child: const Text('Detay'),
+            child: const Text('Planları gör'),
           ),
         ],
       );
