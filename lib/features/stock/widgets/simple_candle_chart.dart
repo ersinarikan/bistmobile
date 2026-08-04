@@ -18,6 +18,10 @@ class SimpleCandleChart extends StatefulWidget {
     this.levels,
     this.forecasts = const [],
     this.patternRanges = const [],
+    this.forceDetailed = false,
+    this.showForecastToggle = false,
+    this.forecastEnabled = false,
+    this.onForecastChanged,
   });
 
   final List<OhlcvBar> bars;
@@ -25,6 +29,11 @@ class SimpleCandleChart extends StatefulWidget {
   final List<Map<String, dynamic>> forecasts;
   /// Absolute bar indices in full `bars` series: {start, end, bullish?}
   final List<({int start, int end, bool bullish})> patternRanges;
+  /// Büyük grafik: Öngörü açıkken Detaylı katmanı zorla.
+  final bool forceDetailed;
+  final bool showForecastToggle;
+  final bool forecastEnabled;
+  final ValueChanged<bool?>? onForecastChanged;
 
   @override
   State<SimpleCandleChart> createState() => _SimpleCandleChartState();
@@ -68,7 +77,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
     final resistance = widget.levels?['resistance'];
     if (support is num) minY = math.min(minY, support.toDouble());
     if (resistance is num) maxY = math.max(maxY, resistance.toDouble());
-    if (_mode == ChartDetailMode.detailed) {
+    if (_mode == ChartDetailMode.detailed || widget.forceDetailed) {
       for (final v in [...ema20, ...ema50, ...bb.$1, ...bb.$2]) {
         if (v != null) {
           minY = math.min(minY, v);
@@ -90,7 +99,9 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
 
     final selIdx = (_selected ?? display.length - 1).clamp(0, display.length - 1);
     final sel = display[selIdx];
-    final detailed = _mode == ChartDetailMode.detailed;
+    final detailed = widget.forceDetailed || _mode == ChartDetailMode.detailed;
+    final showForecastLine =
+        widget.forecasts.isNotEmpty && (detailed || widget.forecastEnabled);
     final session = context.watch<SessionController>();
 
     final localRanges = <({int start, int end, bool bullish})>[];
@@ -202,6 +213,26 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                   ),
                   backgroundColor: LotlotColors.surface,
                 ),
+              if (widget.showForecastToggle)
+                FilterChip(
+                  label: const Text('Öngörü'),
+                  selected: widget.forecastEnabled,
+                  onSelected: (v) => widget.onForecastChanged?.call(v),
+                  visualDensity: VisualDensity.compact,
+                  selectedColor: LotlotColors.accent.withValues(alpha: 0.25),
+                  labelStyle: TextStyle(
+                    fontSize: 12,
+                    color: widget.forecastEnabled
+                        ? LotlotColors.accent
+                        : LotlotColors.textSecondary,
+                  ),
+                  side: BorderSide(
+                    color: widget.forecastEnabled
+                        ? LotlotColors.accent
+                        : LotlotColors.border,
+                  ),
+                  backgroundColor: LotlotColors.surface,
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -243,7 +274,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                       bbLower: detailed ? bb.$1 : const [],
                       bbUpper: detailed ? bb.$2 : const [],
                       rsi: detailed ? rsi : const [],
-                      forecasts: detailed ? widget.forecasts : const [],
+                      forecasts: showForecastLine ? widget.forecasts : const [],
                       patternRanges: localRanges,
                       minY: minY,
                       maxY: maxY,

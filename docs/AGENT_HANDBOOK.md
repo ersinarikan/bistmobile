@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v38 forgot-password 405 fix)
+> Son güncelleme: 2026-08-04 (v39 izleme web tek-kart + Detay/grafik)
 
 ---
 
@@ -102,7 +102,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Guest → hisse satırına dokununca F3 detay açılır
   - [x] Guest’te watchlist mutation / predictions → net “Giriş yap” / kayıt CTA (sessiz 401 yok)
   - [x] Auth: watchlist CRUD + hata/403/kota mesajları sunucudan
-  - [x] Auth: predictions listesi — seçili ufuk `label` / Δ% / Genel Sinyal Gücü bar; Free muted `display_state` (web kart parity)
+  - [x] Auth: predictions hydrate **tek kartta** (ikinci “Tahmin özeti” listesi yok — web parity v39)
+  - [x] Auth: Detay sheet → spark → büyük grafik (Öngörü + AI footer)
   - [x] Email verified gate uyumu (watchlist yazma)
   - [x] Splash: bootstrap → **Landing**; logout → Landing; shell **İzleme | Keşfet** (+ AppBar katalog arama)
 - **Dışı:** Admin cache-report UI (zorunlu değil); Pro gated kartlar (F5).
@@ -357,6 +358,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v39 (2026-08-04) — İzleme web tek-kart + Detay/grafik
+- Kök neden: Listem + Tahmin özeti → N hisse = 2N kart
+- Tek kart / sembol; `predictions` yalnız hydrate; 1G…30G teaser
+- **Detay** → sheet (spark, meta, PatternSection / tahmin özeti)
+- Spark → büyük grafik; **Öngörü** (Pro soft gate); **lotlot.net Yorumu** footer
+- Keşfet/katalog → `StockDetailScreen` aynı
+- Matris W1a–W3b; build **1.0.0+39**
 
 ### v38 (2026-08-04) — Şifre sıfırlama 405 düzeltmesi
 - Kök neden: mobil `GET /forgot-password` açıyordu → **405** (Allow: POST)
@@ -646,8 +655,10 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Google/Apple | Native → mobile endpoints | Var | **ok** |
 | Guest browse | Public stocks / screener | Keşfet sekmesi + Landing | **ok** (v32) |
 | Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
-| Watchlist satır teaser | Pill + Δ% + güç + fiyat | `WatchlistSignalTile` | **ok** (v29) |
-| Predictions kart | label, güç çubuğu, muted Free | Δ%/pill/`display_state` muted | **ok** (v29) |
+| Watchlist satır teaser | Pill + Δ% + güç + fiyat + 1G…30G | `WatchlistSignalTile` + Detay | **ok** (v39 tek kart) |
+| Predictions hydrate | Aynı kart (`pred-{SYM}`) | Aynı kart; ikinci liste **yok** | **ok** (v39; eski çift liste bug kapandı) |
+| Detay modal | `#detailModal` | `showWatchlistDetailSheet` | **ok** (v39) |
+| Büyük grafik + Öngörü + AI | `#chartModal` | `WatchlistBigChartScreen` | **ok** (v39) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
 | Chart + levels | Lightweight Charts | Sade: mum+MA20+hacim+S/R; Detaylı: +EMA50/BB/RSI/öngörü | **ok** (v31–v33) |
