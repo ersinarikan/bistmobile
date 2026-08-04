@@ -128,7 +128,7 @@ class WatchlistSignalTile extends StatelessWidget {
     final evidence = analysis?['evidence_summary']?.toString();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Material(
         color: LotlotColors.surface,
         borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
@@ -136,7 +136,12 @@ class WatchlistSignalTile extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-            border: Border.all(color: LotlotColors.border),
+            border: const Border(
+              left: BorderSide(color: LotlotColors.accent, width: 5),
+              top: BorderSide(color: LotlotColors.border),
+              right: BorderSide(color: LotlotColors.border),
+              bottom: BorderSide(color: LotlotColors.border),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +240,7 @@ class WatchlistSignalTile extends StatelessWidget {
                     ? null
                     : (badges.isEmpty ? 'Formasyon yok' : null),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

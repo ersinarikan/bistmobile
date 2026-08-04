@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v47 AppBar wordmark + grafik tarih/dokunuş)
+> Son güncelleme: 2026-08-04 (v48 AppBar wordmark + kart sol şerit + ML çerçeve)
 
 ---
 
@@ -297,10 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+47` · tag `v47` — AppBar wordmark → Landing; grafik tarih ekseni + dokunuş kartı.  
+**Build (kod):** `1.0.0+48` · tag `v48` — AppBar yatay wordmark; kart sol yeşil; Tahmin özeti yön çerçevesi.  
 **Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **47+** tercih.
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **48+** tercih.
 
 #### P1 smoke (cihaz TF 42)
 
@@ -413,6 +413,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v48 (2026-08-04) — Marka / kart / Tahmin özeti cila
+- AppBar: ikon + `lotlot-wordmark` yatay (wide stacked bug kapandı); tap → Landing
+- İzleme kartı: sol 5px accent şerit; rozet→AL boşluk 16
+- Tahmin özeti: sol çerçeve delta yönü (alım yeşil / satım kırmızı); bar rengi `confidence_bar_type`
+- Matris B-W2 / W-C1 / W-G1 / D-M1 / D-B1
+- Build **1.0.0+48**
 
 ### v47 (2026-08-04) — Marka header + grafik tarih/dokunuş
 - AppBar: `BrandWordmark` (CDN `lotlot-wide`) → Landing; Landing header aynı
@@ -834,7 +841,12 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | D-P1 | Formasyon tık → sarı vurgu; çoklu bant görünür | PASS (kod) |
 | D-Y1 | `görsel onay` yalnız VISUAL_YOLO confirmation; tooltip | PASS (kod) |
 | C-D1 | Büyük grafik alt tarih etiketleri + dokunuş OHLCV kartı | PASS (kod) |
-| B-W1 | AppBar wordmark → Landing | PASS (kod) |
+| B-W1 | AppBar wordmark → Landing | PASS (kod; v48 yatay) |
+| B-W2 | AppBar yatay wordmark (stacked wide yok); tap → Landing | PASS (kod) |
+| W-C1 | İzleme kartı sol 5px yeşil | PASS (kod) |
+| W-G1 | Rozet → AL arası ≥16px | PASS (kod) |
+| D-M1 | Tahmin özeti sol çerçeve alım/satım | PASS (kod) |
+| D-B1 | Genel Sinyal Gücü bar = `confidence_bar_type` | PASS (kod) |
 
 ## 8. Dokunulmaması gerekenler
 

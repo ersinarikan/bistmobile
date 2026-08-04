@@ -587,6 +587,14 @@ class _MlSummaryCard extends StatelessWidget {
   final String horizon;
   final Map<String, dynamic>? horizonMl;
 
+  /// Web `_detailDeltaPresentation` — sol çerçeve rengi.
+  static Color _deltaBorderColor(num? deltaPct) {
+    if (deltaPct == null) return LotlotColors.border;
+    if (deltaPct > 0) return LotlotColors.accent;
+    if (deltaPct < 0) return LotlotColors.danger;
+    return LotlotColors.border;
+  }
+
   @override
   Widget build(BuildContext context) {
     final hLabel = horizon.toUpperCase().replaceAll('D', 'G');
@@ -598,7 +606,12 @@ class _MlSummaryCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: LotlotColors.surfaceElevated,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: LotlotColors.border),
+          border: const Border(
+            left: BorderSide(color: LotlotColors.border, width: 3),
+            top: BorderSide(color: LotlotColors.border),
+            right: BorderSide(color: LotlotColors.border),
+            bottom: BorderSide(color: LotlotColors.border),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -627,7 +640,16 @@ class _MlSummaryCard extends StatelessWidget {
     final confPct = conf is num
         ? (conf <= 1 ? conf * 100 : conf).round().clamp(0, 100)
         : null;
-    final deltaPct = delta is num ? (delta * 100) : null;
+    // Web: usedDeltaPct as fraction; border from sign of delta
+    final deltaFrac = delta is num ? delta.toDouble() : null;
+    final deltaPct = deltaFrac != null
+        ? (deltaFrac.abs() <= 1 ? deltaFrac * 100 : deltaFrac)
+        : null;
+    final borderColor = _deltaBorderColor(
+      deltaFrac == null
+          ? null
+          : (deltaFrac.abs() <= 1 ? deltaFrac : deltaFrac / 100),
+    );
 
     return Container(
       width: double.infinity,
@@ -635,7 +657,12 @@ class _MlSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: LotlotColors.surfaceElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: LotlotColors.border),
+        border: Border(
+          left: BorderSide(color: borderColor, width: 3),
+          top: const BorderSide(color: LotlotColors.border),
+          right: const BorderSide(color: LotlotColors.border),
+          bottom: const BorderSide(color: LotlotColors.border),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

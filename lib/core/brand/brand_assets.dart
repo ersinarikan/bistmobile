@@ -13,13 +13,14 @@ class BrandAssets {
       '${ApiConfig.baseUrl}/static/img/brand/lotlot-square.png';
   static const String wordmark =
       '${ApiConfig.baseUrl}/static/img/brand/lotlot-wordmark.png';
+  /// Stacked / hero — AppBar'da kullanma.
   static const String wide =
       '${ApiConfig.baseUrl}/static/img/brand/lotlot-wide.png';
   static const String pwaIcon512 =
       '${ApiConfig.baseUrl}/static/pwa/icon-512.png';
 }
 
-/// Lotlot logosu — CDN'den; değişince uygulamada yeniden build gerekmez.
+/// Lotlot ikonu — CDN'den.
 class BrandLogo extends StatelessWidget {
   const BrandLogo({
     super.key,
@@ -64,79 +65,88 @@ class BrandLogo extends StatelessWidget {
   }
 }
 
-/// Yatay wordmark (ikon + LOTLOT.NET) — AppBar / header.
+Widget _fallbackWordmarkText(double height) {
+  return Text.rich(
+    TextSpan(
+      children: [
+        TextSpan(
+          text: 'LOTLOT',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: height * 0.55,
+            color: LotlotColors.textPrimary,
+            letterSpacing: 0.4,
+          ),
+        ),
+        TextSpan(
+          text: '.NET',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: height * 0.55,
+            color: LotlotColors.accent,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Web navbar parity: küçük ikon + yatay `lotlot-wordmark.png` (wide stacked değil).
 class BrandWordmark extends StatelessWidget {
   const BrandWordmark({
     super.key,
     this.height = 28,
-    this.maxWidth = 160,
+    this.maxWidth = 168,
+    this.showIcon = true,
   });
 
   final double height;
   final double maxWidth;
+  final bool showIcon;
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
-      BrandAssets.wide,
-      height: height,
-      fit: BoxFit.contain,
-      alignment: Alignment.centerLeft,
-      filterQuality: FilterQuality.high,
-      errorBuilder: (_, _, _) => Image.network(
-        BrandAssets.wordmark,
-        height: height,
-        fit: BoxFit.contain,
-        alignment: Alignment.centerLeft,
-        filterQuality: FilterQuality.high,
-        errorBuilder: (_, _, _) => Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'LOTLOT',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: height * 0.55,
-                  color: LotlotColors.textPrimary,
-                  letterSpacing: 0.4,
-                ),
-              ),
-              TextSpan(
-                text: '.NET',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: height * 0.55,
-                  color: LotlotColors.accent,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) {
-          return ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: height),
-            child: child,
-          );
-        }
-        return SizedBox(
-          width: maxWidth * 0.6,
-          height: height,
-          child: const Align(
-            alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: LotlotColors.accent,
-              ),
+    final iconSize = height * 0.92;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: height),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (showIcon) ...[
+            BrandLogo(width: iconSize, height: iconSize),
+            SizedBox(width: height * 0.28),
+          ],
+          Flexible(
+            child: Image.network(
+              BrandAssets.wordmark,
+              height: height * 0.72,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (_, _, _) => _fallbackWordmarkText(height),
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return SizedBox(
+                  width: maxWidth * 0.45,
+                  height: height * 0.72,
+                  child: const Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: LotlotColors.accent,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }
