@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -9,6 +11,136 @@ import 'formation_status.dart';
 import 'horizon_chips.dart';
 
 const _mlSources = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
+
+typedef SparkFormationRange = ({
+  int start,
+  int end,
+  int normIdx,
+  int startAbs,
+  int endAbs,
+});
+
+List<Map<String, dynamic>> _eligibleSparkFormations(
+  Map<String, dynamic>? pattern,
+) {
+  final raw = pattern?['patterns'];
+  if (raw is! List) return const [];
+
+  final eligible = <Map<String, dynamic>>[];
+  for (final item in raw) {
+    if (item is! Map) continue;
+    final formation = Map<String, dynamic>.from(item);
+    final source = (formation['source'] ?? '').toString().trim().toUpperCase();
+    if (source.isEmpty || _mlSources.contains(source)) continue;
+
+    final recency = (formation['recency_bucket'] ?? '')
+        .toString()
+        .toUpperCase();
+    final confidence = formation['confidence'];
+    final confidenceValue = confidence is num ? confidence.toDouble() : 0.0;
+    if (recency == 'INVALID' || (recency == 'STALE' && confidenceValue <= 0)) {
+      continue;
+    }
+
+    final range = formation['range'];
+    if (range is! Map ||
+        range['start_index'] is! num ||
+        range['end_index'] is! num) {
+      continue;
+    }
+    eligible.add(formation);
+  }
+  return eligible;
+}
+
+int estimateSparkDisplayCount(Map<String, dynamic>? pattern, int barsLength) {
+  if (barsLength <= 0) return 0;
+  final eligible = _eligibleSparkFormations(pattern);
+  var maxIx = -1;
+  var minIx = 1 << 30;
+  for (final formation in eligible) {
+    final range = formation['range'] as Map;
+    final start = (range['start_index'] as num).round();
+    final end = (range['end_index'] as num).round();
+    minIx = math.min(minIx, math.min(start, end));
+    maxIx = math.max(maxIx, math.max(start, end));
+  }
+
+  final apiPoints = pattern?['data_points'];
+  final apiN = apiPoints is num && apiPoints > 0 ? apiPoints.toInt() : 0;
+  final totalPoints = math.max(apiN, maxIx < 0 ? 0 : maxIx + 1);
+  final needed = maxIx < 0 ? 120 : math.max(120, totalPoints - minIx);
+  return math.min(math.min(365, barsLength), needed);
+}
+
+List<SparkFormationRange> normalizeSparkFormationRanges(
+  Map<String, dynamic>? pattern,
+  int displayCount,
+) {
+  if (displayCount <= 0) return const [];
+  final eligible = _eligibleSparkFormations(pattern);
+  var maxIx = -1;
+  for (final formation in eligible) {
+    final range = formation['range'] as Map;
+    maxIx = math.max(
+      maxIx,
+      math.max(
+        (range['start_index'] as num).round(),
+        (range['end_index'] as num).round(),
+      ),
+    );
+  }
+
+  final apiPoints = pattern?['data_points'];
+  final apiN = apiPoints is num && apiPoints > 0 ? apiPoints.toInt() : 0;
+  final totalPoints = math.max(
+    math.max(apiN, maxIx < 0 ? 0 : maxIx + 1),
+    displayCount,
+  );
+  final offset = math.max(0, totalPoints - displayCount);
+  final ranges = <SparkFormationRange>[];
+
+  for (final formation in eligible) {
+    final range = formation['range'] as Map;
+    final startAbs = (range['start_index'] as num).round();
+    final endAbs = (range['end_index'] as num).round();
+    var start = startAbs - offset;
+    var end = endAbs - offset;
+    if (end < 0 || start >= displayCount) continue;
+    start = start.clamp(0, displayCount - 1);
+    end = end.clamp(0, displayCount - 1);
+    if (end < start) continue;
+    ranges.add((
+      start: start,
+      end: end,
+      normIdx: ranges.length,
+      startAbs: startAbs,
+      endAbs: endAbs,
+    ));
+  }
+  return ranges;
+}
+
+int? normIdxForPatternItem(
+  Map<String, dynamic>? pattern,
+  Map<String, dynamic> item,
+  int displayCount,
+) {
+  final itemRange = item['range'];
+  if (itemRange is! Map ||
+      itemRange['start_index'] is! num ||
+      itemRange['end_index'] is! num) {
+    return null;
+  }
+  final startAbs = (itemRange['start_index'] as num).round();
+  final endAbs = (itemRange['end_index'] as num).round();
+  for (final range in normalizeSparkFormationRanges(pattern, displayCount)) {
+    if (range.startAbs == startAbs && range.endAbs == endAbs) {
+      return range.normIdx;
+    }
+  }
+  return null;
+}
 
 const _sourceLabels = <String, String>{
   'VISUAL_YOLO': 'Görsel',
@@ -101,12 +233,18 @@ class PatternSection extends StatefulWidget {
     required this.loading,
     required this.pending,
     this.pattern,
+    this.onFormationTap,
+    this.selectedFormationNormIdx,
+    this.formationDisplayCount = 120,
   });
 
   final bool isAuthenticated;
   final bool loading;
   final bool pending;
   final Map<String, dynamic>? pattern;
+  final ValueChanged<int>? onFormationTap;
+  final int? selectedFormationNormIdx;
+  final int formationDisplayCount;
 
   @override
   State<PatternSection> createState() => _PatternSectionState();
@@ -148,9 +286,9 @@ class _PatternSectionState extends State<PatternSection> {
         children: [
           Text(
             'Analiz özeti',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 10),
           Container(
@@ -239,9 +377,9 @@ class _PatternSectionState extends State<PatternSection> {
         : null;
 
     final fingpt = allPatterns.cast<Map<String, dynamic>?>().firstWhere(
-          (p) => (p?['source']?.toString() ?? '') == 'FINGPT',
-          orElse: () => null,
-        );
+      (p) => (p?['source']?.toString() ?? '') == 'FINGPT',
+      orElse: () => null,
+    );
 
     final formations = sortFormations(allPatterns, excludeSources: _mlSources);
 
@@ -249,7 +387,8 @@ class _PatternSectionState extends State<PatternSection> {
     final signalsMap = signalsRaw is Map ? signalsRaw : null;
     final signalRow = signalRowForHorizon(signalsMap, _horizon);
     final label = signalRow?['label']?.toString();
-    final summary = signalRow?['summary_tr']?.toString() ??
+    final summary =
+        signalRow?['summary_tr']?.toString() ??
         signalRow?['analysis_disclaimer_tr']?.toString() ??
         overallReason;
 
@@ -263,7 +402,8 @@ class _PatternSectionState extends State<PatternSection> {
     final mlMap = mlRaw is Map ? mlRaw : null;
     final mlHorizon = mlUnifiedForHorizon(mlMap, _horizon);
 
-    final hasSezgisel = fingpt != null ||
+    final hasSezgisel =
+        fingpt != null ||
         (newsContext != null &&
             ((newsContext['items'] is List &&
                     (newsContext['items'] as List).isNotEmpty) ||
@@ -273,7 +413,8 @@ class _PatternSectionState extends State<PatternSection> {
     final hasMl = mlMap != null && mlMap.isNotEmpty;
     final hasSignals = signalsMap != null && signalsMap.isNotEmpty;
 
-    final hasContent = overallDir != null ||
+    final hasContent =
+        overallDir != null ||
         label != null ||
         summary != null ||
         formations.isNotEmpty ||
@@ -388,10 +529,7 @@ class _PatternSectionState extends State<PatternSection> {
         ],
         if (proLayers && hasSezgisel) ...[
           const SizedBox(height: 12),
-          _SezgiselChip(
-            fingpt: fingpt,
-            newsContext: newsContext,
-          ),
+          _SezgiselChip(fingpt: fingpt, newsContext: newsContext),
         ],
         if (proLayers && formations.isNotEmpty) ...[
           const SizedBox(height: 14),
@@ -401,15 +539,29 @@ class _PatternSectionState extends State<PatternSection> {
           ),
           const SizedBox(height: 6),
           for (final item in formations.take(12))
-            _FormationRow(item: item),
+            Builder(
+              builder: (context) {
+                final normIdx = normIdxForPatternItem(
+                  pattern,
+                  item,
+                  widget.formationDisplayCount,
+                );
+                return _FormationRow(
+                  item: item,
+                  selected:
+                      normIdx != null &&
+                      normIdx == widget.selectedFormationNormIdx,
+                  onTap: normIdx == null || widget.onFormationTap == null
+                      ? null
+                      : () => widget.onFormationTap!(normIdx),
+                );
+              },
+            ),
         ] else if (proLayers && !hasSezgisel) ...[
           const SizedBox(height: 10),
           const Text(
             'Formasyon tespit edilemedi.',
-            style: TextStyle(
-              color: LotlotColors.textSecondary,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: LotlotColors.textSecondary, fontSize: 13),
           ),
         ],
         if (!proLayers) ...[
@@ -420,8 +572,7 @@ class _PatternSectionState extends State<PatternSection> {
           ),
           const SizedBox(height: 10),
           ElevatedButton(
-            onPressed: () =>
-                showSoftGateSheet(context, kind: SoftGateKind.pro),
+            onPressed: () => showSoftGateSheet(context, kind: SoftGateKind.pro),
             child: const Text('Planları gör'),
           ),
         ],
@@ -459,10 +610,7 @@ class _MlSummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             const Text(
               'Bu ufuk için ML tahmin bilgisi yok.',
-              style: TextStyle(
-                color: LotlotColors.textSecondary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: LotlotColors.textSecondary, fontSize: 12),
             ),
           ],
         ),
@@ -503,8 +651,7 @@ class _MlSummaryCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (key != null)
-                _MiniBadge(translateModelLabel(key)),
+              if (key != null) _MiniBadge(translateModelLabel(key)),
             ],
           ),
           if (price is num || deltaPct != null || confPct != null) ...[
@@ -526,10 +673,7 @@ class _MlSummaryCard extends StatelessWidget {
             const SizedBox(height: 4),
             const Text(
               'Model özeti mevcut.',
-              style: TextStyle(
-                color: LotlotColors.textSecondary,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: LotlotColors.textSecondary, fontSize: 12),
             ),
           ],
         ],
@@ -546,12 +690,15 @@ class _SezgiselChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dir = fingpt?['signal']?.toString() ??
+    final dir =
+        fingpt?['signal']?.toString() ??
         newsContext?['display_direction']?.toString() ??
         'neutral';
     final conf = fingpt?['confidence'] ?? newsContext?['confidence'];
     final count = fingpt?['news_count'] ?? newsContext?['news_count'];
-    final confPct = conf is num ? (conf <= 1 ? conf * 100 : conf).round() : null;
+    final confPct = conf is num
+        ? (conf <= 1 ? conf * 100 : conf).round()
+        : null;
     final label = [
       'Sezgisel',
       _directionLabel(dir),
@@ -572,7 +719,11 @@ class _SezgiselChip extends StatelessWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.lightbulb_outline, color: LotlotColors.accent, size: 18),
+            const Icon(
+              Icons.lightbulb_outline,
+              color: LotlotColors.accent,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -583,7 +734,11 @@ class _SezgiselChip extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: LotlotColors.textSecondary),
+            const Icon(
+              Icons.chevron_right,
+              size: 18,
+              color: LotlotColors.textSecondary,
+            ),
           ],
         ),
       ),
@@ -638,9 +793,9 @@ class _SezgiselChip extends StatelessWidget {
               Text(
                 'Sezgisel Analiz',
                 style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: LotlotColors.accent,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  color: LotlotColors.accent,
+                ),
               ),
               const SizedBox(height: 6),
               const Text(
@@ -713,14 +868,16 @@ class _SezgiselChip extends StatelessWidget {
 }
 
 class _FormationRow extends StatelessWidget {
-  const _FormationRow({required this.item});
+  const _FormationRow({required this.item, required this.selected, this.onTap});
 
   final Map<String, dynamic> item;
+  final bool selected;
+  final VoidCallback? onTap;
 
   bool get _visualOk {
     final conf = item['confirmation_sources'];
     if (conf is List) {
-      return conf.any((e) => e?.toString() == 'VISUAL_YOLO');
+      return conf.any((e) => e?.toString().toUpperCase() == 'VISUAL_YOLO');
     }
     return false;
   }
@@ -735,14 +892,17 @@ class _FormationRow extends StatelessWidget {
     final effectHint = item['effect_hint_tr']?.toString();
     final effectLabel = item['effect_label']?.toString();
     final conf = item['confidence'];
-    final confPct = conf is num ? (conf <= 1 ? conf * 100 : conf).round() : null;
+    final confPct = conf is num
+        ? (conf <= 1 ? conf * 100 : conf).round()
+        : null;
     final isVisual = source == 'VISUAL_YOLO';
-    final signalLabel =
-        signal != null && signal.isNotEmpty ? _directionLabel(signal) : null;
+    final signalLabel = signal != null && signal.isNotEmpty
+        ? _directionLabel(signal)
+        : null;
 
-    final effectState =
-        (item['effect_state']?.toString() ?? '').toLowerCase();
-    final showEffectLabel = effectLabel != null &&
+    final effectState = (item['effect_state']?.toString() ?? '').toLowerCase();
+    final showEffectLabel =
+        effectLabel != null &&
         effectLabel.isNotEmpty &&
         !const {
           'forming',
@@ -763,57 +923,75 @@ class _FormationRow extends StatelessWidget {
     final title = signalLabel == null ? name : '$name · $signalLabel';
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
+      padding: const EdgeInsets.only(top: 6),
+      child: Material(
+        color: selected
+            ? LotlotColors.warning.withValues(alpha: 0.09)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                    if (confPct != null)
+                      Text(
+                        '%$confPct',
+                        style: const TextStyle(
+                          color: LotlotColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-              if (confPct != null)
-                Text(
-                  '%$confPct',
-                  style: const TextStyle(
-                    color: LotlotColors.textSecondary,
-                    fontSize: 12,
-                  ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    _MiniBadge(status.key),
+                    if (sourceLabel.isNotEmpty && !isVisual)
+                      _MiniBadge(sourceLabel),
+                    if (isVisual) const _MiniBadge('Görsel'),
+                    if (_visualOk && !isVisual)
+                      const Tooltip(
+                        message:
+                            'Bu formasyon görsel analiz ile de doğrulandı.',
+                        child: _MiniBadge('görsel onay'),
+                      ),
+                  ],
                 ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            runSpacing: 4,
-            children: [
-              _MiniBadge(status.key),
-              if (sourceLabel.isNotEmpty && !isVisual)
-                _MiniBadge(sourceLabel),
-              if (isVisual) const _MiniBadge('Görsel'),
-              if (_visualOk && !isVisual) const _MiniBadge('görsel onay'),
-            ],
-          ),
-          if (secondary.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              secondary.join(' · '),
-              style: const TextStyle(
-                color: LotlotColors.textSecondary,
-                fontSize: 12,
-                height: 1.35,
-              ),
+                if (secondary.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    secondary.join(' · '),
+                    style: const TextStyle(
+                      color: LotlotColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-        ],
+          ),
+        ),
       ),
     );
   }

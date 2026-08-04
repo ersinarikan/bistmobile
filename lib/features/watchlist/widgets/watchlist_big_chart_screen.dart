@@ -184,7 +184,6 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
                         forecasts:
                             _showForecast ? ctrl.forecasts : const [],
                         patternRanges: _ranges,
-                        forceDetailed: _showForecast,
                         showForecastToggle: true,
                         forecastEnabled: _showForecast,
                         onForecastChanged: _toggleForecast,

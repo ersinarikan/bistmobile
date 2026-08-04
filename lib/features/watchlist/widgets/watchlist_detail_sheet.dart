@@ -16,8 +16,6 @@ import '../../stock/widgets/valuation_card.dart';
 import '../watchlist_controller.dart';
 import 'watchlist_big_chart_screen.dart';
 
-const _sparkExcludedSources = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
-
 /// Web `#detailModal` parity — liste üstünde sheet.
 Future<void> showWatchlistDetailSheet(
   BuildContext context, {
@@ -47,11 +45,22 @@ Future<void> showWatchlistDetailSheet(
   );
 }
 
-class _WatchlistDetailSheetBody extends StatelessWidget {
+class _WatchlistDetailSheetBody extends StatefulWidget {
   const _WatchlistDetailSheetBody({required this.symbol, this.name});
 
   final String symbol;
   final String? name;
+
+  @override
+  State<_WatchlistDetailSheetBody> createState() =>
+      _WatchlistDetailSheetBodyState();
+}
+
+class _WatchlistDetailSheetBodyState extends State<_WatchlistDetailSheetBody> {
+  int? _selectedFormationNormIdx;
+
+  String get symbol => widget.symbol;
+  String? get name => widget.name;
 
   @override
   Widget build(BuildContext context) {
@@ -92,8 +101,8 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
                   child: Text(
                     '$symbol Detay',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -158,6 +167,7 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
                     bars: ctrl.bars,
                     pattern: ctrl.pattern,
                     showFormations: showFormations,
+                    selectedNormIdx: _selectedFormationNormIdx,
                     onOpen: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
@@ -179,6 +189,14 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
                     loading: ctrl.loadingAuth,
                     pending: ctrl.patternPending,
                     pattern: ctrl.pattern,
+                    formationDisplayCount: estimateSparkDisplayCount(
+                      ctrl.pattern,
+                      ctrl.bars.length,
+                    ),
+                    selectedFormationNormIdx: _selectedFormationNormIdx,
+                    onFormationTap: (normIdx) {
+                      setState(() => _selectedFormationNormIdx = normIdx);
+                    },
                   ),
                   MarketMetaCard(
                     volumeTier: ctrl.volumeTier,
@@ -211,9 +229,9 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
     final ok = await wl.setAlertEnabled(symbol, value);
     if (!context.mounted) return;
     if (!ok && wl.lastError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(wl.lastError!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(wl.lastError!)));
     } else if (ok && value && !session.pushNotificationsOn) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -234,79 +252,89 @@ class _SparkPreview extends StatelessWidget {
     required this.onOpen,
     this.pattern,
     this.showFormations = false,
+    this.selectedNormIdx,
   });
 
   final List<OhlcvBar> bars;
   final Map<String, dynamic>? pattern;
   final bool showFormations;
+  final int? selectedNormIdx;
   final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
+    final displayCount = estimateSparkDisplayCount(pattern, bars.length);
     final ranges = showFormations
-        ? _sparkFormationRanges(
-            pattern: pattern,
-            displayCount: math.min(120, bars.length),
-            fullBarsLength: bars.length,
-          )
-        : const <({int start, int end})>[];
+        ? normalizeSparkFormationRanges(pattern, displayCount)
+        : const <SparkFormationRange>[];
+    final slice = displayCount > 0
+        ? bars.sublist(bars.length - displayCount)
+        : const <OhlcvBar>[];
+    final minPrice = slice.isEmpty
+        ? null
+        : slice.map((bar) => bar.low).reduce(math.min);
+    final maxPrice = slice.isEmpty
+        ? null
+        : slice.map((bar) => bar.high).reduce(math.max);
 
     return Material(
       color: LotlotColors.surface,
       borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-      child: InkWell(
-        onTap: bars.isEmpty ? null : onOpen,
-        borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-            border: Border.all(color: LotlotColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SizedBox(
-                height: 200,
-                child: bars.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Grafik yükleniyor…',
-                          style: TextStyle(color: LotlotColors.textSecondary),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+          border: Border.all(color: LotlotColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: bars.isEmpty ? null : onOpen,
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  height: 200,
+                  child: bars.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'Grafik yükleniyor…',
+                            style: TextStyle(color: LotlotColors.textSecondary),
+                          ),
+                        )
+                      : CustomPaint(
+                          painter: _SparkPainter(
+                            bars: bars,
+                            displayCount: displayCount,
+                            formationRanges: ranges,
+                            selectedNormIdx: selectedNormIdx,
+                          ),
+                          child: const SizedBox.expand(),
                         ),
-                      )
-                    : CustomPaint(
-                        painter: _SparkPainter(
-                          bars: bars,
-                          formationRanges: ranges,
-                        ),
-                        child: const SizedBox.expand(),
-                      ),
+                ),
               ),
-              const SizedBox(height: 10),
-              Row(
+            ),
+            if (slice.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
                 children: [
-                  const Icon(
-                    Icons.open_in_full,
-                    size: 16,
-                    color: LotlotColors.accent,
-                  ),
-                  const SizedBox(width: 6),
-                  const Expanded(
-                    child: Text(
-                      'Büyük mum grafiği — tıklayın',
-                      style: TextStyle(
-                        color: LotlotColors.accent,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
+                  Text(
+                    'Bar: ${slice.length} · En düşük '
+                    '₺${minPrice!.toStringAsFixed(2)} · En yüksek '
+                    '₺${maxPrice!.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      color: LotlotColors.textSecondary,
+                      fontSize: 11,
                     ),
                   ),
-                  if (showFormations && ranges.isNotEmpty)
-                    const Text(
-                      'Formasyon',
-                      style: TextStyle(
+                  if (ranges.isNotEmpty)
+                    Text(
+                      'Formasyon: ${ranges.length}',
+                      style: const TextStyle(
                         color: LotlotColors.danger,
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -315,79 +343,52 @@ class _SparkPreview extends StatelessWidget {
                 ],
               ),
             ],
-          ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(
+                  Icons.open_in_full,
+                  size: 16,
+                  color: LotlotColors.accent,
+                ),
+                const SizedBox(width: 6),
+                const Expanded(
+                  child: Text(
+                    'Büyük mum grafiği — tıklayın',
+                    style: TextStyle(
+                      color: LotlotColors.accent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Web `_normalizePatternRanges` — görünen spark dilimine index.
-List<({int start, int end})> _sparkFormationRanges({
-  required Map<String, dynamic>? pattern,
-  required int displayCount,
-  required int fullBarsLength,
-}) {
-  if (pattern == null || displayCount <= 0) return const [];
-  final raw = pattern['patterns'];
-  if (raw is! List) return const [];
-
-  var maxIx = -1;
-  final eligible = <Map<String, dynamic>>[];
-  for (final item in raw) {
-    if (item is! Map) continue;
-    final m = Map<String, dynamic>.from(item);
-    final src = (m['source'] ?? '').toString().toUpperCase();
-    if (src.isEmpty || _sparkExcludedSources.contains(src)) continue;
-    final rec = (m['recency_bucket'] ?? '').toString().toUpperCase();
-    final conf = m['confidence'];
-    final confN = conf is num ? conf.toDouble() : 0.0;
-    if (rec == 'STALE' && confN < 0.35) continue;
-    if (rec == 'INVALID') continue;
-    final range = m['range'];
-    if (range is! Map) continue;
-    final s = range['start_index'];
-    final e = range['end_index'];
-    if (s is! num || e is! num) continue;
-    maxIx = math.max(maxIx, math.max(s.round(), e.round()));
-    eligible.add(m);
-  }
-
-  final apiPts = pattern['data_points'];
-  final apiN = apiPts is num && apiPts > 0 ? apiPts.toInt() : 0;
-  final totalPoints = math.max(
-    math.max(apiN, maxIx < 0 ? 0 : maxIx + 1),
-    math.max(displayCount, fullBarsLength),
-  );
-  final offset = math.max(0, totalPoints - displayCount);
-
-  final out = <({int start, int end})>[];
-  for (final m in eligible) {
-    final range = m['range'] as Map;
-    var start = (range['start_index'] as num).round() - offset;
-    var end = (range['end_index'] as num).round() - offset;
-    if (end < 0 || start >= displayCount) continue;
-    start = start.clamp(0, displayCount - 1);
-    end = end.clamp(0, displayCount - 1);
-    if (end < start) continue;
-    out.add((start: start, end: end));
-  }
-  return out;
-}
-
 class _SparkPainter extends CustomPainter {
   _SparkPainter({
     required this.bars,
+    required this.displayCount,
     this.formationRanges = const [],
+    this.selectedNormIdx,
   });
 
   final List<OhlcvBar> bars;
-  final List<({int start, int end})> formationRanges;
+  final int displayCount;
+  final List<SparkFormationRange> formationRanges;
+  final int? selectedNormIdx;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (bars.isEmpty) return;
-    final take = math.min(120, bars.length);
+    final take = math.min(displayCount, bars.length);
+    if (take <= 0) return;
     final slice = bars.sublist(bars.length - take);
     final n = slice.length;
     var minY = slice.map((b) => b.low).reduce(math.min);
@@ -397,8 +398,9 @@ class _SparkPainter extends CustomPainter {
     minY -= pad;
     maxY += pad;
 
-    double xAt(int i) =>
-        n == 1 ? size.width / 2 : i * size.width / (n - 1);
+    const labelWidth = 52.0;
+    final chartWidth = math.max(0.0, size.width - labelWidth);
+    double xAt(int i) => n == 1 ? chartWidth / 2 : i * chartWidth / (n - 1);
     double yAt(double close) =>
         size.height * (1 - ((close - minY) / (maxY - minY)).clamp(0.0, 1.0));
 
@@ -413,25 +415,32 @@ class _SparkPainter extends CustomPainter {
     canvas.drawPath(
       fillPath,
       Paint()
-        ..shader = ui.Gradient.linear(
-          Offset(0, 0),
-          Offset(0, size.height),
-          [
-            LotlotColors.accent.withValues(alpha: 0.22),
-            LotlotColors.accent.withValues(alpha: 0.02),
-          ],
-        ),
+        ..shader = ui.Gradient.linear(Offset(0, 0), Offset(0, size.height), [
+          LotlotColors.accent.withValues(alpha: 0.22),
+          LotlotColors.accent.withValues(alpha: 0.02),
+        ]),
     );
 
     // Base line (accent), segment-colored on formations like web Chart.js
     for (var i = 0; i < n - 1; i++) {
-      final inFormation = formationRanges.any(
-        (r) => i >= r.start && i <= r.end,
-      );
+      final matchingRanges = formationRanges
+          .where((range) => i >= range.start && i <= range.end)
+          .toList();
+      final selected =
+          selectedNormIdx != null &&
+          matchingRanges.any((range) => range.normIdx == selectedNormIdx);
+      final inFormation = matchingRanges.isNotEmpty;
+      final dimmed = selectedNormIdx != null && inFormation && !selected;
       final paint = Paint()
-        ..color = inFormation ? LotlotColors.danger : LotlotColors.accent
+        ..color = selected
+            ? const Color(0xFFFFD54A)
+            : dimmed
+            ? LotlotColors.danger.withValues(alpha: 0.35)
+            : inFormation
+            ? LotlotColors.danger
+            : LotlotColors.accent
         ..style = PaintingStyle.stroke
-        ..strokeWidth = inFormation ? 2.4 : 1.8
+        ..strokeWidth = selected ? 3 : (inFormation ? 2.4 : 1.8)
         ..strokeCap = StrokeCap.round
         ..isAntiAlias = true;
       canvas.drawLine(
@@ -453,15 +462,21 @@ class _SparkPainter extends CustomPainter {
       band
         ..lineTo(xAt(e), size.height)
         ..close();
+      final selected = r.normIdx == selectedNormIdx;
+      final dimmed = selectedNormIdx != null && !selected;
+      final color = selected ? const Color(0xFFFFD54A) : LotlotColors.danger;
       canvas.drawPath(
         band,
-        Paint()..color = LotlotColors.danger.withValues(alpha: 0.12),
+        Paint()
+          ..color = color.withValues(
+            alpha: selected ? 0.2 : (dimmed ? 0.06 : 0.12),
+          ),
       );
       // Dashed-ish overlay stroke
       final overlay = Paint()
-        ..color = LotlotColors.danger.withValues(alpha: 0.85)
+        ..color = color.withValues(alpha: dimmed ? 0.35 : 0.9)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.2
+        ..strokeWidth = selected ? 3 : 2.2
         ..isAntiAlias = true;
       for (var i = s; i < e; i++) {
         canvas.drawLine(
@@ -471,10 +486,40 @@ class _SparkPainter extends CustomPainter {
         );
       }
     }
+
+    _drawPriceLabel(canvas, size, chartWidth, maxY, 0);
+    _drawPriceLabel(
+      canvas,
+      size,
+      chartWidth,
+      (minY + maxY) / 2,
+      size.height / 2,
+    );
+    _drawPriceLabel(canvas, size, chartWidth, minY, size.height - 14);
+  }
+
+  void _drawPriceLabel(
+    Canvas canvas,
+    Size size,
+    double chartWidth,
+    double value,
+    double top,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: '₺${value.toStringAsFixed(2)}',
+        style: const TextStyle(color: LotlotColors.textSecondary, fontSize: 9),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout(maxWidth: math.max(0, size.width - chartWidth - 4));
+    painter.paint(canvas, Offset(chartWidth + 4, top));
   }
 
   @override
   bool shouldRepaint(covariant _SparkPainter oldDelegate) =>
       oldDelegate.bars != bars ||
-      oldDelegate.formationRanges != formationRanges;
+      oldDelegate.displayCount != displayCount ||
+      oldDelegate.formationRanges != formationRanges ||
+      oldDelegate.selectedNormIdx != selectedNormIdx;
 }

@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v45 büyük grafik uyarı + Detay adil/temel görünürlük)
+> Son güncelleme: 2026-08-04 (v46 büyük grafik toggle + spark formasyon cila)
 
 ---
 
@@ -297,10 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+45` · tag `v45` — büyük grafik uyarı + Detay adil/temel sıra.  
+**Build (kod):** `1.0.0+46` · tag `v46` — büyük grafik indikatör toggle + spark formasyon/değer cila.  
 **Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`; ASC “işlenmesi bitti”. Cihazda USB/debug **45+** veya TF; Detay valuation için **44+**.
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **46+** tercih.
 
 #### P1 smoke (cihaz TF 42)
 
@@ -413,6 +413,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v46 (2026-08-04) — Büyük grafik / Detay spark cila
+- Büyük grafik: Hacim/EMA20/EMA50/BB/RSI/S/R/Formasyon/Öngörü tek tek toggle; Sade/Detaylı preset (web)
+- Legend: açık katmanların renk anlamı
+- Spark: Y etiketleri + Bar/min/max; formasyon index universe web parity (`fullBarsLength` bug kapandı)
+- Formasyon satırına dokun → spark’ta sarı vurgu; diğerleri soluk
+- YOLO `görsel onay`: case-insensitive + tooltip (yalnız `confirmation_sources`’da VISUAL_YOLO olan TA satırları; kaynak VISUAL_YOLO ise yalnız “Görsel”)
+- Build **1.0.0+46**
 
 ### v45 (2026-08-04) — Büyük grafik uyarı + Detay görünürlük
 - Büyük grafik AppBar: grafik uyarısı (Pro; sembol + son kapanış dolu) — web alarm parity
@@ -757,7 +765,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Watchlist satır teaser | Pill + Δ% + güç + fiyat + 1G…30G | `WatchlistSignalTile` + Detay | **ok** (v39 tek kart) |
 | Predictions hydrate | Aynı kart (`pred-{SYM}`) | Aynı kart; ikinci liste **yok** | **ok** (v39; eski çift liste bug kapandı) |
 | Detay modal | `#detailModal` spark→ML→adil→temel→meta | Spark→adil→temel→pattern→meta (v45; Pattern mobil uzun) | **ok** (v39–45) |
-| Büyük grafik + Öngörü + AI | `#chartModal` + alarm | `WatchlistBigChartScreen` + AppBar uyarı (v45) | **ok** (v39/v43/v45) |
+| Büyük grafik + Öngörü + AI | `#chartModal` + alarm + checkbox | Toggle + legend + AppBar uyarı (v46) | **ok** (v39–46) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
 | Chart + levels | Lightweight Charts | Sade: mum+MA20+hacim+S/R; Detaylı: +EMA50/BB/RSI/öngörü | **ok** (v31–v33) |
@@ -809,13 +817,17 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | D-O1 | Sıra: spark → pattern → valuation → fundamentals → meta | PASS (kod) |
 | D-A1 | Kart salt Bildirim metni; zil yok | PASS (kod) |
 
-### 7.3.4 Büyük grafik uyarı / legend (v45)
+### 7.3.4 Büyük grafik uyarı / legend (v45–v46)
 
 | ID | Senaryo | Beklenen |
 |----|---------|----------|
 | C-A1 | Büyük grafik AppBar → Yeni uyarı (Pro; sembol/fiyat dolu) | PASS (kod) |
-| C-L1 | Detaylı: legend EMA20/EMA50; Öngörü açıkken kırmızı kesikli notu | PASS (kod) |
+| C-L1 | Legend: açık katman renkleri; Öngörü kırmızı kesikli | PASS (kod) |
+| C-T1 | EMA/RSI/BB/Hacim/S/R tek tek aç-kapa; Sade/Detaylı preset | PASS (kod) |
 | D-O2 | Detay: spark → valuation → fundamentals → pattern → meta | PASS (kod) |
+| D-S1 | Spark: Bar/min/max + Y etiketleri | PASS (kod) |
+| D-P1 | Formasyon tık → sarı vurgu; çoklu bant görünür | PASS (kod) |
+| D-Y1 | `görsel onay` yalnız VISUAL_YOLO confirmation; tooltip | PASS (kod) |
 
 ## 8. Dokunulmaması gerekenler
 
