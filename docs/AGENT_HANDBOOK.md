@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v42 yetki UX cila)
+> Son güncelleme: 2026-08-04 (TF build 42 IPA — Transporter Deliver)
 
 ---
 
@@ -295,6 +295,45 @@ Matris T-F1…T-D1 (v41).
 
 ---
 
+### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
+
+**Build:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
+**ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
+**Upload:** IPA üretildi; Transporter **Deliver** → TF processing → cihazda **42** indir (eski build ile smoke yok).
+
+#### P1 smoke (cihaz TF 42)
+
+| ID | Senaryo | Sonuç |
+|----|---------|--------|
+| T1 | Splash → auth shell İzleme\|Keşfet | _bekliyor_ |
+| T2 | İzleme: ufuk → pill / Δ% / güç | _bekliyor_ |
+| T3 | Hisse: Detaylı EMA/BB/RSI | _bekliyor_ |
+| T4 | Keşfet BIST → detay | _bekliyor_ |
+| T5 | Soft gate Free/Pro (auto-pop yok) | _bekliyor_ |
+| T6 | Guest Landing + Keşfet | _bekliyor_ |
+| T7 | Hesap: restore / silme görünür | _bekliyor_ |
+
+#### Tier smoke (cihaz TF 42)
+
+| ID | Senaryo | Beklenen | Sonuç |
+|----|---------|----------|--------|
+| T-F1 | Free: Bildirim (Premium) + Push ON | Premium soft gate | _bekliyor_ |
+| T-F2 | Free: muted AL/SAT; AI/Öngörü/Formasyon/Wizard | Soft gate | _bekliyor_ |
+| T-P1 | Pro: AI/Öngörü/Formasyon/chart alerts OK; Wizard+push gate | OK / Premium gate | _bekliyor_ |
+| T-M1 | Premium: alert toggle + Push + Wizard | OK | _bekliyor_ |
+| T-D1 | Downgrade alert OFF | Gate yok | _bekliyor_ |
+
+#### F6 Sandbox (aynı TF 42)
+
+| ID | Senaryo | Sonuç |
+|----|---------|--------|
+| I1 | Sandbox Apple ID → satın al → verify → tier | _bekliyor_ |
+| I2 | Restore → tier | _bekliyor_ |
+
+**F7 go/no-go:** P1 + I1/I2 yeşil olmadan Add for Review yok (bilinçli sandbox notu yalnızca PM kararı).
+
+---
+
 ## 1. Proje özeti
 
 | | |
@@ -373,6 +412,10 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### TF42 upload dilimi (2026-08-04)
+- `flutter build ipa` → **1.0.0 (42)** App Store IPA (`build/ios/ipa/LOTLOT.NET.ipa`)
+- Transporter açıldı; Deliver + TF processing + cihaz 42 smoke §0.9’da
 
 ### v42 (2026-08-04) — Yetki UX cila
 - Free/Pro kapalı zil → “Bildirim (Premium)” TextButton (toggle yanılsaması yok)
