@@ -240,7 +240,7 @@ class WatchlistSignalTile extends StatelessWidget {
                     ? null
                     : (badges.isEmpty ? 'Formasyon yok' : null),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -356,9 +356,10 @@ class WatchlistSignalTile extends StatelessWidget {
                   ),
                 ),
               ],
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
                   onPressed: symbol.isEmpty
                       ? null
                       : () => showWatchlistDetailSheet(
@@ -366,7 +367,8 @@ class WatchlistSignalTile extends StatelessWidget {
                             symbol: symbol,
                             name: name,
                           ),
-                  child: const Text('Detay'),
+                  icon: const Icon(Icons.list_alt, size: 18),
+                  label: const Text('Detay'),
                 ),
               ),
             ],

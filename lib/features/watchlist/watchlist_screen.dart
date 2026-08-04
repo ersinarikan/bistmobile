@@ -9,6 +9,7 @@ import '../stock/widgets/horizon_chips.dart';
 import '../stocks/stocks_search_screen.dart';
 import '../wizard/wizard_screen.dart';
 import 'watchlist_controller.dart';
+import 'widgets/add_watchlist_sheet.dart';
 import 'widgets/watchlist_signal_tile.dart';
 
 class WatchlistScreen extends StatefulWidget {
@@ -131,6 +132,17 @@ class _AuthWatchlistBody extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           _QuotaBar(wl: wl),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: wl.mutating
+                  ? null
+                  : () => showAddWatchlistSheet(context),
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Hisse Ekle'),
+            ),
+          ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             onPressed: () {
@@ -179,27 +191,22 @@ class _AuthWatchlistBody extends StatelessWidget {
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           if (wl.items.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Listeniz boş. Takip etmek istediğiniz hisseyi ekleyin.',
+                    'Listeniz boş. Yukarıdan Hisse Ekle ile sembol arayın.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: LotlotColors.textSecondary),
                   ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const StocksSearchScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text('Hisse ekle'),
+                  const SizedBox(height: 14),
+                  OutlinedButton(
+                    onPressed: () => showAddWatchlistSheet(context),
+                    child: const Text('Sembol ara'),
                   ),
                 ],
               ),

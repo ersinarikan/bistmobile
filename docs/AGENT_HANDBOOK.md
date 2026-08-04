@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v48 AppBar wordmark + kart sol şerit + ML çerçeve)
+> Son güncelleme: 2026-08-04 (v49 Hisse Ekle sheet + Detay butonu)
 
 ---
 
@@ -297,10 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+48` · tag `v48` — AppBar yatay wordmark; kart sol yeşil; Tahmin özeti yön çerçevesi.  
+**Build (kod):** `1.0.0+49` · tag `v49` — Hisse Ekle sheet; Detay primary buton; rozet boşluk.  
 **Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **48+** tercih.
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **49+** tercih.
 
 #### P1 smoke (cihaz TF 42)
 
@@ -413,6 +413,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v49 (2026-08-04) — Hisse Ekle + kart CTA cila
+- İzleme: yeşil **+ Hisse Ekle** (web `#addStockModal` sheet: ara + Ekle + bildirim diyaloğu)
+- Kart **Detay**: full-width primary buton; rozet→AL boşluk 20
+- Build **1.0.0+49**
 
 ### v48 (2026-08-04) — Marka / kart / Tahmin özeti cila
 - AppBar: ikon + `lotlot-wordmark` yatay (wide stacked bug kapandı); tap → Landing
