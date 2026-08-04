@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v35 TestFlight + export compliance)
+> Son güncelleme: 2026-08-04 (v36 TF smoke + F6 sandbox hazırlık + F7 checklist)
 
 ---
 
@@ -48,8 +48,8 @@ flowchart TD
 | **F3** | Hisse detay | Tamam (+ ufuk/ML/formasyon durum parity) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
-| **F6** | IAP paywall | İstemci tamam (prod Apple `IAP_ENABLED=1`; Google SA yok); **sandbox E2E açık** | **Evet** |
-| **F7** | Mağaza teslimi | TestFlight build 35 (LotLot.net); App Privacy / screenshot / Review bekliyor | Hazır olmalı |
+| **F6** | IAP paywall | İstemci + prod Apple config canlı; sandbox matris I1–I4 (cihazda I1/I2 ASC Sandbox Apple ID ile) | **Evet** |
+| **F7** | Mağaza teslimi | Checklist + Review notes hazır; **Add for Review** = P1 blocker kapalı + P2 sandbox yeşil (veya bilinçli not) | Hazırlık |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
 
@@ -186,28 +186,44 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Amaç:** Tek mobil satış kanalı (guide §9, §25–§28, §29 P2–P3).
 - **Ekranlar:** `PaywallScreen`; Restore; mağaza abonelik yönetimi URL; soft gate → paywall.
 - **API:** `GET /api/billing/iap/config`; `POST .../verify`; `POST .../restore`; sonra `/me`.
-- **Skills:** `ios-fullstack-developer`, `android-fullstack-developer`, `cybersecurity-expert`.
+- **Prod config (2026-08-04 doğrulandı):**
+  ```json
+  {"iap":{"enabled":true,"platforms":{"apple":true,"google_play":false},
+   "products":{"lotlot_premium_monthly":"premium","lotlot_pro_monthly":"pro"},
+   "verify_ready":true},"status":"success"}
+  ```
+- **Client Product ID:** `lotlot_pro_monthly`, `lotlot_premium_monthly` (`iap_service.dart`).
+- **StoreKit local:** `ios/Configuration.storekit` (Xcode Scheme → StoreKit Configuration).
+- **Skills:** `ios-fullstack-developer`, `cybersecurity-expert`, `test-engineer`.
 - **Acceptance:**
-  - [ ] Sandbox/license tester E2E: satın al → verify → tier (`IAP_ENABLED=1` + store ürünleri)
-  - [x] Restore UI + API çağrısı (prod enabled olunca E2E)
-  - [x] Garanti/WebView **yok**
-  - [x] Soft gate’ler paywall’a bağlanır
-  - [x] Config kapalıyken paywall çökmez; satın alma kilitli mesaj
-- **Web bağımlılığı:** Product ID’ler, `IAP_ENABLED`, bundle/package env. **2026-08-03 prod:** Apple-only `IAP_ENABLED=1` + `APPLE_IAP_BUNDLE_ID=com.lotlot.lotlotnetMobile`; `platforms.google_play=false` (SA yok). Sandbox E2E store ürünlerine bağlı.
-- **Kod:** `lib/features/billing/` (`BillingController`, `IapService`, `PaywallScreen`); `in_app_purchase`.
+  - [x] Config/ürün yokken çökme yok (`purchaseBlockedReason`; I3)
+  - [x] Garanti/WebView checkout yolu yok (I4)
+  - [x] Restore UI + API; soft gate → paywall
+  - [ ] **I1 cihaz:** Sandbox Apple ID → satın al → verify → `/me` tier
+  - [ ] **I2 cihaz:** Restore → tier
+- **Sandbox E2E prosedür (cihaz / TestFlight):**
+  1. Settings → App Store → Sandbox Account (ASC Users and Access → Sandbox).
+  2. Uygulama: soft gate veya Hesap → Planlar → Pro/Premium satın al.
+  3. Başarı: snackbar + `/me` tier; Hesap’ta plan etiketi.
+  4. Aboneliği iptal / yeni hesap → Restore → aynı tier.
+  5. Play SA / Google Billing **bu dilimde dışı** (`platforms.google_play=false`).
+- **Kod:** `lib/features/billing/`; receipt client’ta sahte yok; token log yok.
 
 #### F7 — Mağaza teslimi
 
-- **Amaç:** Store submission (guide §9.9, §28.5, §29 P6).
-- **Ekranlar:** — (metadata, screenshots, privacy forms).
-- **API:** Deep link: assetlinks / aasa (web).
+- **Amaç:** Store submission (guide §9.9, §28.5, §29 P6). Yeni büyük özellik yok.
+- **ASC app:** **LotLot.net** — `com.lotlot.lotlotnetMobile` (Apple ID `6797657717`). Eski LotLotNet app ile karıştırma.
 - **Skills:** `seo-expert` (ASO), `project-manager` (go/no-go), platform FS.
 - **Acceptance:**
-  - [ ] Data safety / App Privacy doğru
-  - [ ] Restore + hesap silme Review’da görünür
-  - [ ] Build notları: dijital abonelik yalnızca IAP
-  - [ ] analyze + sonar + smoke yeşil
-- **Dışı:** Admin/HPO.
+  - [ ] App Privacy / Data safety formları (aşağı §0.7)
+  - [x] Restore + hesap silme UI görünür (Hesap)
+  - [x] Export Compliance: `ITSAppUsesNonExemptEncryption=false`
+  - [x] Review notes taslağı (§0.7)
+  - [ ] Screenshot seti (iPhone 6.5"+) — marka ikon/LaunchImage uyumlu
+  - [ ] analyze + sonar + TF smoke yeşil (cihaz T1–T7)
+  - [ ] **Add for Review** yalnızca go/no-go yeşil
+- **Go/no-go (PM):** P1 blocker kapalı + P2 I1/I2 sandbox yeşil (veya Review notes’ta “IAP Sandbox’ta doğrulanacak” bilinçli not) olmadan **Add for Review yok**.
+- **Dışı:** Admin/HPO; aasa/deep link (web ekibine not).
 
 ### 0.5 Tüm fazlarda bilinçli dışı
 
@@ -222,6 +238,43 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 2. Minimal kod + skills
 3. Bu §0’da faz **Durum** / acceptance checkbox güncelle
 4. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push (`bistmobile-git-flow`)
+
+### 0.7 F7 mağaza paket notları (ASC)
+
+**App Privacy (özet):**
+- Hesap: e-posta (auth); cihaz ID / push token (bildirim).
+- Kullanım verisi: uygulama etkileşimi (analiz/API çağrıları — ürün işlevi).
+- Satın alma: App Store işlem geçmişi (IAP).
+- Takip (tracking) için üçüncü taraf reklam SDK’sı **yok**.
+- Veri sunucuya (`lotlot.net`) ürün işlevi için; satılmaz.
+
+**Screenshot checklist:**
+- 6.5" (iPhone 15 Pro Max / 14 Plus sınıfı): Landing veya İzleme; Keşfet BIST; Hisse Detaylı grafik; Paywall (Planlar).
+- Marka: LaunchImage / App Icon ile aynı yeşil-koyu palet; generic stock foto yok.
+
+**Review notes (kopyala-yapıştır):**
+
+```text
+LOTLOT.NET — BIST market analysis (subscription app).
+
+Digital goods / subscriptions are sold ONLY via Apple IAP
+(product IDs: lotlot_pro_monthly, lotlot_premium_monthly).
+No external payment / Garanti / in-app WebView checkout.
+
+Account deletion: Hesap (Account) → Hesabı sil.
+Restore purchases: Hesap → Aboneliği geri yükle (also on Planlar paywall).
+
+Sandbox / TestFlight: use Sandbox Apple ID for IAP.
+Export compliance: app uses only HTTPS; ITSAppUsesNonExemptEncryption=false.
+
+Guest can browse Keşfet / BIST catalog; watchlist and Pro features require login.
+```
+
+**ASO kısa:**
+- Subtitle: BIST analiz & sinyaller
+- Keywords (TR odaklı, boşluk yok ASC kurallarına uy): bist,hisse,analiz,sinyal,borsa,…
+
+**PM go/no-go (2026-08-04):** Kod + TF smoke matris (kod yolu) + IAP config canlı. **Add for Review:** cihaz I1/I2 sandbox veya Review notes’ta bilinçli sandbox notu sonrası.
 
 ---
 
@@ -303,6 +356,25 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v36 (2026-08-04) — TF smoke P1 + F6/F7 hazırlık
+- **P1 T6 blocker:** Guest Landing → **Keşfet** (`MainShell(initialTab: 1)`); menü + CTA
+- Chart `SegmentedButton` boş seçim koruması
+- **P1 matris (kod + web parity; cihaz teyidi TestFlight):**
+
+| ID | Senaryo | Sonuç |
+|----|---------|--------|
+| T1 | Splash → auth shell İzleme\|Keşfet | PASS (kod) |
+| T2 | İzleme: ufuk → pill / Δ% / güç bar | PASS (kod; v33–34) |
+| T3 | Hisse: MarketMeta + hacim + Detaylı EMA/BB/RSI | PASS (kod) |
+| T4 | Keşfet BIST 30/100 → detay | PASS (kod) |
+| T5 | Soft gate Free/Pro (auto-pop yok) | PASS (kod) |
+| T6 | Guest Landing + Keşfet | PASS (v36 fix) |
+| T7 | Hesap: restore / silme görünür | PASS (kod) |
+
+- **P2:** Prod IAP config doğrulandı; `purchaseBlockedReason`; `ios/Configuration.storekit`; I1/I2 cihaz sandbox prosedürü handbook F6
+- **P3:** F7 Review notes / App Privacy özet / screenshot checklist §0.7; go/no-go: Add for Review cihaz I1/I2 veya bilinçli not sonrası
+- Build **1.0.0+36**
 
 ### v35 (2026-08-04) — TestFlight + LaunchImage + export compliance
 - App Store Connect uygulaması **LotLot.net** (`com.lotlot.lotlotnetMobile`); Transporter upload build **1.0.0 (35)**
@@ -502,7 +574,8 @@ sonar-scanner
 - [x] F4: hesap / yasal / bildirim prefs — bkz. **§0**
 - [x] F5 çekirdek: soft gate + chart alerts + push/socket — bkz. **§0**
 - [x] F5 dilim: wizard / AI commentary
-- [ ] F6+: IAP — bkz. **§0**
+- [x] F6 istemci + prod Apple config + I3/I4 — bkz. **§0**; I1/I2 cihaz sandbox
+- [ ] F7 Add for Review — bkz. **§0.7** go/no-go
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 
 ### 7.1 Parity review (2026-08-03) — F0–F2

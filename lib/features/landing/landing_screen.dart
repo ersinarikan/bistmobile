@@ -64,6 +64,17 @@ class LandingScreen extends StatelessWidget {
                     );
                   },
                 ),
+                ListTile(
+                  title: const Text('Keşfet'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const MainShell(initialTab: 1),
+                      ),
+                    );
+                  },
+                ),
               ],
               ListTile(
                 title: const Text('BIST Hisseleri'),
@@ -247,6 +258,18 @@ class LandingScreen extends StatelessWidget {
                           child: const Text('Giriş Yap'),
                         ),
                         const SizedBox(height: 12),
+                        OutlinedButton(
+                          style: outlineAccent,
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const MainShell(initialTab: 1),
+                              ),
+                            );
+                          },
+                          child: const Text('Keşfet'),
+                        ),
+                        const SizedBox(height: 12),
                       ],
                       OutlinedButton(
                         style: outlineAccent,
@@ -271,8 +294,8 @@ class LandingScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Giriş sonrası Keşfet sekmesinde BIST 30 / 100 skorlu '
-                        'tarama; BIST Hisseleri ile tam katalog arama.',
+                        'Keşfet sekmesinde BIST 30 / 100 skorlu tarama; '
+                        'BIST Hisseleri ile tam katalog arama. İzleme için giriş.',
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: LotlotColors.textSecondary,

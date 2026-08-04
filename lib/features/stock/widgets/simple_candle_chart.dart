@@ -140,7 +140,10 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                   ),
                 ],
                 selected: {_mode},
-                onSelectionChanged: (s) => setState(() => _mode = s.first),
+                onSelectionChanged: (s) {
+                  if (s.isEmpty) return;
+                  setState(() => _mode = s.first);
+                },
                 style: ButtonStyle(
                   visualDensity: VisualDensity.compact,
                   foregroundColor: WidgetStateProperty.resolveWith((states) {

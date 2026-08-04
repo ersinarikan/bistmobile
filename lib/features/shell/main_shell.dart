@@ -12,7 +12,10 @@ import '../watchlist/watchlist_screen.dart';
 
 /// Ana kabuk: İzleme | Keşfet (+ AppBar katalog arama).
 class MainShell extends StatefulWidget {
-  const MainShell({super.key});
+  const MainShell({super.key, this.initialTab = 0});
+
+  /// 0 = İzleme, 1 = Keşfet
+  final int initialTab;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -20,7 +23,13 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   AuthStatus? _lastAuth;
-  int _tab = 0;
+  late int _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = widget.initialTab.clamp(0, 1);
+  }
 
   void _openAccount() {
     Navigator.of(context).push(

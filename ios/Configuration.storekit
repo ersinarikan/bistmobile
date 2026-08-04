@@ -1,0 +1,98 @@
+{
+  "identifier" : "LotLotNetIAP",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "tr_TR",
+    "_storefront" : "TUR",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21481234",
+      "localizations" : [
+
+      ],
+      "name" : "LOTLOT Plans",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "149.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6500000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Geniş analiz, AI yorum, grafik alarmları",
+              "displayName" : "Pro Aylık",
+              "locale" : "tr_TR"
+            },
+            {
+              "description" : "Extended analysis, AI notes, chart alerts",
+              "displayName" : "Pro Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "lotlot_pro_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "subscriptionGroupID" : "21481234",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "299.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6500000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Push, Hisse Sihirbazı, geniş kota",
+              "displayName" : "Premium Aylık",
+              "locale" : "tr_TR"
+            },
+            {
+              "description" : "Push, Stock Wizard, higher quotas",
+              "displayName" : "Premium Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "lotlot_premium_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "21481234",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

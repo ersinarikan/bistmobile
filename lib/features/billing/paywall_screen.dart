@@ -153,11 +153,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(14),
                       child: Text(
-                        billing.error ??
-                            (billing.iapEnabled
-                                ? 'Satın alma henüz bu cihaz / platform için hazır değil.'
-                                : 'Uygulama içi abonelik şu an kapalı. '
-                                    'Web’den alınmış planınız varsa giriş yaparak kullanabilirsiniz.'),
+                        billing.purchaseBlockedReason,
                         style: const TextStyle(
                           color: LotlotColors.warning,
                           height: 1.4,

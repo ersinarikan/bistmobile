@@ -38,6 +38,9 @@ class BillingController extends ChangeNotifier {
   bool get canPurchase =>
       iapEnabled && verifyReady && storeAvailable && _platformOk;
 
+  /// Paywall / soft gate: satın alma kilitliyken kullanıcı mesajı (çökme yok).
+  String get purchaseBlockedReason => error ?? _disabledMessage();
+
   bool get _platformOk {
     final p = _iap.storePlatform;
     if (p == 'apple') return applePlatform;
