@@ -299,7 +299,7 @@ Matris T-F1…T-D1 (v41).
 
 **Build:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** IPA üretildi; Transporter **Deliver** → TF processing → cihazda **42** indir (eski build ile smoke yok).
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`; ASC “işlenmesi bitti”. Cihazda TestFlight’tan **42** yükle/güncelle (otomatik değil; eski build ile smoke yok).
 
 #### P1 smoke (cihaz TF 42)
 
@@ -415,7 +415,7 @@ State: **Provider**. Token: **flutter_secure_storage**.
 
 ### TF42 upload dilimi (2026-08-04)
 - `flutter build ipa` → **1.0.0 (42)** App Store IPA (`build/ios/ipa/LOTLOT.NET.ipa`)
-- Transporter açıldı; Deliver + TF processing + cihaz 42 smoke §0.9’da
+- Transporter Deliver **başarılı** (işleme bitti); cihaz §0.9 smoke + I1/I2 sırada
 
 ### v42 (2026-08-04) — Yetki UX cila
 - Free/Pro kapalı zil → “Bildirim (Premium)” TextButton (toggle yanılsaması yok)
