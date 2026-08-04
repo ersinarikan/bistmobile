@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/session_controller.dart';
+import '../../chart_alerts/create_chart_alert_sheet.dart';
 import '../../pro/soft_gate_sheet.dart';
 import '../../stock/stock_detail_controller.dart';
 import '../../stock/widgets/simple_candle_chart.dart';
@@ -56,6 +57,21 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
       return;
     }
     setState(() => _showForecast = true);
+  }
+
+  Future<void> _onAlarm() async {
+    final bars = widget.controller.bars;
+    final lastClose = bars.isNotEmpty ? bars.last.close : null;
+    final ok = await showCreateChartAlertSheet(
+      context,
+      initialSymbol: widget.symbol,
+      initialSource: 'price',
+      initialValue: lastClose,
+    );
+    if (!mounted || !ok) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Uyarı eklendi')),
+    );
   }
 
   Future<void> _runAi() async {
@@ -138,6 +154,13 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(widget.symbol),
+            actions: [
+              IconButton(
+                tooltip: 'Grafik uyarısı',
+                onPressed: _onAlarm,
+                icon: const Icon(Icons.notification_add_outlined),
+              ),
+            ],
           ),
           body: Column(
             children: [

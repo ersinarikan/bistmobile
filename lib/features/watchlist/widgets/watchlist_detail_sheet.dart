@@ -104,7 +104,10 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
               ],
             ),
           ),
-          if (ctrl.loadingPublic && ctrl.bars.isEmpty)
+          if (ctrl.loadingPublic &&
+              ctrl.bars.isEmpty &&
+              ctrl.valuation == null &&
+              ctrl.fundamentals == null)
             const Expanded(
               child: Center(
                 child: CircularProgressIndicator(color: LotlotColors.accent),
@@ -115,6 +118,14 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 children: [
+                  if (ctrl.loadingPublic)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: LinearProgressIndicator(
+                        color: LotlotColors.accent,
+                        minHeight: 2,
+                      ),
+                    ),
                   if (ctrl.error != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -160,15 +171,15 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 12),
-                  // Web #detailModal: spark → pattern/ML → adil değer → temel → meta
+                  // Pattern uzun; adil/temel spark altında kalsın (Keşfet detay gibi)
+                  ValuationCard(valuation: ctrl.valuation),
+                  FundamentalsCard(fundamentals: ctrl.fundamentals),
                   PatternSection(
                     isAuthenticated: auth,
                     loading: ctrl.loadingAuth,
                     pending: ctrl.patternPending,
                     pattern: ctrl.pattern,
                   ),
-                  ValuationCard(valuation: ctrl.valuation),
-                  FundamentalsCard(fundamentals: ctrl.fundamentals),
                   MarketMetaCard(
                     volumeTier: ctrl.volumeTier,
                     volatilityRegime: ctrl.volatilityRegime,

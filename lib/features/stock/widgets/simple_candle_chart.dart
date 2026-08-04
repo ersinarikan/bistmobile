@@ -257,6 +257,18 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                 ),
             ],
           ),
+          if (detailed) ...[
+            const SizedBox(height: 6),
+            Text(
+              showForecastLine
+                  ? 'Sarı: EMA20 · Mavi: EMA50 · Kırmızı kesikli: Öngörü'
+                  : 'Sarı: EMA20 · Mavi: EMA50',
+              style: const TextStyle(
+                fontSize: 11,
+                color: LotlotColors.textSecondary,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             detailed

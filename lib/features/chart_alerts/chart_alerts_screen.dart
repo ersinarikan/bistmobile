@@ -6,27 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import 'chart_alerts_controller.dart';
-
-const _sourceLabels = <String, String>{
-  'price': 'Fiyat',
-  'rsi14': 'RSI (14)',
-  'ema20': 'EMA 20',
-  'ema50': 'EMA 50',
-  'bb_upper': 'Bollinger üst',
-  'bb_lower': 'Bollinger alt',
-};
-
-const _opLabels = <String, String>{
-  'lt': 'Küçüktür (<)',
-  'gt': 'Büyüktür (>)',
-  'lte': 'Küçük eşit (≤)',
-  'gte': 'Büyük eşit (≥)',
-};
-
-const _freqLabels = <String, String>{
-  'once': 'Bir kez',
-  'every_time': 'Her tetiklenmede',
-};
+import 'create_chart_alert_sheet.dart';
 
 class ChartAlertsScreen extends StatefulWidget {
   const ChartAlertsScreen({super.key});
@@ -42,7 +22,9 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_ctrl != null) return;
-    _ctrl = ChartAlertsController(apiClient: context.read<ApiClient>());
+    _ctrl = ChartAlertsController(
+      apiClient: context.read<ApiClient>(),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -77,7 +59,7 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: LotlotColors.surface,
-      builder: (ctx) => _CreateAlertSheet(
+      builder: (ctx) => CreateChartAlertSheet(
         allowPush: session.isPremium && ctrl.channelsPushAllowed,
         onSubmit: (symbol, source, op, value, email, push, frequency) async {
           final ok = await ctrl.create(
@@ -298,183 +280,6 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CreateAlertSheet extends StatefulWidget {
-  const _CreateAlertSheet({
-    required this.allowPush,
-    required this.onSubmit,
-  });
-
-  final bool allowPush;
-  final Future<void> Function(
-    String symbol,
-    String source,
-    String op,
-    num value,
-    bool email,
-    bool push,
-    String frequency,
-  ) onSubmit;
-
-  @override
-  State<_CreateAlertSheet> createState() => _CreateAlertSheetState();
-}
-
-class _CreateAlertSheetState extends State<_CreateAlertSheet> {
-  final _symbol = TextEditingController();
-  final _value = TextEditingController(text: '30');
-  String _source = 'rsi14';
-  String _op = 'lt';
-  String _frequency = 'once';
-  bool _email = true;
-  bool _push = false;
-  bool _busy = false;
-
-  static const _sources = [
-    'price',
-    'rsi14',
-    'ema20',
-    'ema50',
-    'bb_upper',
-    'bb_lower',
-  ];
-  static const _ops = ['lt', 'gt', 'lte', 'gte'];
-  static const _freqs = ['once', 'every_time'];
-
-  @override
-  void dispose() {
-    _symbol.dispose();
-    _value.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.viewInsetsOf(context).bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottom),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Yeni uyarı',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _symbol,
-              decoration: const InputDecoration(labelText: 'Sembol'),
-              textCapitalization: TextCapitalization.characters,
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _source,
-              decoration: const InputDecoration(labelText: 'Kaynak'),
-              items: _sources
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(_sourceLabels[s] ?? s),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _source = v ?? _source),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _op,
-              decoration: const InputDecoration(labelText: 'Operatör'),
-              items: _ops
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(_opLabels[s] ?? s),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _op = v ?? _op),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _value,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Değer'),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _frequency,
-              decoration: const InputDecoration(labelText: 'Sıklık'),
-              items: _freqs
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(_freqLabels[s] ?? s),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _frequency = v ?? _frequency),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('E-posta bildir'),
-              value: _email,
-              onChanged: (v) => setState(() => _email = v),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                widget.allowPush ? 'Push bildir' : 'Push (yalnız Premium)',
-              ),
-              value: widget.allowPush && _push,
-              onChanged:
-                  widget.allowPush ? (v) => setState(() => _push = v) : null,
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _busy
-                  ? null
-                  : () async {
-                      final sym = _symbol.text.trim();
-                      final val = num.tryParse(_value.text.trim());
-                      if (sym.isEmpty || val == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Sembol ve değer gerekli'),
-                          ),
-                        );
-                        return;
-                      }
-                      setState(() => _busy = true);
-                      await widget.onSubmit(
-                        sym,
-                        _source,
-                        _op,
-                        val,
-                        _email,
-                        _push,
-                        _frequency,
-                      );
-                      if (mounted) setState(() => _busy = false);
-                    },
-              child: _busy
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Kaydet'),
-            ),
-          ],
-        ),
       ),
     );
   }

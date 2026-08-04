@@ -146,6 +146,8 @@ class StockDetailController extends ChangeNotifier {
       valuation = v is Map ? Map<String, dynamic>.from(v) : null;
     } on ApiException {
       valuation = null;
+    } finally {
+      _notify();
     }
   }
 
@@ -156,6 +158,8 @@ class StockDetailController extends ChangeNotifier {
       fundamentals = f is Map ? Map<String, dynamic>.from(f) : null;
     } on ApiException {
       fundamentals = null;
+    } finally {
+      _notify();
     }
   }
 
