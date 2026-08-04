@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v37 UX cila)
+> Son güncelleme: 2026-08-04 (v38 forgot-password 405 fix)
 
 ---
 
@@ -74,9 +74,9 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 #### F1 — Auth tamam
 
 - **Amaç:** Üç kanal + oturum yaşam döngüsü (guide §4–§8).
-- **Ekranlar:** Splash bootstrap; Login/Register; e-posta doğrulama bekleyen; (opsiyonel) şifre sıfırlama → web.
-- **API (guide):** §5–§6 login/register; §8.4–§8.5 Google/Apple mobile; §8.6 Turnstile `https://lotlot.net/mobile/turnstile`; §7 refresh; §8 logout / `DELETE /me`.
-- **Skills:** `cybersecurity-expert`, `android-fullstack-developer`, `ios-fullstack-developer`.
+- **Ekranlar:** Splash bootstrap; Login/Register; e-posta doğrulama bekleyen; şifre sıfırlama → **web** (`AuthWebUrls.forgotPassword` = `/login?panel=forgot-password`; GET `/forgot-password` 405 — POST-only form).
+- **API (guide):** §5–§6 login/register; §6.1 şifre sıfırlama WEB_ONLY (mobil JSON yok); §8.4–§8.5 Google/Apple mobile; §8.6 Turnstile `https://lotlot.net/mobile/turnstile`; §7 refresh; §8 logout / `DELETE /me`.
+- **Skills:** `cybersecurity-expert`, `android-fullstack-developer`, `ios-fullstack-developer`, `test-engineer`.
 - **Acceptance:**
   - [x] E-posta + Turnstile lazy köprü (register/login)
   - [x] Google + Apple native SDK → `google-mobile` / `apple-mobile` (Client ID’ler `OauthLocal` / dart-define)
@@ -86,8 +86,9 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Register → `pending_verification` + resend UX
   - [x] `email_not_verified` → doğrulama bekleyen ekran
   - [x] Apple native E2E (prod `APPLE_MOBILE_CLIENT_IDS=com.lotlot.lotlotnetMobile` + web `APPLE_CLIENT_ID`)
-- **Dışı:** Web session cookie auth. Guest shell F2’de (F1 sonrası splash hâlâ login’e düşebilir; F2’de browse’a açılır).
-- **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_MOBILE_CLIENT_IDS`, `TURNSTILE_SITE_KEY`. Google Cloud OAuth client’ları + iOS URL scheme.
+  - [x] Şifremi unuttum → sistem tarayıcısı `/login?panel=forgot-password` (405 yok; R1–R4)
+- **Dışı:** Web session cookie auth; mobil `POST /api/auth/forgot-password`. Guest shell F2’de (F1 sonrası splash hâlâ login’e düşebilir; F2’de browse’a açılır).
+- **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_MOBILE_CLIENT_IDS`, `TURNSTILE_SITE_KEY`. Google Cloud OAuth client’ları + iOS URL scheme. Reset: enumeration yok, hash’li token, rate/Turnstile web’de.
 
 #### F2 — Keşfet + Watchlist (+ guest browse)
 
@@ -356,6 +357,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v38 (2026-08-04) — Şifre sıfırlama 405 düzeltmesi
+- Kök neden: mobil `GET /forgot-password` açıyordu → **405** (Allow: POST)
+- Düzeltme: `AuthWebUrls.forgotPassword` → `https://lotlot.net/login?panel=forgot-password` (sistem tarayıcısı)
+- Guide §6.1 WEB_ONLY; mobil JSON reset yok; token log yok
+- Matris: R1 panel açılır / R2–R3 web form+mail / R4 no log
+- Build **1.0.0+38**
 
 ### v37 (2026-08-04) — Post-P3 UX cila
 - Hesap/push: FCM/Firebase kullanıcı kopyası kaldırıldı

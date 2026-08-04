@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/brand/brand_assets.dart';
+import '../../core/legal/legal_urls.dart';
 import '../../core/theme/app_theme.dart';
 import '../shell/main_shell.dart';
 import '../watchlist/watchlist_controller.dart';
@@ -244,7 +245,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _forgotPassword() async {
-    final uri = Uri.parse('https://lotlot.net/forgot-password');
+    final uri = Uri.parse(AuthWebUrls.forgotPassword);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
