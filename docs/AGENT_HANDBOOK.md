@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v43 web izleme kart / Öngörü / bildirim parity)
+> Son güncelleme: 2026-08-04 (v44 İzleme Detay adil değer + temel özet)
 
 ---
 
@@ -297,9 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
+**Build (kod):** `1.0.0+44` · tag `v44` — İzleme Detay web parity (adil değer + temel/bilanço).  
+**Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`; ASC “işlenmesi bitti”. Cihazda TestFlight’tan **42** yükle/güncelle (otomatik değil; eski build ile smoke yok).
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`; ASC “işlenmesi bitti”. Cihazda TestFlight’tan **42** (veya sonraki TF) yükle; Detay valuation/fundamentals için **44+** gerekir.
 
 #### P1 smoke (cihaz TF 42)
 
@@ -412,6 +413,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v44 (2026-08-04) — İzleme Detay web UX parity
+- Detay sheet: `ValuationCard` + `FundamentalsCard` (mevcut `StockDetailController` verisi)
+- Sıra web `#detailModal`: spark → PatternSection → adil değer → temel/bilanço → MarketMeta
+- Kart bildirim: salt metin (zil yok; v43 korunur); Detay Switch Premium ON
+- Matris D-V1 / D-F1 / D-O1 / D-A1
+- Build **1.0.0+44**
 
 ### v43 (2026-08-04) — Web izleme kart / Öngörü / bildirim parity
 - Öngörü: `target_price` + sağa projeksiyon (history %72 / future); kesikli çizgi
@@ -742,7 +750,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Watchlist CRUD + kota | Dashboard | İzleme | **ok** |
 | Watchlist satır teaser | Pill + Δ% + güç + fiyat + 1G…30G | `WatchlistSignalTile` + Detay | **ok** (v39 tek kart) |
 | Predictions hydrate | Aynı kart (`pred-{SYM}`) | Aynı kart; ikinci liste **yok** | **ok** (v39; eski çift liste bug kapandı) |
-| Detay modal | `#detailModal` + spark formasyon segment | `showWatchlistDetailSheet` + renkli spark (v40) | **ok** (v39–40) |
+| Detay modal | `#detailModal` spark→ML→adil→temel→meta | Aynı sıra + Valuation/Fundamentals (v44) | **ok** (v39–44) |
 | Büyük grafik + Öngörü + AI | `#chartModal` | `WatchlistBigChartScreen` + sağa projeksiyon (v43) | **ok** (v39/v43) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
@@ -785,6 +793,15 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | W-F1 | Öngörü Pro: çizgi son mumun sağında; target_price | PASS (kod) |
 | W-A1 | Eklemede Bildirim; kart salt metin; Detay Premium ON | PASS (kod) |
 | W-A2 | Free muted AL/SAT | PASS (kod) |
+
+### 7.3.3 İzleme Detay valuation/fundamentals (v44)
+
+| ID | Senaryo | Beklenen |
+|----|---------|----------|
+| D-V1 | Detay: Adil değer (`fair_value` varsa) web alanları | PASS (kod) |
+| D-F1 | Detay: Temel/banka bilanço özeti satırları | PASS (kod) |
+| D-O1 | Sıra: spark → pattern → valuation → fundamentals → meta | PASS (kod) |
+| D-A1 | Kart salt Bildirim metni; zil yok | PASS (kod) |
 
 ## 8. Dokunulmaması gerekenler
 

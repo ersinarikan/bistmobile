@@ -9,8 +9,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/session_controller.dart';
 import '../../pro/soft_gate_sheet.dart';
 import '../../stock/stock_detail_controller.dart';
+import '../../stock/widgets/fundamentals_card.dart';
 import '../../stock/widgets/market_meta_card.dart';
 import '../../stock/widgets/pattern_section.dart';
+import '../../stock/widgets/valuation_card.dart';
 import '../watchlist_controller.dart';
 import 'watchlist_big_chart_screen.dart';
 
@@ -158,16 +160,18 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
                     },
                   ),
                   const SizedBox(height: 12),
-                  MarketMetaCard(
-                    volumeTier: ctrl.volumeTier,
-                    volatilityRegime: ctrl.volatilityRegime,
-                  ),
-                  const SizedBox(height: 8),
+                  // Web #detailModal: spark → pattern/ML → adil değer → temel → meta
                   PatternSection(
                     isAuthenticated: auth,
                     loading: ctrl.loadingAuth,
                     pending: ctrl.patternPending,
                     pattern: ctrl.pattern,
+                  ),
+                  ValuationCard(valuation: ctrl.valuation),
+                  FundamentalsCard(fundamentals: ctrl.fundamentals),
+                  MarketMetaCard(
+                    volumeTier: ctrl.volumeTier,
+                    volatilityRegime: ctrl.volatilityRegime,
                   ),
                   const SizedBox(height: 16),
                   const Text(
