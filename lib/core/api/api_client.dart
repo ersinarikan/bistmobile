@@ -320,9 +320,11 @@ class ApiClient {
   Future<Map<String, dynamic>> addWatchlist({
     required String symbol,
     String? notes,
+    bool alertEnabled = true,
   }) {
     return post('/api/watchlist', body: {
       'symbol': symbol,
+      'alert_enabled': alertEnabled,
       'notes': ?notes,
     });
   }

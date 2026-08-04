@@ -122,9 +122,9 @@ String? pickMlModelKey(Map<String, dynamic> horizonMl) {
 String translateModelLabel(String? key) {
   switch (key) {
     case 'enhanced':
-      return 'Gelişmiş';
+      return 'Gelişmiş Analiz';
     case 'basic':
-      return 'Temel';
+      return 'İstatistiksel Analiz';
     default:
       return key ?? '-';
   }

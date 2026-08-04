@@ -7,9 +7,11 @@ import 'package:provider/provider.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/session_controller.dart';
+import '../../pro/soft_gate_sheet.dart';
 import '../../stock/stock_detail_controller.dart';
 import '../../stock/widgets/market_meta_card.dart';
 import '../../stock/widgets/pattern_section.dart';
+import '../watchlist_controller.dart';
 import 'watchlist_big_chart_screen.dart';
 
 const _sparkExcludedSources = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
@@ -53,9 +55,19 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final ctrl = context.watch<StockDetailController>();
     final session = context.watch<SessionController>();
+    final wl = context.watch<WatchlistController>();
     final auth = session.status == AuthStatus.authenticated;
     final showFormations = session.isPro || session.isPremium;
     final height = MediaQuery.sizeOf(context).height * 0.92;
+    Map<String, dynamic>? item;
+    final key = symbol.toUpperCase();
+    for (final e in wl.items) {
+      if ((e['symbol']?.toString() ?? '').toUpperCase() == key) {
+        item = e;
+        break;
+      }
+    }
+    final alertOn = item?['alert_enabled'] == true;
 
     return SizedBox(
       height: height,
@@ -109,6 +121,26 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
                         style: const TextStyle(color: LotlotColors.danger),
                       ),
                     ),
+                  if (auth)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Sinyal bildirimi'),
+                      subtitle: Text(
+                        session.isPremium
+                            ? 'Kartta Bildirim: ${alertOn ? 'Açık' : 'Kapalı'}'
+                            : 'Açmak için Premium gerekir',
+                        style: const TextStyle(
+                          color: LotlotColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                      value: alertOn,
+                      onChanged: wl.mutating
+                          ? null
+                          : (v) => _onAlertChanged(context, v),
+                      activeThumbColor: LotlotColors.onAccent,
+                      activeTrackColor: LotlotColors.accent,
+                    ),
                   _SparkPreview(
                     bars: ctrl.bars,
                     pattern: ctrl.pattern,
@@ -152,6 +184,32 @@ class _WatchlistDetailSheetBody extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _onAlertChanged(BuildContext context, bool value) async {
+    final session = context.read<SessionController>();
+    final wl = context.read<WatchlistController>();
+    if (value && !session.isPremium) {
+      await showSoftGateSheet(context, kind: SoftGateKind.premium);
+      return;
+    }
+    final ok = await wl.setAlertEnabled(symbol, value);
+    if (!context.mounted) return;
+    if (!ok && wl.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(wl.lastError!)),
+      );
+    } else if (ok && value && !session.pushNotificationsOn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Sinyal uyarısı açıldı; cihaz push için '
+            'Hesap → Push bildirimlerini açın.',
+          ),
+          duration: Duration(seconds: 5),
+        ),
+      );
+    }
   }
 }
 

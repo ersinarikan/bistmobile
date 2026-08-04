@@ -10,6 +10,8 @@ class WatchlistController extends ChangeNotifier {
 
   List<Map<String, dynamic>> items = [];
   List<Map<String, dynamic>> predictions = [];
+  /// Web kart `#patt-*` — sembol → pattern-analysis payload.
+  Map<String, Map<String, dynamic>> patternBySymbol = {};
   Map<String, dynamic>? subscription;
   String selectedHorizon = '7d';
   bool loading = false;
@@ -57,15 +59,18 @@ class WatchlistController extends ChangeNotifier {
                 .toList()
             : [];
       } on ApiException catch (e) {
-        // Liste geldiyse predictions hatasını yumuşak tut
         predictions = [];
         if (e.statusCode != 403) {
           lastError = e.message;
         }
       }
+
+      // Kart rozetleri — web gibi pattern-analysis (chunked).
+      await _hydratePatterns();
     } on ApiException catch (e) {
       items = [];
       predictions = [];
+      patternBySymbol = {};
       lastError = _friendly(e);
       if (e.body?['subscription'] is Map) {
         subscription = Map<String, dynamic>.from(e.body!['subscription'] as Map);
@@ -73,6 +78,7 @@ class WatchlistController extends ChangeNotifier {
     } catch (e) {
       items = [];
       predictions = [];
+      patternBySymbol = {};
       lastError = e.toString();
     } finally {
       loading = false;
@@ -80,12 +86,46 @@ class WatchlistController extends ChangeNotifier {
     }
   }
 
-  Future<bool> addSymbol(String symbol) async {
+  Future<void> _hydratePatterns() async {
+    final symbols = items
+        .map((e) => (e['symbol']?.toString() ?? '').toUpperCase())
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (symbols.isEmpty) {
+      patternBySymbol = {};
+      return;
+    }
+    final next = <String, Map<String, dynamic>>{};
+    const chunk = 4;
+    for (var i = 0; i < symbols.length; i += chunk) {
+      final slice = symbols.sublist(
+        i,
+        i + chunk > symbols.length ? symbols.length : i + chunk,
+      );
+      await Future.wait(slice.map((sym) async {
+        try {
+          final data = await _api.fetchPatternAnalysis(sym, fast: true);
+          next[sym] = data;
+        } catch (_) {
+          // Rozet yumuşak; listeyi bozma
+        }
+      }));
+    }
+    patternBySymbol = next;
+  }
+
+  Future<bool> addSymbol(
+    String symbol, {
+    bool alertEnabled = true,
+  }) async {
     mutating = true;
     lastError = null;
     notifyListeners();
     try {
-      final data = await _api.addWatchlist(symbol: symbol.toUpperCase());
+      final data = await _api.addWatchlist(
+        symbol: symbol.toUpperCase(),
+        alertEnabled: alertEnabled,
+      );
       if (data['subscription'] is Map) {
         subscription = Map<String, dynamic>.from(data['subscription'] as Map);
       }
@@ -148,7 +188,16 @@ class WatchlistController extends ChangeNotifier {
         symbol.toUpperCase(),
         body: {'alert_enabled': enabled},
       );
-      await refresh();
+      // Yerel güncelle (tam refresh yavaş olabilir).
+      final key = symbol.toUpperCase();
+      for (var i = 0; i < items.length; i++) {
+        if ((items[i]['symbol']?.toString() ?? '').toUpperCase() == key) {
+          items[i] = {...items[i], 'alert_enabled': enabled};
+          break;
+        }
+      }
+      mutating = false;
+      notifyListeners();
       return true;
     } on ApiException catch (e) {
       lastApiError = e;
@@ -169,6 +218,7 @@ class WatchlistController extends ChangeNotifier {
   void clear() {
     items = [];
     predictions = [];
+    patternBySymbol = {};
     subscription = null;
     lastError = null;
     lastApiError = null;
@@ -197,6 +247,10 @@ class WatchlistController extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  Map<String, dynamic>? patternForSymbol(String symbol) {
+    return patternBySymbol[symbol.toUpperCase()];
   }
 
   String _friendly(ApiException e) {

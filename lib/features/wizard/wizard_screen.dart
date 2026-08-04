@@ -8,6 +8,7 @@ import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../stock/stock_detail_screen.dart';
 import '../watchlist/watchlist_controller.dart';
+import '../watchlist/widgets/add_watchlist_alert_dialog.dart';
 import 'wizard_controller.dart';
 
 const _horizonLabels = <String, String>{
@@ -335,8 +336,10 @@ class _ResultCard extends StatelessWidget {
   Future<void> _addWatchlist(BuildContext context) async {
     final symbol = item['symbol']?.toString() ?? '';
     if (symbol.isEmpty) return;
+    final alertEnabled = await showAddWatchlistAlertDialog(context);
+    if (!context.mounted || alertEnabled == null) return;
     final wl = context.read<WatchlistController>();
-    final ok = await wl.addSymbol(symbol);
+    final ok = await wl.addSymbol(symbol, alertEnabled: alertEnabled);
     if (!context.mounted) return;
     if (ok) {
       onWatchlistAdded(symbol);

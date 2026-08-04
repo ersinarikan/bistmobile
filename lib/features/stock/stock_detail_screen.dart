@@ -6,6 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../auth/login_screen.dart';
 import '../auth/session_controller.dart';
 import '../watchlist/watchlist_controller.dart';
+import '../watchlist/widgets/add_watchlist_alert_dialog.dart';
 import 'stock_detail_controller.dart';
 import 'widgets/ai_commentary_section.dart';
 import 'widgets/corporate_card.dart';
@@ -116,14 +117,26 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final sym = widget.symbol.toUpperCase();
     final inList = _inWatchlist(wl);
-    final ok = inList ? await wl.removeSymbol(sym) : await wl.addSymbol(sym);
+    if (inList) {
+      final ok = await wl.removeSymbol(sym);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            ok ? '$sym listeden çıkarıldı' : (wl.lastError ?? 'İşlem başarısız'),
+          ),
+        ),
+      );
+      return;
+    }
+    final alertEnabled = await showAddWatchlistAlertDialog(context);
+    if (!mounted || alertEnabled == null) return;
+    final ok = await wl.addSymbol(sym, alertEnabled: alertEnabled);
     if (!mounted) return;
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          ok
-              ? (inList ? '$sym listeden çıkarıldı' : '$sym listeye eklendi')
-              : (wl.lastError ?? 'İşlem başarısız'),
+          ok ? '$sym listeye eklendi' : (wl.lastError ?? 'İşlem başarısız'),
         ),
       ),
     );

@@ -95,7 +95,10 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
         session.isPro && widget.forecasts.isNotEmpty && _forecastEnabled;
     if (showForecastLine) {
       for (final f in widget.forecasts) {
-        final p = f['price'] ?? f['close'] ?? f['value'];
+        final p = f['target_price'] ??
+            f['price'] ??
+            f['close'] ??
+            f['value'];
         if (p is num) {
           minY = math.min(minY, p.toDouble());
           maxY = math.max(maxY, p.toDouble());
@@ -277,11 +280,13 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
                     d.localPosition.dx,
                     constraints.maxWidth,
                     display.length,
+                    reserveForecast: showForecastLine,
                   ),
                   onHorizontalDragUpdate: (d) => _pick(
                     d.localPosition.dx,
                     constraints.maxWidth,
                     display.length,
+                    reserveForecast: showForecastLine,
                   ),
                   child: CustomPaint(
                     size: Size(
@@ -318,13 +323,20 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
     );
   }
 
-  void _pick(double dx, double width, int count) {
+  void _pick(
+    double dx,
+    double width,
+    int count, {
+    required bool reserveForecast,
+  }) {
     if (count <= 0 || width <= 0) return;
     const leftPad = 44.0;
     const rightPad = 8.0;
     final plotW = (width - leftPad - rightPad).clamp(1.0, width);
-    final x = ((dx - leftPad) / plotW).clamp(0.0, 1.0);
-    final i = (x * (count - 1)).round().clamp(0, count - 1);
+    // Öngörü açıkken mumlar sol ~72%; dokunuş yalnız tarihsel dilimde.
+    final histW = reserveForecast ? plotW * 0.72 : plotW;
+    final x = ((dx - leftPad) / histW).clamp(0.0, 0.999);
+    final i = (x * count).floor().clamp(0, count - 1);
     if (i != _selected) setState(() => _selected = i);
   }
 
@@ -567,10 +579,12 @@ class _ChartPainter extends CustomPainter {
 
   void _drawFormationShade(Canvas canvas, Rect plot) {
     final n = bars.length;
+    final hist = _historyPlot(plot);
     for (final r in patternRanges) {
       if (r.end < r.start) continue;
-      final x1 = _x(plot, r.start, n) - plot.width / n / 2;
-      final x2 = _x(plot, r.end, n) + plot.width / n / 2;
+      final slot = hist.width / n;
+      final x1 = _x(plot, r.start, n) - slot / 2;
+      final x2 = _x(plot, r.end, n) + slot / 2;
       final color = (r.bullish ? LotlotColors.accent : LotlotColors.danger)
           .withValues(alpha: 0.12);
       canvas.drawRect(
@@ -645,7 +659,8 @@ class _ChartPainter extends CustomPainter {
 
   void _drawCandles(Canvas canvas, Rect plot) {
     final n = bars.length;
-    final slot = plot.width / n;
+    final hist = _historyPlot(plot);
+    final slot = hist.width / n;
     final bodyW = (slot * 0.62).clamp(1.5, 10.0);
     for (var i = 0; i < n; i++) {
       final b = bars[i];
@@ -708,29 +723,63 @@ class _ChartPainter extends CustomPainter {
     if (started) canvas.drawPath(path, paint);
   }
 
+  /// Web big-chart Öngörü: son close → target_price noktaları sağa (gelecek dilim).
   void _drawForecasts(Canvas canvas, Rect plot) {
     if (forecasts.isEmpty || bars.isEmpty) return;
-    final last = bars.last.close;
+    final prices = _sortedForecastPrices(forecasts);
+    if (prices.isEmpty) return;
+
     final n = bars.length;
-    final paint = Paint()
-      ..color = LotlotColors.accentMuted.withValues(alpha: 0.9)
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
+    final last = bars.last.close;
     final path = Path()..moveTo(_x(plot, n - 1, n), _y(plot, last));
-    final step = math.max(1, (plot.width / n).round());
-    var i = 0;
-    for (final f in forecasts.take(8)) {
-      final p = f['price'] ?? f['close'] ?? f['value'];
-      if (p is! num) continue;
-      i++;
-      final x = plot.right - step * (forecasts.length - i).clamp(0, 20);
-      path.lineTo(x.clamp(plot.left, plot.right), _y(plot, p.toDouble()));
+    for (var i = 0; i < prices.length; i++) {
+      path.lineTo(_forecastX(plot, i, prices.length), _y(plot, prices[i]));
     }
-    canvas.drawPath(
-      path,
-      paint
-        ..strokeCap = StrokeCap.round,
-    );
+    final paint = Paint()
+      ..color = LotlotColors.danger.withValues(alpha: 0.88)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+    _drawDashedPath(canvas, path, paint);
+  }
+
+  static List<double> _sortedForecastPrices(List<Map<String, dynamic>> raw) {
+    const order = ['1d', '3d', '7d', '14d', '30d'];
+    final items = <({String h, double price, num? end})>[];
+    for (final f in raw) {
+      final p = f['target_price'] ?? f['price'] ?? f['close'] ?? f['value'];
+      if (p is! num) continue;
+      final h = (f['horizon']?.toString() ?? '').toLowerCase();
+      final et = f['end_time'];
+      items.add((
+        h: h,
+        price: p.toDouble(),
+        end: et is num ? et : null,
+      ));
+    }
+    items.sort((a, b) {
+      if (a.end != null && b.end != null) {
+        return a.end!.compareTo(b.end!);
+      }
+      final ia = order.indexOf(a.h);
+      final ib = order.indexOf(b.h);
+      return (ia < 0 ? 99 : ia).compareTo(ib < 0 ? 99 : ib);
+    });
+    return items.map((e) => e.price).take(8).toList();
+  }
+
+  static void _drawDashedPath(Canvas canvas, Path path, Paint paint) {
+    for (final metric in path.computeMetrics()) {
+      var dist = 0.0;
+      const dash = 5.0;
+      const gap = 4.0;
+      while (dist < metric.length) {
+        final next = math.min(dist + dash, metric.length);
+        canvas.drawPath(metric.extractPath(dist, next), paint);
+        dist = next + gap;
+      }
+    }
   }
 
   void _drawVolume(Canvas canvas, Rect plot) {
@@ -738,7 +787,8 @@ class _ChartPainter extends CustomPainter {
     final maxV = vols.fold<double>(0, math.max);
     if (maxV <= 0) return;
     final n = bars.length;
-    final slot = plot.width / n;
+    final hist = _historyPlot(plot);
+    final slot = hist.width / n;
     final w = (slot * 0.7).clamp(1.0, 8.0);
     for (var i = 0; i < n; i++) {
       final b = bars[i];
@@ -847,10 +897,33 @@ class _ChartPainter extends CustomPainter {
     }
   }
 
+  /// Öngörü varken mumlar plot'un sol ~%72'sinde; sağ gelecek projeksiyon.
+  static const _historyFrac = 0.72;
+
+  Rect _historyPlot(Rect plot) {
+    if (forecasts.isEmpty) return plot;
+    return Rect.fromLTRB(
+      plot.left,
+      plot.top,
+      plot.left + plot.width * _historyFrac,
+      plot.bottom,
+    );
+  }
+
   double _x(Rect plot, int i, int n) {
-    if (n <= 1) return plot.center.dx;
-    final slot = plot.width / n;
-    return plot.left + slot * (i + 0.5);
+    final hist = _historyPlot(plot);
+    if (n <= 1) return hist.center.dx;
+    final slot = hist.width / n;
+    return hist.left + slot * (i + 0.5);
+  }
+
+  /// Gelecek dilimde i-inci öngörü noktası (0 = ilk horizon).
+  double _forecastX(Rect plot, int i, int count) {
+    final hist = _historyPlot(plot);
+    final futureLeft = hist.right;
+    final futureW = (plot.right - futureLeft).clamp(1.0, plot.width);
+    final step = futureW / (count + 0.35);
+    return futureLeft + step * (i + 0.65);
   }
 
   double _y(Rect plot, double value) {

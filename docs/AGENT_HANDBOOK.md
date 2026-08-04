@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (TF build 42 IPA — Transporter Deliver)
+> Son güncelleme: 2026-08-04 (v43 web izleme kart / Öngörü / bildirim parity)
 
 ---
 
@@ -283,7 +283,7 @@ Kaynak: `subscription.is_pro` / `is_premium` (`GET /me`); client uydurmaz.
 | Özellik | Free | Pro | Premium |
 |---------|------|-----|---------|
 | İzleme CRUD + muted AL/SAT | Evet | Evet | Evet |
-| Kart sinyal bildirimi (`alert_enabled`) | Salt metin; ON → soft gate; OFF downgrade OK | Aynı | Toggle |
+| Kart sinyal bildirimi (`alert_enabled`) | Ekleme + salt metin; Detay Switch; ON Premium | Aynı | Toggle Detay’da |
 | Hesap Push ON | Soft gate Premium | Soft gate Premium | Evet (+ FCM) |
 | E-posta bildirimi | Evet | Evet | Evet |
 | AI yorum / Öngörü / Formasyon shade | Soft gate Pro | Evet | Evet |
@@ -291,7 +291,7 @@ Kaynak: `subscription.is_pro` / `is_premium` (`GET /me`); client uydurmaz.
 | Hisse Sihirbazı | Soft gate Premium | Soft gate Premium | Evet |
 | Pattern formasyon / Sezgisel / ML kart | Gizli + CTA | Evet | Evet |
 
-Matris T-F1…T-D1 (v41).
+Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ---
 
@@ -412,6 +412,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v43 (2026-08-04) — Web izleme kart / Öngörü / bildirim parity
+- Öngörü: `target_price` + sağa projeksiyon (history %72 / future); kesikli çizgi
+- Kart rozetleri: formasyon/Sezgisel (≤4 +N), ufuk chip, best-model, likidite/kanıt
+- Bildirim: eklemede Açık/Kapalı; kart salt metin; Detay Switch (Premium ON)
+- Pattern hydrate (chunked `pattern-analysis`); matris W-B1…W-A2
+- Build **1.0.0+43**
 
 ### TF42 upload dilimi (2026-08-04)
 - `flutter build ipa` → **1.0.0 (42)** App Store IPA (`build/ios/ipa/LOTLOT.NET.ipa`)
@@ -736,7 +743,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Watchlist satır teaser | Pill + Δ% + güç + fiyat + 1G…30G | `WatchlistSignalTile` + Detay | **ok** (v39 tek kart) |
 | Predictions hydrate | Aynı kart (`pred-{SYM}`) | Aynı kart; ikinci liste **yok** | **ok** (v39; eski çift liste bug kapandı) |
 | Detay modal | `#detailModal` + spark formasyon segment | `showWatchlistDetailSheet` + renkli spark (v40) | **ok** (v39–40) |
-| Büyük grafik + Öngörü + AI | `#chartModal` | `WatchlistBigChartScreen` | **ok** (v39) |
+| Büyük grafik + Öngörü + AI | `#chartModal` | `WatchlistBigChartScreen` + sağa projeksiyon (v43) | **ok** (v39/v43) |
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
 | Chart + levels | Lightweight Charts | Sade: mum+MA20+hacim+S/R; Detaylı: +EMA50/BB/RSI/öngörü | **ok** (v31–v33) |
@@ -752,19 +759,32 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | FCM push | — | Optional Firebase | **ok** / no-op configsız |
 | `pattern-summary` UI | Var/özet | Yok | **gap** (backlog) |
 | Drawing suite | Fib/Gann/Elliott | — | **bilinçli dışı** |
-| Kart bildirim zili | Salt metin Açık/Kapalı | Premium toggle; Free/Pro OFF downgrade + ON soft gate | **ok** (v41) |
-| Stock Öngörü çizimi | Pro | Detaylı chip + `isPro`; Free çizmez | **ok** (v41) |
+| Kart bildirim zili | Salt metin Açık/Kapalı | Kart salt metin; ekleme + Detay Switch (v43) | **ok** (v43) |
+| Stock Öngörü çizimi | Pro; `end_time`/`target_price` sağa | Aynı semantik CustomPainter (v43) | **ok** (v43) |
 | Pattern Free savunma | Server prune | Client gizle + Pro CTA | **ok** (v41) |
+| Kart formasyon/Sezgisel rozet | `#patt-*` ≤4 +N | `WatchlistBadgeStrip` | **ok** (v43) |
+| Ufuk chip + best-model | pred satırı | Kart strip | **ok** (v43) |
+| Likidite / kanıt ikon | header icons | `WatchlistMetaIcons` | **ok** (v43) |
 
 ### 7.3.1 Tier gate smoke matrisi (v41)
 
 | ID | Senaryo | Beklenen |
 |----|---------|----------|
-| T-F1 | Free: kart zili ON denemesi; Hesap Push ON | Premium soft gate |
-| T-F2 | Free: AL/SAT muted; AI / Öngörü / Formasyon / Wizard | Soft gate (Pro veya Premium) |
+| T-F1 | Free: kart zili ON denemesi; Hesap Push ON | Premium soft gate (v43: kartta zil yok; Detay Switch) |
+| T-F2 | Free: AL/SAT muted; AI / Öngörü / Formasyon / Wizard | Soft gate |
 | T-P1 | Pro: AI / Öngörü / Formasyon / chart alerts | OK; Wizard + sinyal push → Premium gate |
-| T-M1 | Premium: alert toggle + Push ON + Wizard | OK |
-| T-D1 | Downgrade: `alert_enabled` true iken Free/Pro | OFF serbest (gate yok) |
+| T-M1 | Premium: Detay alert + Push + Wizard | OK |
+| T-D1 | Downgrade alert OFF | Detay Switch OFF serbest |
+
+### 7.3.2 Web kart / Öngörü matris (v43)
+
+| ID | Senaryo | Beklenen |
+|----|---------|----------|
+| W-B1 | Kartta formasyon/Sezgisel ≤4 +N; ML kart rozeti yok | PASS (kod) |
+| W-B2 | Ufuk chip + best-model; likidite/kanıt | PASS (kod) |
+| W-F1 | Öngörü Pro: çizgi son mumun sağında; target_price | PASS (kod) |
+| W-A1 | Eklemede Bildirim; kart salt metin; Detay Premium ON | PASS (kod) |
+| W-A2 | Free muted AL/SAT | PASS (kod) |
 
 ## 8. Dokunulmaması gerekenler
 

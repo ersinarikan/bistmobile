@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../auth/session_controller.dart';
-import '../../pro/soft_gate_sheet.dart';
+import '../../stock/widgets/formation_status.dart';
 import '../watchlist_controller.dart';
+import 'watchlist_card_badges.dart';
 import 'watchlist_detail_sheet.dart';
 
 Color confidenceBarColor(String? type) {
@@ -92,6 +93,7 @@ class WatchlistSignalTile extends StatelessWidget {
     final session = context.watch<SessionController>();
     final wl = context.watch<WatchlistController>();
     final pred = symbol.isEmpty ? null : wl.predictionForSymbol(symbol);
+    final analysis = symbol.isEmpty ? null : wl.patternForSymbol(symbol);
     final signal = pred != null ? wl.signalFor(pred) : null;
     final current = pred?['current_price'];
     final label = signal?['label']?.toString();
@@ -110,6 +112,20 @@ class WatchlistSignalTile extends StatelessWidget {
         degraded ? LotlotColors.warning : confidenceBarColor(barType);
     final pillColor = pillColorFor(pill, muted: muted, degraded: degraded);
     final teasers = horizonPriceTeasers(pred);
+
+    final hz = wl.selectedHorizon;
+    final hzChip = hz.toUpperCase().replaceAll('D', 'G');
+    final badges = buildWatchlistPatternBadges(analysis);
+    final mlRoot = analysis?['ml_unified'] is Map
+        ? analysis!['ml_unified'] as Map
+        : (pred?['ml_unified'] is Map ? pred!['ml_unified'] as Map : null);
+    final ml = mlUnifiedForHorizon(mlRoot, hz);
+    final bestKey = ml != null ? pickMlModelKey(ml) : null;
+    final bestLabel = bestKey == null ? null : translateModelLabel(bestKey);
+    final bestChip =
+        (bestLabel == null || bestLabel == '-') ? null : bestLabel;
+    final liquidity = analysis?['liquidity_warning'] == true;
+    final evidence = analysis?['evidence_summary']?.toString();
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -146,33 +162,10 @@ class WatchlistSignalTile extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            if (pill != null) ...[
-                              const SizedBox(width: 8),
-                              Opacity(
-                                opacity: muted ? 0.58 : 1,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: pillColor.withValues(alpha: 0.18),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: pillColor.withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    pill,
-                                    style: TextStyle(
-                                      color: pillColor,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                            WatchlistMetaIcons(
+                              liquidityWarning: liquidity,
+                              evidenceSummary: evidence,
+                            ),
                           ],
                         ),
                         if (name != null && name.isNotEmpty) ...[
@@ -208,61 +201,6 @@ class WatchlistSignalTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                  // Web: kartta zil yok. Premium toggle; Free/Pro: salt metin +
-                  // isteğe bağlı “Bildirim (Premium)”; Açık’ta OFF (downgrade).
-                  if (session.isPremium)
-                    IconButton(
-                      tooltip: alertOn
-                          ? 'Sinyal uyarısını kapat'
-                          : 'Sinyal uyarısını aç',
-                      visualDensity: VisualDensity.compact,
-                      icon: Icon(
-                        alertOn
-                            ? Icons.notifications_active
-                            : Icons.notifications_none,
-                        color: alertOn
-                            ? LotlotColors.accent
-                            : LotlotColors.textSecondary,
-                      ),
-                      onPressed: symbol.isEmpty || wl.mutating
-                          ? null
-                          : () => _toggleAlert(
-                                context,
-                                wl,
-                                session,
-                                symbol,
-                                alertOn,
-                              ),
-                    )
-                  else if (alertOn)
-                    IconButton(
-                      tooltip: 'Sinyal uyarısını kapat',
-                      visualDensity: VisualDensity.compact,
-                      icon: const Icon(
-                        Icons.notifications_active,
-                        color: LotlotColors.accent,
-                      ),
-                      onPressed: symbol.isEmpty || wl.mutating
-                          ? null
-                          : () => _setAlertOff(context, wl, symbol),
-                    )
-                  else
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      onPressed: () => showSoftGateSheet(
-                        context,
-                        kind: SoftGateKind.premium,
-                      ),
-                      child: const Text(
-                        'Bildirim (Premium)',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    ),
                   IconButton(
                     tooltip: 'Kaldır',
                     visualDensity: VisualDensity.compact,
@@ -287,37 +225,82 @@ class WatchlistSignalTile extends StatelessWidget {
                   ),
                 ),
               ],
-              if (label != null || delta != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    if (label != null && label.isNotEmpty) label,
-                    if (delta != null) 'Δ $delta',
-                  ].join(' · '),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: muted || degraded
-                        ? LotlotColors.textSecondary
-                        : LotlotColors.textPrimary,
+              const SizedBox(height: 8),
+              WatchlistBadgeStrip(
+                badges: badges,
+                horizonChip: hzChip,
+                selectedDelta: delta,
+                bestModel: bestChip,
+                emptyHint: analysis == null
+                    ? null
+                    : (badges.isEmpty ? 'Formasyon yok' : null),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (pill != null)
+                    Opacity(
+                      opacity: muted ? 0.58 : 1,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: pillColor.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: pillColor.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Text(
+                          pill,
+                          style: TextStyle(
+                            color: pillColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (label != null || delta != null)
+                          Text(
+                            [
+                              if (label != null && label.isNotEmpty) label,
+                              if (delta != null) 'Δ $delta',
+                            ].join(' · '),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: muted || degraded
+                                  ? LotlotColors.textSecondary
+                                  : LotlotColors.textPrimary,
+                            ),
+                          ),
+                        if (note != null && note.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            note,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: LotlotColors.textSecondary,
+                              fontSize: 12,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
-              if (note != null && note.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(
-                  note,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: degraded
-                        ? LotlotColors.warning
-                        : LotlotColors.textSecondary,
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-              ],
+                ],
+              ),
               if (genel is num) ...[
                 const SizedBox(height: 8),
                 const Text(
@@ -335,12 +318,12 @@ class WatchlistSignalTile extends StatelessWidget {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
-                          value: genel.toDouble().clamp(0, 100) / 100.0,
-                          minHeight: 5,
+                          value: (genel / 100).clamp(0.0, 1.0),
+                          minHeight: 6,
+                          backgroundColor: LotlotColors.border,
                           color: muted
                               ? LotlotColors.textSecondary
                               : barColor,
-                          backgroundColor: LotlotColors.border,
                         ),
                       ),
                     ),
@@ -358,20 +341,19 @@ class WatchlistSignalTile extends StatelessWidget {
                   ],
                 ),
               ],
-              if (!active && reason != null) ...[
+              if (!active && reason != null && reason.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Pasif ($reason)',
+                  reason,
                   style: const TextStyle(
                     color: LotlotColors.warning,
                     fontSize: 12,
                   ),
                 ),
               ],
-              const SizedBox(height: 10),
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton.icon(
+                child: TextButton(
                   onPressed: symbol.isEmpty
                       ? null
                       : () => showWatchlistDetailSheet(
@@ -379,8 +361,7 @@ class WatchlistSignalTile extends StatelessWidget {
                             symbol: symbol,
                             name: name,
                           ),
-                  icon: const Icon(Icons.list_alt, size: 18),
-                  label: const Text('Detay'),
+                  child: const Text('Detay'),
                 ),
               ),
             ],
@@ -388,57 +369,6 @@ class WatchlistSignalTile extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _toggleAlert(
-    BuildContext context,
-    WatchlistController wl,
-    SessionController session,
-    String symbol,
-    bool alertOn,
-  ) async {
-    // Premium-only ON/OFF path (caller already Premium).
-    final turningOn = !alertOn;
-    final ok = await wl.setAlertEnabled(symbol, !alertOn);
-    if (!context.mounted) return;
-    if (!ok) {
-      final apiErr = wl.lastApiError;
-      if (apiErr != null && tryShowSoftGateForApiError(context, apiErr)) {
-        return;
-      }
-      if (wl.lastError != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(wl.lastError!)),
-        );
-      }
-      return;
-    }
-    if (turningOn && !session.pushNotificationsOn) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Sinyal uyarısı açıldı; cihaz push için '
-            'Hesap → Push bildirimlerini açın.',
-          ),
-          duration: Duration(seconds: 5),
-        ),
-      );
-    }
-  }
-
-  /// Downgrade: Free/Pro kullanıcı önceki Premium `alert_enabled` kapatabilir.
-  Future<void> _setAlertOff(
-    BuildContext context,
-    WatchlistController wl,
-    String symbol,
-  ) async {
-    final ok = await wl.setAlertEnabled(symbol, false);
-    if (!context.mounted) return;
-    if (!ok && wl.lastError != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(wl.lastError!)),
-      );
-    }
   }
 
   Future<void> _remove(BuildContext context, String symbol) async {
