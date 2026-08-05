@@ -199,7 +199,7 @@ class ApiClient {
     return post('/api/auth/login', body: body, auth: false);
   }
 
-  /// `POST /api/auth/register` — §5
+  /// `POST /api/auth/register` — §5 (`client: mobile`)
   Future<Map<String, dynamic>> register({
     required String email,
     required String password,
@@ -212,6 +212,7 @@ class ApiClient {
       'password': password,
       'first_name': firstName,
       'last_name': lastName,
+      'client': 'mobile',
     };
     if (turnstileToken != null) {
       body['turnstile_token'] = turnstileToken;
@@ -223,9 +224,24 @@ class ApiClient {
   Future<Map<String, dynamic>> resendVerification({required String email}) {
     return post(
       '/api/auth/resend-verification',
-      body: {'email': email},
+      body: {'email': email, 'client': 'mobile'},
       auth: false,
     );
+  }
+
+  /// `POST /api/auth/forgot-password` — §6.1 (`client: mobile`)
+  Future<Map<String, dynamic>> forgotPassword({
+    required String email,
+    String? turnstileToken,
+  }) {
+    final body = <String, dynamic>{
+      'email': email,
+      'client': 'mobile',
+    };
+    if (turnstileToken != null) {
+      body['turnstile_token'] = turnstileToken;
+    }
+    return post('/api/auth/forgot-password', body: body, auth: false);
   }
 
   /// `DELETE /api/auth/me` — §8 (`confirm: true` zorunlu)

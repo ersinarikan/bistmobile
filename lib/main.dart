@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +47,7 @@ class _LotlotAppState extends State<LotlotApp> {
   late final SessionController _session;
   late final PushService _push;
   late final SocketAlertsClient _socket;
+  StreamSubscription<Uri>? _appLinkSub;
 
   AuthStatus? _lastAuth;
   bool? _lastPushOn;
@@ -84,6 +88,14 @@ class _LotlotAppState extends State<LotlotApp> {
         }
       });
     }
+
+    final appLinks = AppLinks();
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) openDeepLink(uri.toString());
+    });
+    _appLinkSub = appLinks.uriLinkStream.listen((uri) {
+      openDeepLink(uri.toString());
+    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       flushPendingDeepLink();
@@ -141,6 +153,7 @@ class _LotlotAppState extends State<LotlotApp> {
 
   @override
   void dispose() {
+    _appLinkSub?.cancel();
     _push.removeListener(_onPushTokenRefresh);
     _session.removeListener(_onSession);
     _socket.disconnect();

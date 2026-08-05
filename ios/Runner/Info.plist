@@ -87,6 +87,14 @@
 				<string>com.googleusercontent.apps.544107298661-dn3bnerlqubij3vl4palru1ohv0sb55d</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>lotlot</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

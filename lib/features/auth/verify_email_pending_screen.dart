@@ -51,11 +51,12 @@ class _VerifyEmailPendingScreenState extends State<VerifyEmailPendingScreen> {
   String get _bodyCopy {
     if (widget.verificationEmailSent) {
       return '${widget.email} adresine bir doğrulama bağlantısı gönderdik. '
-          'Bağlantıya tıkladıktan sonra giriş yapabilirsiniz.';
+          'Bağlantıyı tarayıcıda açıp “E-postamı doğrula”ya basın; ardından '
+          '“Uygulamayı aç” ile buraya dönüp giriş yapın.';
     }
     return 'Hesabınız oluşturuldu ancak doğrulama e-postası şu an '
         'gönderilemedi (${widget.email}). Aşağıdan yeniden deneyin; '
-        'bağlantıya tıkladıktan sonra giriş yapabilirsiniz.';
+        'tarayıcıda doğruladıktan sonra uygulamaya dönüp giriş yapın.';
   }
 
   @override

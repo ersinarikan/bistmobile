@@ -5,6 +5,7 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../core/config/api_config.dart';
 import '../../core/theme/app_theme.dart';
+import 'auth_helpers.dart';
 
 /// Cloudflare Turnstile köprüsü — §8.6.
 /// Prod URL zorunlu; token [Navigator.pop] ile `String` olarak döner.
@@ -29,6 +30,12 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
   late final WebViewController _controller;
   var _loading = true;
   String? _error;
+  var _completed = false;
+
+  /// Prod bridge sitekey (public; HTML ile aynı). Render’ı Flutter’dan
+  /// yeniden bağlarız çünkü sayfa `postMessage(object)` yolluyor ve
+  /// top-level WKWebView’da `parent !== window` false — token kayboluyordu.
+  static const _siteKey = '0x4AAAAAADFC6pJ_itsqf9ND';
 
   @override
   void initState() {
@@ -36,12 +43,20 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(LotlotColors.background)
+      // SECURITY: Channel only accepts Turnstile token JSON from allowlisted
+      // origins (see onNavigationRequest). No app secrets are exposed to JS.
       ..addJavaScriptChannel(
-        'turnstileBridge',
+        'turnstileBridge', // NOSONAR — §8.6 bridge; token-only, allowlisted nav
         onMessageReceived: _onBridgeMessage,
       )
       ..setNavigationDelegate(
         NavigationDelegate(
+          onNavigationRequest: (request) {
+            if (isAllowedTurnstileNavigation(request.url)) {
+              return NavigationDecision.navigate;
+            }
+            return NavigationDecision.prevent;
+          },
           onPageStarted: (_) {
             if (mounted) {
               setState(() {
@@ -51,7 +66,7 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
             }
           },
           onPageFinished: (_) async {
-            await _injectMessageForwarder();
+            await _installFlutterBridge();
             if (mounted) setState(() => _loading = false);
           },
           onWebResourceError: (err) {
@@ -67,33 +82,76 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
       ..loadRequest(Uri.parse(ApiConfig.turnstileBridgeUrl));
   }
 
-  /// Sayfa `postMessage` / parent mesajlarını Flutter kanalına iletir.
-  Future<void> _injectMessageForwarder() async {
+  /// String kanal + Turnstile’ı `appearance: always` ile yeniden mount.
+  Future<void> _installFlutterBridge() async {
     await _controller.runJavaScript('''
 (function() {
-  if (window.__lotlotTurnstileHooked) return;
-  window.__lotlotTurnstileHooked = true;
-  function forward(raw) {
+  function deliver(token) {
     try {
-      var s = (typeof raw === 'string') ? raw : JSON.stringify(raw);
+      if (!token) return;
+      var payload = JSON.stringify({ turnstile_token: String(token) });
       if (window.turnstileBridge && window.turnstileBridge.postMessage) {
-        window.turnstileBridge.postMessage(s);
+        window.turnstileBridge.postMessage(payload);
       }
     } catch (e) {}
   }
-  window.addEventListener('message', function(ev) { forward(ev.data); });
+  window.__lotlotDeliverTurnstile = deliver;
+
+  // Obje postMessage → JSON string (native handler kırılmasın)
+  try {
+    var h = window.webkit && window.webkit.messageHandlers &&
+      window.webkit.messageHandlers.turnstileBridge;
+    if (h && !h.__lotlotPatched) {
+      var orig = h.postMessage.bind(h);
+      h.postMessage = function(msg) {
+        if (typeof msg !== 'string') {
+          try { msg = JSON.stringify(msg); } catch (e) { return; }
+        }
+        orig(msg);
+      };
+      h.__lotlotPatched = true;
+    }
+  } catch (e) {}
+
+  function remount() {
+    if (!window.turnstile) return false;
+    var el = document.getElementById('turnstile-mount');
+    if (!el) return false;
+    try { el.innerHTML = ''; } catch (e) {}
+    try {
+      window.turnstile.render('#turnstile-mount', {
+        sitekey: '$_siteKey',
+        appearance: 'always',
+        callback: deliver,
+        'expired-callback': function () { deliver(''); },
+        'error-callback': function () { deliver(''); }
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  if (remount()) return;
+  var n = 0;
+  var iv = setInterval(function () {
+    n++;
+    if (remount() || n > 40) clearInterval(iv);
+  }, 150);
 })();
 ''');
   }
 
   void _onBridgeMessage(JavaScriptMessage message) {
+    if (_completed) return;
     final raw = message.message.trim();
     if (raw.isEmpty) return;
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! Map) return;
       final token = decoded['turnstile_token']?.toString() ?? '';
-      if (token.isEmpty) return; // süre dolumu — yok say (§8.6)
+      if (token.isEmpty) return;
+      _completed = true;
       if (!mounted) return;
       Navigator.of(context).pop(token);
     } catch (_) {
@@ -136,6 +194,7 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
                         setState(() {
                           _error = null;
                           _loading = true;
+                          _completed = false;
                         });
                         _controller.loadRequest(
                           Uri.parse(ApiConfig.turnstileBridgeUrl),
@@ -144,6 +203,21 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
                       child: const Text('Yeniden dene'),
                     ),
                   ],
+                ),
+              ),
+            ),
+          if (!_loading && _error == null)
+            const Positioned(
+              left: 24,
+              right: 24,
+              bottom: 28,
+              child: Text(
+                'Kutuyu işaretleyin; doğrulama bitince kayıt devam eder.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: LotlotColors.textSecondary,
+                  fontSize: 13,
+                  height: 1.35,
                 ),
               ),
             ),

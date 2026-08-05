@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/storage/token_storage.dart';
+import 'auth_helpers.dart';
 
 enum AuthStatus { unknown, authenticated, unauthenticated }
 
@@ -14,6 +15,12 @@ enum LoginResult {
 
 enum RegisterResult {
   pendingVerification,
+  needsTurnstile,
+  failed,
+}
+
+enum PasswordResetResult {
+  success,
   needsTurnstile,
   failed,
 }
@@ -289,6 +296,43 @@ class SessionController extends ChangeNotifier {
       lastError = e.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  /// `POST /api/auth/forgot-password` — §6.1 (yeni şifre web formunda).
+  Future<PasswordResetResult> requestPasswordReset({
+    required String email,
+    String? turnstileToken,
+  }) async {
+    lastError = null;
+    lastErrorCode = null;
+    notifyListeners();
+    try {
+      await _api.forgotPassword(
+        email: email,
+        turnstileToken: turnstileToken,
+      );
+      // Generic 200 — e-posta varlığı ifşa edilmez.
+      notifyListeners();
+      return PasswordResetResult.success;
+    } on ApiException catch (e) {
+      final mapped = mapForgotPasswordException(e);
+      if (mapped == PasswordResetResult.needsTurnstile) {
+        lastError =
+            e.errorCode == 'invalid_turnstile' ? _friendlyAuthMessage(e) : null;
+        lastErrorCode = e.errorCode;
+        notifyListeners();
+        return PasswordResetResult.needsTurnstile;
+      }
+      lastError = _friendlyAuthMessage(e);
+      lastErrorCode = e.errorCode;
+      notifyListeners();
+      return PasswordResetResult.failed;
+    } catch (e) {
+      lastError = e.toString();
+      lastErrorCode = null;
+      notifyListeners();
+      return PasswordResetResult.failed;
     }
   }
 

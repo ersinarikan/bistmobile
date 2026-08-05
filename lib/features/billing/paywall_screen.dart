@@ -25,6 +25,8 @@ class PaywallScreen extends StatefulWidget {
 }
 
 class _PaywallScreenState extends State<PaywallScreen> {
+  var _restoreLocked = false;
+
   @override
   void initState() {
     super.initState();
@@ -57,7 +59,13 @@ class _PaywallScreenState extends State<PaywallScreen> {
     if (!mounted) return;
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Abonelik etkinleştirildi')),
+        SnackBar(
+          content: Text(
+            billing.lastErrorCode == 'already_subscribed'
+                ? 'Bu plan zaten aktif'
+                : 'Abonelik etkinleştirildi',
+          ),
+        ),
       );
       Navigator.of(context).pop(true);
     } else if (billing.error != null) {
@@ -68,24 +76,30 @@ class _PaywallScreenState extends State<PaywallScreen> {
   }
 
   Future<void> _restore() async {
-    await _ensureAuth();
-    if (!mounted) return;
-    final session = context.read<SessionController>();
-    if (session.status != AuthStatus.authenticated) return;
+    if (_restoreLocked) return;
+    _restoreLocked = true;
+    try {
+      await _ensureAuth();
+      if (!mounted) return;
+      final session = context.read<SessionController>();
+      if (session.status != AuthStatus.authenticated) return;
 
-    final billing = context.read<BillingController>();
-    final ok = await billing.restorePurchases();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          ok
-              ? 'Abonelik geri yüklendi'
-              : (billing.error ?? 'Geri yükleme başarısız'),
+      final billing = context.read<BillingController>();
+      final ok = await billing.restorePurchases();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? 'Abonelik geri yüklendi'
+                : (billing.error ?? 'Geri yükleme başarısız'),
+          ),
         ),
-      ),
-    );
-    if (ok) Navigator.of(context).pop(true);
+      );
+      if (ok) Navigator.of(context).pop(true);
+    } finally {
+      _restoreLocked = false;
+    }
   }
 
   Future<void> _openManage() async {
@@ -185,7 +199,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ],
                   price: billing.priceLabel(kIapProductPro),
                   highlighted: !highlightPremium,
-                  enabled: billing.canPurchase && !billing.busy,
+                  enabled: billing.canPurchase &&
+                      !billing.busy &&
+                      billing.hasStoreProduct(kIapProductPro) &&
+                      !session.isPro &&
+                      !session.isPremium,
                   onBuy: () => _buy(kIapProductPro),
                 ),
                 const SizedBox(height: 12),
@@ -199,7 +217,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   ],
                   price: billing.priceLabel(kIapProductPremium),
                   highlighted: highlightPremium,
-                  enabled: billing.canPurchase && !billing.busy,
+                  enabled: billing.canPurchase &&
+                      !billing.busy &&
+                      billing.hasStoreProduct(kIapProductPremium) &&
+                      !session.isPremium,
                   onBuy: () => _buy(kIapProductPremium),
                 ),
                 const SizedBox(height: 20),

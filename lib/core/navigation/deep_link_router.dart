@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../features/auth/auth_helpers.dart';
+import '../../features/auth/auth_screen.dart';
 import '../../features/stock/stock_detail_screen.dart';
 import '../theme/app_theme.dart';
 
-/// Global navigator — deep_link / socket banner.
+/// Global navigator — deep_link / socket banner / custom scheme handoff.
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 String? _pendingDeepLink;
@@ -17,7 +19,7 @@ void openDeepLink(String? deepLink) {
     return;
   }
   _pendingDeepLink = null;
-  _pushStockFromDeepLink(nav, deepLink);
+  _routeDeepLink(nav, deepLink);
 }
 
 /// MaterialApp ayağa kalktıktan / splash sonrası çağır.
@@ -25,6 +27,33 @@ void flushPendingDeepLink() {
   final pending = _pendingDeepLink;
   if (pending == null) return;
   openDeepLink(pending);
+}
+
+void _routeDeepLink(NavigatorState nav, String deepLink) {
+  final raw = deepLink.trim();
+  final uri = Uri.tryParse(raw);
+  if (uri != null && uri.scheme == 'lotlot') {
+    final host = uri.host.toLowerCase();
+    final path = uri.path.toLowerCase();
+    final isAuthLogin = host == 'auth' &&
+        (path == '/login' || path.endsWith('/login') || path.isEmpty);
+    if (isAuthLogin || (host.isEmpty && path.contains('login'))) {
+      final email = uri.queryParameters['email']?.trim() ?? '';
+      final passwordReset = isPasswordResetQuery(uri.queryParameters);
+      nav.push(
+        MaterialPageRoute<void>(
+          builder: (_) => AuthScreen(
+            initialMode: AuthMode.login,
+            initialEmail: email.isEmpty ? null : email,
+            passwordResetHandoff: passwordReset,
+          ),
+        ),
+      );
+      return;
+    }
+  }
+
+  _pushStockFromDeepLink(nav, raw);
 }
 
 void _pushStockFromDeepLink(NavigatorState nav, String deepLink) {

@@ -85,8 +85,8 @@ Web OAuth, mobil OAuth ve IAP **ayrı credential setleridir**; birbirinin yerine
 | Katman | Mobil ne kullanır | Backend env | Not |
 |--------|-------------------|-------------|-----|
 | Web login (tarayıcı) | Tarayıcı OAuth redirect | `GOOGLE_CLIENT_ID`, Apple web Services ID | Mobil JSON API **değil** |
-| Mobil login | Native `idToken` / `identityToken` | `GOOGLE_MOBILE_CLIENT_IDS` (boşsa `GOOGLE_CLIENT_ID` fallback), `APPLE_CLIENT_ID` | Android/iOS client ID ≠ web client ID |
-| Apple mobil token `aud` | Bundle ID (native SDK) | `APPLE_CLIENT_ID` **Bundle ID olmalı** | Web Services ID ile karıştırılırsa `invalid_oauth_token` |
+| Mobil login | Native `idToken` / `identityToken` | `GOOGLE_MOBILE_CLIENT_IDS` (boşsa `GOOGLE_CLIENT_ID` fallback); Apple: `APPLE_MOBILE_CLIENT_IDS` (Bundle ID) + `APPLE_CLIENT_ID` (web Services ID) | Android/iOS client ID ≠ web; Apple mobil `aud` ≠ web Services ID |
+| Apple mobil token `aud` | Bundle ID (native SDK) | `APPLE_MOBILE_CLIENT_IDS` (ör. `com.lotlot.lotlotnetMobile`); web `APPLE_CLIENT_ID` = Services ID | Backend **ikisini de** kabul eder; yalnız web ID ile mobil token → `invalid_oauth_token` |
 | IAP abonelik | StoreKit JWS / Play `purchaseToken` | `IAP_*`, `APPLE_IAP_BUNDLE_ID`, `GOOGLE_PLAY_*` | OAuth client secret IAP için **kullanılmaz** |
 
 Detaylı onboarding sırası: **§26**, öncelik tablosu: **§29**.
@@ -388,20 +388,23 @@ Not: JSON `resend-verification` uçunda Turnstile alanı **yoktur** (web formund
 
 E-posta/şifre kaydından sonra oturum **açılmaz**. Akış:
 
-1. `201 pending_verification` → mobil “E-posta doğrulama bekleniyor” ekranı.
-2. Kullanıcı maildeki linke tıklar → **web** sayfası açılır:
+1. `POST /api/auth/register` gövdesinde **`client: "mobile"`** (yoksa/`"web"` → web davranışı).
+2. `201 pending_verification` → mobil “E-posta doğrulama bekleniyor” ekranı.
+3. Kullanıcı maildeki linke tıklar → **web** onay sayfası:
    ```text
-   https://lotlot.net/verify-email/<token>
+   https://lotlot.net/verify-email/<token>?src=mobile
    ```
-   (Tarayıcı veya mail uygulaması; mobil uygulama bu token'ı parse etmek zorunda değildir.)
-3. Doğrulama tamamlanınca kullanıcı mobilde `POST /api/auth/login` ile giriş yapar.
-4. Mail gelmediyse `POST /api/auth/resend-verification` (§5 üstü).
+   GET yalnız formu gösterir; hesabı doğrulamaz (link-scanner koruması).
+4. Kullanıcı **E-postamı doğrula** ile `POST /verify-email/confirm` (+ CSRF, hidden `src=mobile`) → `email_verified=true`.
+5. Mobil `src` için web oturumu açılmaz; başarı sayfasında `lotlot://auth/login?email=...&verified=1` handoff (“Uygulamayı aç”).
+6. Kullanıcı uygulamada `POST /api/auth/login` ile giriş yapar.
+7. Mail gelmediyse `POST /api/auth/resend-verification` (+ isteğe bağlı `client: "mobile"`).
 
-**Deep link / Universal Link (opsiyonel):** Mail linkini uygulamaya yönlendirmek isteğe bağlıdır; doğrulama işlemi sunucuda web route ile tamamlanır. En basit yol: kullanıcıya “Maildeki linke tıklayın, ardından uygulamaya dönüp giriş yapın” metni.
+Web formu / `client` yok: confirm sonrası mevcut gibi Flask `login_user` + `/user` (veya admin dashboard).
 
 Doğrulanmadan login denemesi → `403 email_not_verified` + `verification_required: true` (§6).
 
-**Akış diyagramı (e-posta doğrulama):**
+**Akış diyagramı (e-posta doğrulama — mobil):**
 
 ```mermaid
 sequenceDiagram
@@ -411,11 +414,14 @@ sequenceDiagram
   participant App as MobileApp
   participant API as LotlotAPI
 
+  App->>API: POST register client=mobile
+  API->>Mail: verify-email token src=mobile
   App->>User: pending_verification ekrani
   Mail->>User: Dogrulama linki
-  User->>Web: GET verify-email/token
-  Web->>Web: Hesap email_verified=true
-  User->>App: Uygulamaya don
+  User->>Web: GET verify-email/token?src=mobile
+  User->>Web: POST verify-email/confirm
+  Web->>Web: email_verified=true
+  Web->>App: lotlot://auth/login
   App->>API: POST login
   API-->>App: JWT plus subscription
 ```
@@ -524,46 +530,70 @@ Google veya Apple ile girişte Turnstile **gerekmez**; native SDK token'ı doğr
 
 ### 6.1 Şifre Sıfırlama Kapsamı
 
-Şifre sıfırlama akışı backend'de **web form + e-posta linki** olarak desteklenir; **mobil JSON API yoktur**.
-
-Web uçları (HTML — Bearer JWT kullanılmaz):
+Şifre sıfırlama, e-posta doğrulama handoff kalıbıyla aynı mimaridedir: mobil JSON ile istek başlar, yeni şifre **yalnızca web formunda** girilir, başarıda `lotlot://` ile uygulamaya dönüş olur. Reset token uygulamaya taşınmaz.
 
 ```http
-GET  https://lotlot.net/login
-POST /forgot-password          (web form; mobil JSON değil)
-GET  https://lotlot.net/reset-password/<token>
-POST /reset-password/<token>   (web form)
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "client": "mobile",
+  "turnstile_token": "<TOKEN>"
+}
 ```
 
-Mobil uygulama için önerilen akış:
+Yanıt her zaman generic `200` (hesap yoksa da aynı mesaj; e-posta varlığı ifşa edilmez):
 
-1. Login ekranında “Şifrenizi mi unuttunuz?” göster.
-2. Sistem tarayıcısı veya in-app WebView ile aç:
-   ```text
-   https://lotlot.net/login
-   ```
-   (Sayfada “Şifremi unuttum” sekmesi / formu vardır.)
-3. Kullanıcı e-postadaki reset linkini açar → `https://lotlot.net/reset-password/<token>` web formu.
-4. Yeni şifre belirlendikten sonra mobil uygulama login ekranına döner; `POST /api/auth/login` ile giriş.
+```json
+{
+  "status": "success",
+  "message": "Bu e-postaya ait aktif bir hesap varsa şifre sıfırlama bağlantısı gönderildi."
+}
+```
+
+Turnstile / rate-limit (login ile aynı köprü disiplini):
+
+| Durum | HTTP | `error` |
+|-------|------|---------|
+| Sayaç Turnstile eşiğini geçti, token yok | 400 | `captcha_required` (`captcha_required: true`) |
+| Token geçersiz | 400 | `invalid_turnstile` |
+| Geçici blok | 429 | `rate_limited` |
+
+Web uçları (HTML — Bearer JWT kullanılmaz; şifre girişi burada kalır):
+
+```http
+GET  https://lotlot.net/reset-password/<token>?src=mobile
+POST /reset-password/<token>   (web form + CSRF; hidden src)
+POST /forgot-password          (web form; tarayıcı kullanıcıları)
+```
+
+Mobil uygulama akışı:
+
+1. Login ekranında “Şifrenizi mi unuttunuz?” → e-posta al → `POST /api/auth/forgot-password` + `client:"mobile"`.
+2. `400 captcha_required` / `invalid_turnstile` → §8.6 Turnstile köprüsü → token ile tekrar.
+3. Kullanıcı maildeki linki **sistem tarayıcısında** açar (`?src=mobile`).
+4. Web formunda yeni şifreyi girer (uygulama token/şifre işlemez).
+5. Başarıda web oturumu açılmaz; `lotlot://auth/login?email=<quoted>&password_reset=1` handoff (“Uygulamayı aç”).
+6. Uygulama deep link dinler → login ekranı (e-posta dolu) → `POST /api/auth/login`.
 
 Güvenlik davranışı:
 
-- E-posta varlığı ifşa edilmez; web formu generic mesaj gösterir.
+- E-posta varlığı ifşa edilmez; API ve web generic mesaj gösterir.
 - Yalnızca aktif `provider=email` hesaplara reset maili gönderilir (Google/Apple-only hesapta reset maili gitmez).
-- Reset token DB'de hash'li saklanır, tek kullanımlıdır ve 1 saat içinde geçerlidir.
-- Password reset isteklerinde Redis tabanlı sayaç kullanılır: 25 sn cooldown, 3 gerçek istekten sonra Turnstile (web form), 6 gerçek istekten sonra geçici blok.
-- Mobil istemci reset token'ı loglamamalı, saklamamalı veya API token gibi işlememelidir.
+- Reset token DB'de hash'li saklanır, tek kullanımlıdır ve 1 saat içinde geçerlidir; uygulamaya gelmez.
+- Redis sayaç: 25 sn cooldown, 3 gerçek istekten sonra Turnstile, 6 gerçek istekten sonra geçici blok.
+- Bilinçli olarak **yok**: mobil JSON ile token + yeni şifre POST'u.
 
-**Akış diyagramı (şifre sıfırlama — WEB_ONLY):**
+**Akış diyagramı (şifre sıfırlama — mobil handoff):**
 
 ```mermaid
 flowchart TD
-  A[Login ekrani Sifremi unuttum] --> B[WebView lotlot.net/login]
-  B --> C[POST forgot-password web form]
-  C --> D[E-posta reset linki]
-  D --> E[Web reset-password token form]
-  E --> F[Mobil login ekrani]
-  F --> G["POST /api/auth/login CANLI"]
+  A[Login ekrani Sifremi unuttum] --> B["POST /api/auth/forgot-password client=mobile"]
+  B --> C[E-posta reset linki src=mobile]
+  C --> D[Web reset-password formu]
+  D --> E["lotlot://auth/login password_reset=1"]
+  E --> F["POST /api/auth/login CANLI"]
 ```
 
 ## 7. Token Refresh Akışı
@@ -800,7 +830,7 @@ Private relay e-posta (`@privaterelay.appleid.com`) desteklenir; web ile aynı p
 
 **Kayıt vs giriş:** Google ile aynı — ayrı Apple kayıt endpoint'i yok; `POST /api/auth/apple-mobile` find-or-create + JWT. İlk girişte `fullName` göndermeyi unutmayın (Apple yalnızca bir kez verir).
 
-**SDK tarafı (mobil ekip):** Native iOS token'ının JWT `aud` claim'i **Bundle ID** olmalıdır. Backend `APPLE_CLIENT_ID` bu Bundle ID ile eşleşmelidir — web Sign in with Apple **Services ID** farklıysa mobil auth reddedilir (`invalid_oauth_token`). Deploy: `docs/DEPLOYMENT_GUIDE.md` §28.6.
+**SDK tarafı (mobil ekip):** Native iOS token'ının JWT `aud` claim'i **her zaman Bundle ID**'dir (ör. `com.lotlot.lotlotnetMobile`). Web Sign in with Apple **Services ID** kullanır (ör. `net.lotlot.bistpattern.web`). Backend her ikisini de kabul eder: `APPLE_MOBILE_CLIENT_IDS` (virgüllü Bundle ID listesi) + `APPLE_CLIENT_ID` (web Services ID). Native SDK'da Services ID'yi `aud` yapmak mümkün değildir — web ID'yi Bundle ID sanmayın. Deploy: `docs/DEPLOYMENT_GUIDE.md` §28.6.
 
 **Akış diyagramı (Apple — kayıt = giriş, CANLI):**
 
@@ -898,7 +928,7 @@ Tüm kimlik akışları tek bakışta:
 | **Apple kayıt/giriş** | `POST /api/auth/apple-mobile` | **Hayır** | JWT (yeni veya mevcut hesap) |
 | **E-posta doğrulama** | Mail → `GET https://lotlot.net/verify-email/<token>` (web) | Hayır | Sonra mobil `POST /login` |
 | **Doğrulama maili tekrar** | `POST /api/auth/resend-verification` | Hayır (JSON API) | `200` generic mesaj |
-| **Şifre sıfırlama** | WebView `https://lotlot.net/login` → mail → `reset-password/<token>` | Web form (mobil JSON yok) | Mobil `POST /login` |
+| **Şifre sıfırlama** | `POST /api/auth/forgot-password` (`client:"mobile"`) → mail → web `reset-password/<token>?src=mobile` → `lotlot://…password_reset=1` | Eşik sonrası (§8.6) | Mobil `POST /login` |
 | **Oturum kontrolü** | `GET /api/auth/me` | — | State güncelle |
 | **Token yenileme** | `POST /api/auth/refresh` | — | Yeni token çifti |
 | **Çıkış** | `POST /api/auth/logout` + local token sil | — | Login ekranı |
@@ -2428,7 +2458,7 @@ Login screen (e-posta/şifre — lazy WebView):
 1. `POST /api/auth/login`
 2. `400 captcha_required` veya `401` + `captcha_required: true` → §8.6 köprüsü → token ile retry
 3. Tokenları kaydet → ana ekran
-4. Şifre unutulduysa web şifre sıfırlama akışına yönlendir (`POST /forgot-password` HTML form akışı; JSON API değil)
+4. Şifre unutulduysa `POST /api/auth/forgot-password` (`client:"mobile"`) → mail → web form → `lotlot://…password_reset=1` (§6.1)
 
 **Paywall / abonelik ekranı (§9):**
 
@@ -2547,13 +2577,13 @@ Mobil geliştirici ilk entegrasyonda şunları tamamlamalı:
 
 Mobil için desteklenen ana JSON contract (özet liste):
 
-**Kimlik:** `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google-mobile`, `POST /api/auth/apple-mobile`, `POST /api/auth/refresh`, `GET /api/auth/me`, `PATCH /api/auth/me` (`push_notifications`, `email_notifications`), `POST /api/auth/logout`, `POST /api/auth/resend-verification`, `DELETE /api/auth/me` (hesap silme, `{"confirm":true}` gövdesi). Tüm auth senaryoları özeti: **§8.8**.
+**Kimlik:** `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/google-mobile`, `POST /api/auth/apple-mobile`, `POST /api/auth/refresh`, `GET /api/auth/me`, `PATCH /api/auth/me` (`push_notifications`, `email_notifications`), `POST /api/auth/logout`, `POST /api/auth/resend-verification`, `POST /api/auth/forgot-password` (`client:"mobile"`), `DELETE /api/auth/me` (hesap silme, `{"confirm":true}` gövdesi). Tüm auth senaryoları özeti: **§8.8**.
 
 **E-posta doğrulama (web, JSON API değil):** mail linki `GET https://lotlot.net/verify-email/<token>`
 
-**Turnstile köprü (WebView, JSON API değil):** `GET /mobile/turnstile` → `turnstile_token` → register/login gövdesi (`TURNSTILE_SITE_KEY` yoksa 404)
+**Turnstile köprü (WebView, JSON API değil):** `GET /mobile/turnstile` → `turnstile_token` → register/login/forgot-password gövdesi (`TURNSTILE_SITE_KEY` yoksa 404)
 
-**Şifre sıfırlama:** Web form/link — `GET https://lotlot.net/login`, mail → `GET|POST https://lotlot.net/reset-password/<token>`. JSON mobil API yok (§6.1).
+**Şifre sıfırlama:** `POST /api/auth/forgot-password` → mail → `GET|POST https://lotlot.net/reset-password/<token>?src=mobile` → `lotlot://auth/login?…&password_reset=1` (§6.1). Yeni şifre web formunda; mobil JSON reset yok.
 
 **Kullanıcı + abonelik:** `GET /api/auth/me` (`subscription` içinde `billing`, `chart_alert_limit`)
 
@@ -2760,21 +2790,21 @@ Lotlot backend ekibinin prod yapılandırması ve entegrasyon testi için mobil 
 
 ### 26.1 OAuth — prod auth açılışı (öncelik: yüksek)
 
-Google native giriş prod’da çalışması için backend’de `GOOGLE_MOBILE_CLIENT_IDS` tanımlı olmalıdır. Apple için bundle ID eşleşmesi doğrulanmalıdır.
+Google native giriş prod’da çalışması için backend’de `GOOGLE_MOBILE_CLIENT_IDS` tanımlı olmalıdır. Apple için **mobil Bundle ID** `APPLE_MOBILE_CLIENT_IDS` ile, web Services ID `APPLE_CLIENT_ID` ile tanımlı olmalıdır; backend identity token doğrulamasında ikisini de kabul eder.
 
 | # | Mobil ekip gönderir | Backend kullanımı | Not |
 |---|---------------------|-------------------|-----|
 | 1 | **Android** Google OAuth Client ID (`…apps.googleusercontent.com`) | `GOOGLE_MOBILE_CLIENT_IDS` (virgülle) | Web `GOOGLE_CLIENT_ID` ile **aynı değil** |
 | 2 | **iOS** Google OAuth Client ID | Aynı env satırı | Google Cloud Console → OAuth 2.0 Client IDs |
-| 3 | **Apple Bundle ID** (ör. `com.sirket.lotlot`) | `APPLE_CLIENT_ID` = Bundle ID (native token `aud`) | Web Services ID farklıysa mobil token reddedilir |
-| 4 | Uygulama **prod derleme** ile test `idToken` / `identityToken` (JWT decode — audience claim) | Smoke: `POST /api/auth/google-mobile`, `apple-mobile` | Audience backend env ile birebir aynı olmalı |
+| 3 | **Apple Bundle ID** (ör. `com.lotlot.lotlotnetMobile`) | `APPLE_MOBILE_CLIENT_IDS` = Bundle ID (native token `aud`) | Web `APPLE_CLIENT_ID` = Services ID; **karıştırma** — backend ikisini kabul eder |
+| 4 | Uygulama **prod derleme** ile test `idToken` / `identityToken` (JWT decode — audience claim) | Smoke: `POST /api/auth/google-mobile`, `apple-mobile` | Mobil Apple `aud` = Bundle ID olmalı |
 
 **Gönderim formatı (örnek):**
 
 ```text
 Google Android client ID: 123456789-xxxxx.apps.googleusercontent.com
 Google iOS client ID:     123456789-yyyyy.apps.googleusercontent.com
-Apple Bundle ID:          com.example.lotlot
+Apple Bundle ID:          com.lotlot.lotlotnetMobile
 Test ortamı:              prod API (https://lotlot.net)
 ```
 
@@ -2821,7 +2851,7 @@ Mobil entegrasyon öncesi prod’da aşağıdakiler tanımlı olmalıdır:
 |-----|------|
 | `IAP_ENABLED=1` | Verify / restore uçlarını açar |
 | `IAP_TEST_MODE=0` | Prod’da gerçek Apple JWS / Play token doğrulama |
-| `APPLE_CLIENT_ID` / `APPLE_IAP_BUNDLE_ID` | Apple bundle eşlemesi |
+| `APPLE_CLIENT_ID` / `APPLE_MOBILE_CLIENT_IDS` / `APPLE_IAP_BUNDLE_ID` | Web Services ID; mobil Bundle ID listesi; IAP bundle |
 | `GOOGLE_PLAY_PACKAGE_NAME` | Play paket adı |
 | `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE` | Play Developer API (subscriptionsv2) |
 | `IAP_PRODUCT_TIERS_JSON` | Store product ID → `pro` / `premium` eşlemesi |
@@ -2834,7 +2864,7 @@ Mobil entegrasyon öncesi prod’da aşağıdakiler tanımlı olmalıdır:
 
 OAuth client ID ve bundle ID değişikliklerini backend ekibine **yazılı** iletin (e-posta veya ticket). Prod env güncellemesi sonrası mobil taraf aynı gün smoke test koşmalıdır.
 
-**Backend tarafı karşılık (referans):** `GOOGLE_MOBILE_CLIENT_IDS` → `/opt/bist-pattern/.secrets/google_oauth.env` veya systemd env; `APPLE_CLIENT_ID` → `/opt/bist-pattern/.secrets/apple_oauth.env`. Detay: `docs/DEPLOYMENT_GUIDE.md` §28.6.2.
+**Backend tarafı karşılık (referans):** `GOOGLE_MOBILE_CLIENT_IDS` → `/opt/bist-pattern/.secrets/google_oauth.env` veya systemd env; `APPLE_CLIENT_ID` (web Services ID) + `APPLE_MOBILE_CLIENT_IDS` (Bundle ID) → `/opt/bist-pattern/.secrets/apple_oauth.env`. Detay: `docs/DEPLOYMENT_GUIDE.md` §28.6.2.
 
 ---
 
@@ -2907,7 +2937,7 @@ Lotlot **mobil uygulaması henüz geliştirilmeye başlanmadı** (greenfield). B
 | Öncelik | Mobil ekip | Backend / ops |
 |---------|------------|---------------|
 | **P0** | Bu dokümanı oku (§0, §9, §25, §28). Paywall’ı yalnızca StoreKit / Play Billing ile planla. Backend’e ilet: Android+iOS **Google OAuth Client ID**, **Apple Bundle ID**, hedef **Product ID** listesi (`lotlot_pro_monthly`, `lotlot_premium_monthly` veya önerilen alternatifler). **Garanti, WebView checkout, harici kart akışı ekleme.** | Mobil ekibe bu dokümanı (MD veya DOCX) ilet. `main` deploy. Prod `IAP_ENABLED=1` + servis restart. |
-| **P1** | Google / Apple native auth SDK; JWT güvenli saklama; splash’te `GET /api/auth/me` + gerekirse refresh. E-posta auth: lazy Turnstile köprüsü (`https://lotlot.net/mobile/turnstile`). | Prod env: `GOOGLE_MOBILE_CLIENT_IDS`, `APPLE_CLIENT_ID` = native Bundle ID (§8.4–§8.5, §0.7). `TURNSTILE_SITE_KEY` tanımlı. |
+| **P1** | Google / Apple native auth SDK; JWT güvenli saklama; splash’te `GET /api/auth/me` + gerekirse refresh. E-posta auth: lazy Turnstile köprüsü (`https://lotlot.net/mobile/turnstile`). | Prod env: `GOOGLE_MOBILE_CLIENT_IDS`, `APPLE_MOBILE_CLIENT_IDS` = Bundle ID, `APPLE_CLIENT_ID` = web Services ID (§8.4–§8.5, §0.7). `TURNSTILE_SITE_KEY` tanımlı. |
 | **P2** | App Store Connect + Play Console subscription ürünleri. StoreKit 2 / Play Billing Library; satın alma → `POST /api/billing/iap/verify`; Restore → `POST /api/billing/iap/restore`; sonrası `/me` yenile. | `IAP_PRODUCT_TIERS_JSON`, `APPLE_IAP_BUNDLE_ID`, `GOOGLE_PLAY_PACKAGE_NAME`, `GOOGLE_PLAY_SERVICE_ACCOUNT_FILE`. Prod `IAP_TEST_MODE=0`. |
 | **P3** | Paywall öncesi `GET /api/billing/iap/config`. Sandbox / license tester ile E2E. Smoke script çıktısını backend’e gönder. | `./venv/bin/python scripts/mobile_predeploy_smoke.py --base-url https://lotlot.net --bearer-token <JWT>` yeşil. Preprod’da `--iap-verify-smoke` (`IAP_TEST_MODE=1`). |
 | **P4** | Watchlist, tahmin, Pro/Premium API entegrasyonu (§10–§18). Hisse detay: **Adil Değer** kartı → `GET /api/public/stocks/<symbol>/valuation` (§17.2, §22). Chart alerts (Pro+). | — |

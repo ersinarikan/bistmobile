@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-04 (v52 Landing/BIST cila + forgot UX)
+> Son güncelleme: 2026-08-05 (v59 native forgot-password §6.1)
 
 ---
 
@@ -48,7 +48,7 @@ flowchart TD
 | **F3** | Hisse detay | Tamam (+ ufuk/ML/formasyon durum parity) | Hayır |
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
-| **F6** | IAP paywall | İstemci + prod Apple config canlı; sandbox matris I1–I4 (cihazda I1/I2 ASC Sandbox Apple ID ile) | **Evet** |
+| **F6** | IAP paywall | İstemci + prod Apple; **I1/I2 Sandbox PASS** (2026-08-05, USB +58) | **Evet** |
 | **F7** | Mağaza teslimi | Checklist + Review notes + **post-P3 UX cila (v37)**; Add for Review = sandbox I1/I2 veya bilinçli not | Hazırlık |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
@@ -74,8 +74,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 #### F1 — Auth tamam
 
 - **Amaç:** Üç kanal + oturum yaşam döngüsü (guide §4–§8).
-- **Ekranlar:** Splash bootstrap; Login/Register; e-posta doğrulama bekleyen; şifre sıfırlama → **web** (`AuthWebUrls.forgotPassword` = `/login?panel=forgot-password`; GET `/forgot-password` 405 — POST-only form).
-- **API (guide):** §5–§6 login/register; §6.1 şifre sıfırlama WEB_ONLY (mobil JSON yok); §8.4–§8.5 Google/Apple mobile; §8.6 Turnstile `https://lotlot.net/mobile/turnstile`; §7 refresh; §8 logout / `DELETE /me`.
+- **Ekranlar:** Splash bootstrap; Login/Register; e-posta doğrulama bekleyen; şifre sıfırlama isteği **mobil JSON** + mail → web reset formu → `lotlot://` handoff.
+- **API (guide):** §5–§6 login/register; §6.1 `POST /api/auth/forgot-password` (`client:"mobile"`) + lazy Turnstile; yeni şifre yalnızca web formunda; §8.4–§8.5 Google/Apple mobile; §8.6 Turnstile; §7 refresh; §8 logout / `DELETE /me`.
 - **Skills:** `cybersecurity-expert`, `android-fullstack-developer`, `ios-fullstack-developer`, `test-engineer`.
 - **Acceptance:**
   - [x] E-posta + Turnstile lazy köprü (register/login)
@@ -86,9 +86,9 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Register → `pending_verification` + resend UX
   - [x] `email_not_verified` → doğrulama bekleyen ekran
   - [x] Apple native E2E (prod `APPLE_MOBILE_CLIENT_IDS=com.lotlot.lotlotnetMobile` + web `APPLE_CLIENT_ID`)
-  - [x] Şifremi unuttum → bilgilendirme + in-app browser `/login?panel=forgot-password` (WEB_ONLY; R1–R4)
-- **Dışı:** Web session cookie auth; mobil `POST /api/auth/forgot-password`. Guest shell F2’de (F1 sonrası splash hâlâ login’e düşebilir; F2’de browse’a açılır).
-- **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_MOBILE_CLIENT_IDS`, `TURNSTILE_SITE_KEY`. Google Cloud OAuth client’ları + iOS URL scheme. Reset: enumeration yok, hash’li token, rate/Turnstile web’de.
+  - [x] Şifremi unuttum → `POST /api/auth/forgot-password` + Turnstile; mail → web reset → `lotlot://…password_reset=1` (FP1–FP6)
+- **Dışı:** Web session cookie auth; mobil JSON ile yeni şifre POST’u (bilinçli — §6.1). Guest shell F2’de.
+- **Risk / web:** Prod `GOOGLE_MOBILE_CLIENT_IDS` (iOS+Android), `APPLE_MOBILE_CLIENT_IDS`, `TURNSTILE_SITE_KEY`. Reset: enumeration yok, hash’li token, rate/Turnstile.
 
 #### F2 — Keşfet + Watchlist (+ guest browse)
 
@@ -201,8 +201,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Config/ürün yokken çökme yok (`purchaseBlockedReason`; I3)
   - [x] Garanti/WebView checkout yolu yok (I4)
   - [x] Restore UI + API; soft gate → paywall
-  - [ ] **I1 cihaz:** Sandbox Apple ID → satın al → verify → `/me` tier
-  - [ ] **I2 cihaz:** Restore → tier
+  - [x] **I1 cihaz:** Sandbox Apple ID → satın al → verify → `/me` tier
+  - [x] **I2 cihaz:** Restore → tier
 - **Sandbox E2E prosedür (cihaz / TestFlight):**
   1. Settings → App Store → Sandbox Account (ASC Users and Access → Sandbox).
   2. Uygulama: soft gate veya Hesap → Planlar → Pro/Premium satın al.
@@ -297,10 +297,22 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+49` · tag `v49` — Hisse Ekle sheet; Detay primary buton; rozet boşluk.  
+**Build (kod):** `1.0.0+58` · USB install **2026-08-05** (IAP sandbox I1/I2 PASS + pending-complete / restore single-flight).  
 **Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **49+** tercih.
+**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **58+** tercih.
+
+**F6 preflight (2026-08-05 agent):**
+- `GET /api/billing/iap/config` → `enabled=true`, `verify_ready=true`, `platforms.apple=true`, ürün map OK
+- Product ID client/ASC: `lotlot_pro_monthly`, `lotlot_premium_monthly` (ASC ilk grup + fiyat yayılımı sonrası StoreKit her iki ürünü döndürür)
+- USB release `1.0.0+58` → iPhone 14 Plus (`00008110-0009384E1A46201E`)
+- Play Billing bu dilimde dışı (`google_play=false`)
+
+**I1 / I2 cihaz koşu (Sandbox — 2026-08-05 PASS):**
+1. Yeni e-posta kayıt → hesabı ücretsiz → Pro satın al → OK (verify 200).
+2. Premium’a yükselt → OK.
+3. Aboneliği geri yükle → tek `POST /iap/restore` + tier güncellendi (grup seviyesi Pro görünebilir).
+4. Aktif planda ilgili satın alma butonu kapalı; `already_subscribed` / pending queue → `completePurchase` her yolda.
 
 #### P1 smoke (cihaz TF 42)
 
@@ -324,14 +336,14 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 | T-M1 | Premium: alert toggle + Push + Wizard | OK | _bekliyor_ |
 | T-D1 | Downgrade alert OFF | Gate yok | _bekliyor_ |
 
-#### F6 Sandbox (aynı TF 42)
+#### F6 Sandbox (USB 58+)
 
 | ID | Senaryo | Sonuç |
 |----|---------|--------|
-| I1 | Sandbox Apple ID → satın al → verify → tier | _bekliyor_ |
-| I2 | Restore → tier | _bekliyor_ |
+| I1 | Sandbox Apple ID → satın al → verify → tier | **PASS** (Pro + Premium yükseltme) |
+| I2 | Restore → tier | **PASS** (tek restore POST; tier güncellendi) |
 
-**F7 go/no-go:** P1 + I1/I2 yeşil olmadan Add for Review yok (bilinçli sandbox notu yalnızca PM kararı).
+**F7 go/no-go:** P1 + I1/I2 yeşil olmadan Add for Review yok (bilinçli sandbox notu yalnızca PM kararı). I1/I2 **PASS** — sıradaki: F7 checklist / TF upload.
 
 ---
 
@@ -413,6 +425,31 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v59 (2026-08-05) — Native forgot-password (BIST v602 §6.1)
+- Guide senkron: `POST /api/auth/forgot-password` + `client:mobile` + lazy Turnstile
+- Yeni şifre web formunda; başarı → `lotlot://auth/login?…&password_reset=1`
+- Matris: FP1 generic 200 UX; FP2/3 Turnstile; FP4 rate_limited; FP5 invalid_email (prod 400 doğrulandı); FP6 handoff snackbar; FP7 login/register regresyon
+- Build **1.0.0+59**
+
+### v58 (2026-08-05) — F6 Sandbox I1/I2 PASS
+- ASC abonelik yayılımı sonrası Pro+Premium StoreKit OK; USB **1.0.0+58**
+- Restore single-flight (tek `POST /iap/restore`); JWS dedupe
+- `already_subscribed` / verify hata yolunda `completePurchase` (pending queue kilidi)
+- Buy stream race: unhandled poll + daha kısa timeout
+- Aktif planda satın alma butonu kapalı
+- Handbook §0.9 I1/I2 **PASS**; analyze + SonarCloud OK
+
+### v54 (2026-08-05) — Mobil kayıt → verify → app handoff
+- Register/resend API: `client: mobile` → mail `?src=mobile`
+- Confirm sonrası web: `lotlot://auth/login?email=` (web kayıt `/user` aynı)
+- Mobil: `app_links` + `lotlot` scheme; Auth email prefill; pending metin
+- Build **1.0.0+54**
+
+### v53 (2026-08-04) — Kayıt Turnstile köprüsü (takılma)
+- Root cause: prod `invalid_turnstile` → bridge; HTML `postMessage(object)` + top-level WKWebView’da `parent !== window` false → Flutter kanalına token gitmiyordu; ekran “Güvenlik doğrulaması”nda kilitleniyordu
+- Fix: `turnstileBridge` objeyi JSON string’e çevir; widget’ı `appearance: always` ile remount + `JSON.stringify` deliver; iptalde snackbar
+- Build **1.0.0+53**
 
 ### v52 (2026-08-04) — Landing/BIST cila + şifre sıfırlama UX
 - BIST katalog: Keşfet dilinde accent satırlar; boş/hata shell
@@ -746,10 +783,10 @@ sonar-scanner
 - [x] F4: hesap / yasal / bildirim prefs — bkz. **§0**
 - [x] F5 çekirdek: soft gate + chart alerts + push/socket — bkz. **§0**
 - [x] F5 dilim: wizard / AI commentary
-- [x] F6 istemci + prod Apple config + I3/I4 — bkz. **§0**; I1/I2 cihaz sandbox
+- [x] F6 istemci + prod Apple config + I3/I4 + **I1/I2 cihaz sandbox PASS** — bkz. **§0**
+- [x] Native forgot-password JSON + web reset handoff (BIST v602 / §6.1) — bkz. **§0 F1**
 - [ ] F7 Add for Review — bkz. **§0.7** go/no-go
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
-- [ ] Native JSON şifre sıfırlama (`POST /api/auth/forgot-password`) — guide §6.1 WEB_ONLY; web ekibi sözleşmesi gerekir
 
 ### 7.1 Parity review (2026-08-03) — F0–F2
 

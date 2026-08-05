@@ -2,13 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/brand/brand_assets.dart';
-import '../../core/legal/legal_urls.dart';
 import '../../core/theme/app_theme.dart';
 import '../shell/main_shell.dart';
 import '../watchlist/watchlist_controller.dart';
+import 'auth_helpers.dart';
 import 'oauth_sign_in.dart';
 import 'session_controller.dart';
 import 'turnstile_bridge_screen.dart';
@@ -21,11 +20,17 @@ class AuthScreen extends StatefulWidget {
   const AuthScreen({
     super.key,
     this.initialMode = AuthMode.login,
+    this.initialEmail,
     this.popOnSuccess = false,
+    this.passwordResetHandoff = false,
   });
 
   final AuthMode initialMode;
+  final String? initialEmail;
   final bool popOnSuccess;
+
+  /// `lotlot://auth/login?…&password_reset=1` — şifre web’de güncellendi.
+  final bool passwordResetHandoff;
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -47,8 +52,17 @@ class _AuthScreenState extends State<AuthScreen> {
   void initState() {
     super.initState();
     _mode = widget.initialMode;
+    final seed = widget.initialEmail?.trim();
+    if (seed != null && seed.isNotEmpty) {
+      _email.text = seed;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SessionController>().setError(null);
+      if (widget.passwordResetHandoff && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AuthCopy.passwordResetDone)),
+        );
+      }
     });
   }
 
@@ -97,6 +111,9 @@ class _AuthScreenState extends State<AuthScreen> {
       if (!mounted) return;
       if (token == null || token.isEmpty) {
         setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AuthCopy.turnstileRequired)),
+        );
         return;
       }
       result = await session.loginWithEmail(
@@ -105,9 +122,7 @@ class _AuthScreenState extends State<AuthScreen> {
         turnstileToken: token,
       );
       if (result == LoginResult.needsTurnstile) {
-        session.setError(
-          'Güvenlik doğrulaması yenilenmeli. Lütfen tekrar deneyin.',
-        );
+        session.setError(AuthCopy.turnstileRetry);
         result = LoginResult.failed;
       }
     }
@@ -151,6 +166,9 @@ class _AuthScreenState extends State<AuthScreen> {
       if (!mounted) return;
       if (token == null || token.isEmpty) {
         setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text(AuthCopy.turnstileRequired)),
+        );
         return;
       }
       result = await session.register(
@@ -161,9 +179,7 @@ class _AuthScreenState extends State<AuthScreen> {
         turnstileToken: token,
       );
       if (result == RegisterResult.needsTurnstile) {
-        session.setError(
-          'Güvenlik doğrulaması yenilenmeli. Lütfen tekrar deneyin.',
-        );
+        session.setError(AuthCopy.turnstileRetry);
         result = RegisterResult.failed;
       }
     }
@@ -245,7 +261,9 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _forgotPassword() async {
-    final go = await showDialog<bool>(
+    final emailCtrl = TextEditingController(text: _email.text.trim());
+    final formKey = GlobalKey<FormState>();
+    final go = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: LotlotColors.surfaceElevated,
@@ -253,41 +271,104 @@ class _AuthScreenState extends State<AuthScreen> {
           'Şifre sıfırlama',
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
-        content: const Text(
-          'Şifre sıfırlama lotlot.net üzerinde tamamlanır. '
-          'Yeni şifreyi kaydettikten sonra bu ekrandan giriş yapın.',
-          style: TextStyle(height: 1.4),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'E-posta adresinize sıfırlama bağlantısı gönderilir. '
+                'Yeni şifreyi lotlot.net formunda belirlersiniz.',
+                style: TextStyle(height: 1.4),
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                decoration: const InputDecoration(labelText: 'E-posta'),
+                validator: (v) {
+                  final t = v?.trim() ?? '';
+                  if (t.isEmpty || !t.contains('@')) {
+                    return 'Geçerli bir e-posta girin';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Vazgeç'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Devam'),
+            onPressed: () {
+              if (formKey.currentState?.validate() != true) return;
+              Navigator.pop(ctx, emailCtrl.text.trim());
+            },
+            child: const Text('Gönder'),
           ),
         ],
       ),
     );
-    if (go != true || !mounted) return;
+    emailCtrl.dispose();
+    if (go == null || go.isEmpty || !mounted) return;
+    await _sendPasswordReset(go);
+  }
 
-    final uri = Uri.parse(AuthWebUrls.forgotPassword);
-    try {
-      final ok = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
-      if (!ok) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (_) {
-      try {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } catch (_) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sayfa açılamadı')),
-        );
-      }
+  Future<void> _sendPasswordReset(String email) async {
+    setState(() => _loading = true);
+    final session = context.read<SessionController>();
+    var result = await session.requestPasswordReset(email: email);
+
+    if (result == PasswordResetResult.needsTurnstile && mounted) {
+      result = await _passwordResetWithTurnstile(session, email);
     }
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+    _email.text = email;
+
+    if (result == PasswordResetResult.success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(AuthCopy.passwordResetSent),
+          duration: Duration(seconds: 6),
+        ),
+      );
+      return;
+    }
+    if (session.lastError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(session.lastError!)),
+      );
+    }
+  }
+
+  Future<PasswordResetResult> _passwordResetWithTurnstile(
+    SessionController session,
+    String email,
+  ) async {
+    final token = await TurnstileBridgeScreen.open(context);
+    if (!mounted) return PasswordResetResult.failed;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(AuthCopy.turnstileRequired)),
+      );
+      return PasswordResetResult.failed;
+    }
+    final result = await session.requestPasswordReset(
+      email: email,
+      turnstileToken: token,
+    );
+    if (result == PasswordResetResult.needsTurnstile) {
+      session.setError(AuthCopy.turnstileRetry);
+      return PasswordResetResult.failed;
+    }
+    return result;
   }
 
   @override

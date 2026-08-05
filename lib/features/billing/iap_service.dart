@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Store ürün ID’leri — guide §9.4 / config fallback.
@@ -27,6 +28,8 @@ class IapService {
   final InAppPurchase _iap = InAppPurchase.instance;
   StreamSubscription<List<PurchaseDetails>>? _sub;
   final _purchaseWaiters = <String, Completer<PurchaseDetails>>{};
+  /// Listener açılmadan / buy beklemeden gelen (Apple unfinished queue) işlemler.
+  final _unhandled = <String, PurchaseDetails>{};
 
   bool available = false;
   String? lastError;
@@ -65,57 +68,167 @@ class IapService {
   }
 
   /// Satın alma; tamamlanınca [PurchaseDetails] döner.
+  ///
+  /// iOS’ta önceki oturumda `completePurchase` çağrılmadıysa StoreKit
+  /// `storekit_duplicate_product_object` fırlatır — bekleyen işlemi alırız.
   Future<PurchaseDetails> buy(ProductDetails product) async {
     if (!available) {
       throw StateError(lastError ?? 'Mağaza kullanılamıyor');
     }
+
+    PurchaseDetails? takeReady() {
+      final existing = _unhandled.remove(product.id);
+      if (existing != null &&
+          (existing.status == PurchaseStatus.purchased ||
+              existing.status == PurchaseStatus.restored)) {
+        return existing;
+      }
+      return null;
+    }
+
+    final early = takeReady();
+    if (early != null) return early;
+
     final completer = Completer<PurchaseDetails>();
     _purchaseWaiters[product.id] = completer;
 
-    final param = PurchaseParam(productDetails: product);
-    // Abonelikler non-consumable / auto-renewing subscription olarak gelir.
-    final ok = await _iap.buyNonConsumable(purchaseParam: param);
-    if (!ok) {
+    // Stream, waiter kaydından hemen önce gelmiş olabilir.
+    final raced = takeReady();
+    if (raced != null) {
       _purchaseWaiters.remove(product.id);
-      throw StateError('Satın alma başlatılamadı');
+      return raced;
     }
-    return completer.future.timeout(
-      const Duration(minutes: 5),
-      onTimeout: () {
+
+    final param = PurchaseParam(productDetails: product);
+    try {
+      final ok = await _iap.buyNonConsumable(purchaseParam: param);
+      if (!ok) {
         _purchaseWaiters.remove(product.id);
-        throw TimeoutException('Satın alma zaman aşımı');
-      },
-    );
+        throw StateError('Satın alma başlatılamadı');
+      }
+    } on PlatformException catch (e) {
+      if (_isPendingDuplicate(e)) {
+        final pending = takeReady();
+        if (pending != null) {
+          _purchaseWaiters.remove(product.id);
+          return pending;
+        }
+        try {
+          await _iap.restorePurchases();
+        } catch (_) {/* stream */}
+        return _waitForPurchase(product.id, completer, const Duration(seconds: 45));
+      }
+      _purchaseWaiters.remove(product.id);
+      rethrow;
+    }
+
+    return _waitForPurchase(product.id, completer, const Duration(seconds: 90));
   }
 
-  Future<List<PurchaseDetails>> restore() async {
-    if (!available) return [];
-    final collected = <PurchaseDetails>[];
-    final done = Completer<List<PurchaseDetails>>();
-    late final StreamSubscription<List<PurchaseDetails>> sub;
-    Timer? settle;
-    sub = _iap.purchaseStream.listen((list) {
-      for (final p in list) {
-        if (p.status == PurchaseStatus.restored ||
-            p.status == PurchaseStatus.purchased) {
-          collected.add(p);
-        }
+  /// Stream gecikirse `_unhandled` poll; Apple sheet bitti ama event kaçtıysa kurtarır.
+  Future<PurchaseDetails> _waitForPurchase(
+    String productId,
+    Completer<PurchaseDetails> completer,
+    Duration timeout,
+  ) async {
+    final poll = Timer.periodic(const Duration(milliseconds: 400), (_) {
+      if (completer.isCompleted) return;
+      final ready = _unhandled.remove(productId);
+      if (ready != null &&
+          (ready.status == PurchaseStatus.purchased ||
+              ready.status == PurchaseStatus.restored)) {
+        _purchaseWaiters.remove(productId);
+        if (!completer.isCompleted) completer.complete(ready);
       }
-      settle?.cancel();
-      settle = Timer(const Duration(milliseconds: 900), () {
-        if (!done.isCompleted) done.complete(List.of(collected));
-      });
     });
     try {
-      await _iap.restorePurchases();
-      return await done.future.timeout(
-        const Duration(seconds: 15),
-        onTimeout: () => List.of(collected),
+      return await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          _purchaseWaiters.remove(productId);
+          final late = _unhandled.remove(productId);
+          if (late != null &&
+              (late.status == PurchaseStatus.purchased ||
+                  late.status == PurchaseStatus.restored)) {
+            return late;
+          }
+          throw TimeoutException(
+            'Satın alma tamamlanamadı. Aboneliği geri yükle’yi deneyin.',
+          );
+        },
       );
     } finally {
-      settle?.cancel();
-      await sub.cancel();
+      poll.cancel();
     }
+  }
+
+  Future<List<PurchaseDetails>>? _restoreFlight;
+  Completer<List<PurchaseDetails>>? _restoreDone;
+  final _restoreBuffer = <PurchaseDetails>[];
+  Timer? _restoreSettle;
+
+  /// Tek uçuş: eşzamanlı restore aynı Future’ı paylaşır (çift API POST yok).
+  Future<List<PurchaseDetails>> restore() {
+    if (!available) return Future.value([]);
+    return _restoreFlight ??= _restoreOnce().whenComplete(() {
+      _restoreFlight = null;
+    });
+  }
+
+  Future<List<PurchaseDetails>> _restoreOnce() async {
+    _restoreSettle?.cancel();
+    _restoreBuffer
+      ..clear()
+      ..addAll(
+        _unhandled.values.where(
+          (p) =>
+              p.status == PurchaseStatus.restored ||
+              p.status == PurchaseStatus.purchased,
+        ),
+      );
+    _unhandled.clear();
+
+    final done = Completer<List<PurchaseDetails>>();
+    _restoreDone = done;
+
+    void settleSoon() {
+      _restoreSettle?.cancel();
+      _restoreSettle = Timer(const Duration(milliseconds: 900), () {
+        if (!done.isCompleted) {
+          done.complete(_dedupePurchases(_restoreBuffer));
+        }
+        if (identical(_restoreDone, done)) {
+          _restoreDone = null;
+        }
+      });
+    }
+
+    try {
+      await _iap.restorePurchases();
+      settleSoon();
+      return await done.future.timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => _dedupePurchases(_restoreBuffer),
+      );
+    } finally {
+      _restoreSettle?.cancel();
+      _restoreSettle = null;
+      if (identical(_restoreDone, done)) {
+        _restoreDone = null;
+      }
+    }
+  }
+
+  List<PurchaseDetails> _dedupePurchases(List<PurchaseDetails> list) {
+    final seen = <String>{};
+    final out = <PurchaseDetails>[];
+    for (final p in list) {
+      final key = p.purchaseID?.isNotEmpty == true
+          ? p.purchaseID!
+          : '${p.productID}:${p.verificationData.serverVerificationData}';
+      if (seen.add(key)) out.add(p);
+    }
+    return out;
   }
 
   Future<void> complete(PurchaseDetails details) async {
@@ -153,20 +266,58 @@ class IapService {
     return 'unknown';
   }
 
+  bool _isPendingDuplicate(PlatformException e) {
+    final code = e.code.toLowerCase();
+    final msg = (e.message ?? '').toLowerCase();
+    return code.contains('duplicate') ||
+        msg.contains('pending transaction') ||
+        msg.contains('duplicate');
+  }
+
   void _onPurchases(List<PurchaseDetails> list) {
+    var touchedRestore = false;
     for (final p in list) {
       if (p.status == PurchaseStatus.pending) continue;
+
       final waiter = _purchaseWaiters.remove(p.productID);
-      if (waiter == null || waiter.isCompleted) continue;
-      if (p.status == PurchaseStatus.error) {
-        waiter.completeError(
-          StateError(p.error?.message ?? 'Satın alma hatası'),
-        );
-      } else if (p.status == PurchaseStatus.canceled) {
-        waiter.completeError(StateError('Satın alma iptal edildi'));
-      } else {
-        waiter.complete(p);
+      if (waiter != null && !waiter.isCompleted) {
+        if (p.status == PurchaseStatus.error) {
+          waiter.completeError(
+            StateError(p.error?.message ?? 'Satın alma hatası'),
+          );
+        } else if (p.status == PurchaseStatus.canceled) {
+          waiter.completeError(StateError('Satın alma iptal edildi'));
+        } else {
+          waiter.complete(p);
+        }
+        continue;
       }
+
+      if (_restoreDone != null &&
+          (p.status == PurchaseStatus.purchased ||
+              p.status == PurchaseStatus.restored)) {
+        _restoreBuffer.add(p);
+        touchedRestore = true;
+        continue;
+      }
+
+      // Buy/restore beklemiyorken gelen unfinished queue.
+      if (p.status == PurchaseStatus.purchased ||
+          p.status == PurchaseStatus.restored) {
+        _unhandled[p.productID] = p;
+      } else if (p.pendingCompletePurchase) {
+        unawaited(complete(p));
+      }
+    }
+    if (touchedRestore && _restoreDone != null && !_restoreDone!.isCompleted) {
+      _restoreSettle?.cancel();
+      _restoreSettle = Timer(const Duration(milliseconds: 900), () {
+        final done = _restoreDone;
+        if (done != null && !done.isCompleted) {
+          done.complete(_dedupePurchases(_restoreBuffer));
+        }
+        _restoreDone = null;
+      });
     }
   }
 }

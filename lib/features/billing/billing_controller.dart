@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../../core/api/api_client.dart';
@@ -35,6 +36,9 @@ class BillingController extends ChangeNotifier {
   Map<String, ProductDetails> storeProducts = {};
   bool storeAvailable = false;
 
+  /// Eşzamanlı restore → tek API POST (single-flight).
+  Future<bool>? _restoreFlight;
+
   bool get canPurchase =>
       iapEnabled && verifyReady && storeAvailable && _platformOk;
 
@@ -49,6 +53,9 @@ class BillingController extends ChangeNotifier {
   }
 
   ProductDetails? productFor(String id) => storeProducts[id];
+
+  /// StoreKit/Play bu ürünü döndürdü mü (fiyat satırı ve satın alma için).
+  bool hasStoreProduct(String productId) => storeProducts.containsKey(productId);
 
   String? priceLabel(String productId) => storeProducts[productId]?.price;
 
@@ -98,6 +105,7 @@ class BillingController extends ChangeNotifier {
   }
 
   Future<bool> purchase(String productId) async {
+    if (busy) return false;
     if (!canPurchase) {
       error = _disabledMessage();
       notifyListeners();
@@ -114,42 +122,74 @@ class BillingController extends ChangeNotifier {
     error = null;
     lastErrorCode = null;
     notifyListeners();
+    PurchaseDetails? details;
     try {
-      final details = await _iap.buy(product);
+      details = await _iap.buy(product);
       final payload = _iap.toVerifyPayload(details);
       if (payload == null) {
         error = 'Satın alma doğrulama verisi alınamadı.';
-        await _iap.complete(details);
         return false;
       }
-      await _api.verifyIap(
-        platform: payload.platform,
-        productId: payload.productId,
-        signedTransaction: payload.signedTransaction,
-        purchaseToken: payload.purchaseToken,
-      );
-      await _iap.complete(details);
+      try {
+        await _api.verifyIap(
+          platform: payload.platform,
+          productId: payload.productId,
+          signedTransaction: payload.signedTransaction,
+          purchaseToken: payload.purchaseToken,
+        );
+      } on ApiException catch (e) {
+        // 409 already_subscribed: mağaza işlemini yine bitirmeliyiz (yoksa kuyruk kilitlenir).
+        if (e.errorCode == 'already_subscribed' || e.statusCode == 409) {
+          await _session.refreshMe();
+          error = null;
+          lastErrorCode = e.errorCode;
+          return true;
+        }
+        error = _friendlyBillingError(e);
+        lastErrorCode = e.errorCode;
+        return false;
+      }
       await _session.refreshMe();
       return true;
     } on ApiException catch (e) {
       error = _friendlyBillingError(e);
       lastErrorCode = e.errorCode;
       return false;
+    } on PlatformException catch (e) {
+      error = _friendlyPlatformError(e);
+      return false;
     } catch (e) {
       final msg = e.toString();
       if (msg.contains('iptal')) {
-        error = null; // kullanıcı iptali — sessiz
+        error = null;
       } else {
-        error = msg.replaceFirst('Bad state: ', '').replaceFirst('StateError: ', '');
+        error = msg
+            .replaceFirst('Bad state: ', '')
+            .replaceFirst('StateError: ', '')
+            .replaceFirst('Exception: ', '')
+            .replaceFirst('TimeoutException: ', '');
       }
       return false;
     } finally {
+      // Verify başarısız olsa bile StoreKit kuyruğunu boşalt (pending → loader kilidi).
+      if (details != null) {
+        try {
+          await _iap.complete(details);
+        } catch (_) {/* ignore */}
+      }
       busy = false;
       notifyListeners();
     }
   }
 
-  Future<bool> restorePurchases() async {
+  Future<bool> restorePurchases() {
+    return _restoreFlight ??= _restorePurchasesOnce().whenComplete(() {
+      _restoreFlight = null;
+    });
+  }
+
+  Future<bool> _restorePurchasesOnce() async {
+    if (busy) return false;
     if (!storeAvailable) {
       error = _iap.lastError ?? 'Mağaza kullanılamıyor.';
       notifyListeners();
@@ -174,7 +214,8 @@ class BillingController extends ChangeNotifier {
 
       final platform = _iap.storePlatform;
       if (platform == 'apple') {
-        final jws = <String>[];
+        // Aynı JWS birden fazla gelirse tek POST.
+        final jws = <String>{};
         for (final p in list) {
           final payload = _iap.toVerifyPayload(p);
           if (payload?.signedTransaction != null) {
@@ -186,17 +227,21 @@ class BillingController extends ChangeNotifier {
           error = 'Geri yükleme doğrulama verisi alınamadı.';
           return false;
         }
-        await _api.restoreIap(platform: 'apple', signedTransactions: jws);
+        await _api.restoreIap(
+          platform: 'apple',
+          signedTransactions: jws.toList(),
+        );
       } else if (platform == 'google') {
+        final seen = <String>{};
         final purchases = <Map<String, String>>[];
         for (final p in list) {
           final payload = _iap.toVerifyPayload(p);
-          if (payload?.purchaseToken != null) {
-            purchases.add({
-              'product_id': payload!.productId,
-              'purchase_token': payload.purchaseToken!,
-            });
-          }
+          final token = payload?.purchaseToken;
+          if (token == null || !seen.add(token)) continue;
+          purchases.add({
+            'product_id': payload!.productId,
+            'purchase_token': token,
+          });
           await _iap.complete(p);
         }
         if (purchases.isEmpty) {
@@ -215,6 +260,9 @@ class BillingController extends ChangeNotifier {
       error = _friendlyBillingError(e);
       lastErrorCode = e.errorCode;
       return false;
+    } on PlatformException catch (e) {
+      error = _friendlyPlatformError(e);
+      return false;
     } catch (e) {
       error = e.toString();
       return false;
@@ -222,6 +270,20 @@ class BillingController extends ChangeNotifier {
       busy = false;
       notifyListeners();
     }
+  }
+
+  String _friendlyPlatformError(PlatformException e) {
+    final code = e.code.toLowerCase();
+    final msg = (e.message ?? '').toLowerCase();
+    if (code.contains('duplicate') || msg.contains('pending transaction')) {
+      return 'Bekleyen bir mağaza işlemi var. '
+          'Aboneliği geri yükle’yi deneyin veya uygulamayı kapatıp açın.';
+    }
+    if (code.contains('cancel') || msg.contains('cancel')) {
+      return 'Satın alma iptal edildi';
+    }
+    if (msg.isNotEmpty) return msg;
+    return 'Mağaza işlemi başarısız ($code)';
   }
 
   String _disabledMessage() {
