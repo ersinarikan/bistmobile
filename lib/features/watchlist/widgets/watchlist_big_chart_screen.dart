@@ -33,9 +33,6 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
   bool _aiLoading = false;
   bool _aiDoneOnce = false;
 
-  List<({int start, int end, bool bullish})> get _ranges =>
-      _patternRangesFrom(widget.controller.pattern);
-
   Future<void> _toggleForecast(bool? value) async {
     final want = value == true;
     if (!want) {
@@ -122,7 +119,7 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
                         levels: ctrl.levels,
                         forecasts:
                             _showForecast ? ctrl.forecasts : const [],
-                        patternRanges: _ranges,
+                        pattern: ctrl.pattern,
                         showForecastToggle: true,
                         forecastEnabled: _showForecast,
                         onForecastChanged: _toggleForecast,
@@ -154,28 +151,4 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
       },
     );
   }
-}
-
-List<({int start, int end, bool bullish})> _patternRangesFrom(
-  Map<String, dynamic>? pattern,
-) {
-  final raw = pattern?['patterns'];
-  if (raw is! List) return const [];
-  final out = <({int start, int end, bool bullish})>[];
-  const skip = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
-  for (final item in raw) {
-    if (item is! Map) continue;
-    final src = item['source']?.toString() ?? '';
-    if (skip.contains(src)) continue;
-    final range = item['range'];
-    if (range is! Map) continue;
-    final s = range['start_index'];
-    final e = range['end_index'];
-    if (s is! num || e is! num) continue;
-    final signal = (item['signal'] ?? '').toString().toLowerCase();
-    final bullish =
-        signal.contains('bull') || signal == 'buy' || signal == 'al';
-    out.add((start: s.round(), end: e.round(), bullish: bullish));
-  }
-  return out;
 }

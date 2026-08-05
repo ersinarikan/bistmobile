@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../auth/session_controller.dart';
 import '../../pro/soft_gate_sheet.dart';
 import '../stock_detail_controller.dart';
+import 'formation_range_math.dart';
 
 enum ChartDetailMode { simple, detailed }
 
@@ -17,7 +18,7 @@ class SimpleCandleChart extends StatefulWidget {
     required this.bars,
     this.levels,
     this.forecasts = const [],
-    this.patternRanges = const [],
+    this.pattern,
     this.forceDetailed = false,
     this.showForecastToggle = false,
     this.forecastEnabled = false,
@@ -29,8 +30,8 @@ class SimpleCandleChart extends StatefulWidget {
   final List<OhlcvBar> bars;
   final Map<String, dynamic>? levels;
   final List<Map<String, dynamic>> forecasts;
-  /// Absolute bar indices in full `bars` series: {start, end, bullish?}
-  final List<({int start, int end, bool bullish})> patternRanges;
+  /// Full pattern-analysis payload; shade indices use `data_points` (spark parity).
+  final Map<String, dynamic>? pattern;
   /// Büyük grafik: Öngörü açıkken Detaylı katmanı zorla.
   final bool forceDetailed;
   final bool showForecastToggle;
@@ -137,7 +138,6 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
       widget.bars.length,
     );
     final display = widget.bars.sublist(widget.bars.length - take);
-    final offset = widget.bars.length - display.length;
     final closes = display.map((b) => b.close).toList();
     final ema20 = _ema(closes, 20);
     final ema50 = _ema(closes, 50);
@@ -200,19 +200,9 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
         (_selected ?? display.length - 1).clamp(0, display.length - 1);
     final sel = display[selIdx];
 
-    final localRanges = <({int start, int end, bool bullish})>[];
-    if (showFormationShade && session.isPro) {
-      for (final r in widget.patternRanges) {
-        final s = r.start - offset;
-        final e = r.end - offset;
-        if (e < 0 || s >= display.length) continue;
-        localRanges.add((
-          start: s.clamp(0, display.length - 1),
-          end: e.clamp(0, display.length - 1),
-          bullish: r.bullish,
-        ));
-      }
-    }
+    final localRanges = showFormationShade && session.isPro
+        ? localizeFormationShades(widget.pattern, display.length)
+        : const <FormationShadeRange>[];
 
     final volH = showVolume ? 56.0 : 0.0;
     final rsiH = showRsi ? 48.0 : 0.0;
@@ -707,7 +697,7 @@ class _ChartPainter extends CustomPainter {
   final List<double?> bbUpper;
   final List<double?> rsi;
   final List<Map<String, dynamic>> forecasts;
-  final List<({int start, int end, bool bullish})> patternRanges;
+  final List<FormationShadeRange> patternRanges;
   final double minY;
   final double maxY;
   final int selected;

@@ -17,29 +17,6 @@ import 'widgets/public_analysis_gate_panel.dart';
 import 'widgets/simple_candle_chart.dart';
 import 'widgets/valuation_card.dart';
 
-List<({int start, int end, bool bullish})> _patternRangesFrom(
-  Map<String, dynamic>? pattern,
-) {
-  final raw = pattern?['patterns'];
-  if (raw is! List) return const [];
-  final out = <({int start, int end, bool bullish})>[];
-  const skip = {'ML_PREDICTOR', 'ENHANCED_ML', 'FINGPT'};
-  for (final item in raw) {
-    if (item is! Map) continue;
-    final src = item['source']?.toString() ?? '';
-    if (skip.contains(src)) continue;
-    final range = item['range'];
-    if (range is! Map) continue;
-    final s = range['start_index'];
-    final e = range['end_index'];
-    if (s is! num || e is! num) continue;
-    final signal = (item['signal'] ?? '').toString().toLowerCase();
-    final bullish = signal.contains('bull') || signal == 'buy' || signal == 'al';
-    out.add((start: s.round(), end: e.round(), bullish: bullish));
-  }
-  return out;
-}
-
 class StockDetailScreen extends StatefulWidget {
   const StockDetailScreen({
     super.key,
@@ -255,9 +232,7 @@ class _StockDetailScreenState extends State<StockDetailScreen> {
                       bars: ctrl.bars,
                       levels: auth ? ctrl.levels : null,
                       forecasts: auth ? ctrl.forecasts : const [],
-                      patternRanges: auth
-                          ? _patternRangesFrom(ctrl.pattern)
-                          : const [],
+                      pattern: auth ? ctrl.pattern : null,
                       publicPreview: !auth,
                       onPublicTap: auth ? null : _openLogin,
                     ),

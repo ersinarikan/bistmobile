@@ -297,10 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+58` · USB install **2026-08-05** (IAP sandbox I1/I2 PASS + pending-complete / restore single-flight).  
-**Son TF upload:** `1.0.0+42` · tag `v42` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
+**Build (kod):** `1.0.0+61` · formasyon spark↔big index parity + iOS MinimumOSVersion 15.0.  
+**Son TF upload:** `1.0.0+61` (hedef) · tag `v54` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter Deliver **OK** (2026-08-04 ~16:58) — `1.0.0 (42)`. Cihazda USB **58+** tercih.
+**Upload:** Transporter — TF **61** (MinimumOSVersion 15.0; 90068 uyarısı kapandı).
 
 **F6 preflight (2026-08-05 agent):**
 - `GET /api/billing/iap/config` → `enabled=true`, `verify_ready=true`, `platforms.apple=true`, ürün map OK
@@ -425,6 +425,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v61 (2026-08-05) — Formasyon chart index hizası + iOS 15
+- Spark ↔ büyük mum: ortak `data_points` offset (`formation_range_math.dart` / `localizeFormationShades`)
+- Çift `_patternRangesFrom` kaldırıldı; candle `pattern` payload alır
+- Eligibility spark ile aynı (ML/FINGPT, INVALID/STALE); renk semantiği bilinçli aynı (spark kırmızı, mum sinyal)
+- TF feedback: formasyon aydınlatma tarih kayması
+- `IPHONEOS_DEPLOYMENT_TARGET` / Podfile **15.0** (ASC 90068)
+- Matris FR1–FR6 unit; Build **1.0.0+61** · git tag **v54**
 
 ### v59 (2026-08-05) — Native forgot-password (BIST v602 §6.1)
 - Guide senkron: `POST /api/auth/forgot-password` + `client:mobile` + lazy Turnstile
@@ -846,7 +854,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | Hisse public kartlar | valuation/fund/corporate | Var | **ok** |
 | Hacim / volatilite meta | volume-tier + regime | `MarketMetaCard` | **ok** (v30) |
 | Chart + levels | Lightweight Charts | Sade: mum+MA20+hacim+S/R; Detaylı: +EMA50/BB/RSI/öngörü | **ok** (v31–v33) |
-| Chart formasyon highlight | range shade | Detaylı + Pro soft gate | **ok** (v33; drawing suite yok) |
+| Chart formasyon highlight | range shade | Detaylı + Pro soft gate; spark↔big `data_points` index | **ok** (v61) |
 | Sezgisel + haber sheet | 💡 portal | Rozet + bottom sheet | **ok** |
 | Ufuk + Genel Sinyal | Detay modal ufuk | Chip + `signals_by_horizon` | **ok** (v28) |
 | ML / öngörü özeti | `detailMlUnified` + chart forecasts | `ml_unified` kart + chart polyline | **ok** (v28/v33) |
@@ -903,7 +911,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | C-T1 | EMA/RSI/BB/Hacim/S/R tek tek aç-kapa; Sade/Detaylı preset | PASS (kod) |
 | D-O2 | Detay: spark → valuation → fundamentals → pattern → meta | PASS (kod) |
 | D-S1 | Spark: Bar/min/max + Y etiketleri | PASS (kod) |
-| D-P1 | Formasyon tık → sarı vurgu; çoklu bant görünür | PASS (kod) |
+| D-P1 | Formasyon tık → sarı vurgu; spark↔big aynı index bandı | PASS (kod FR6) |
 | D-Y1 | `görsel onay` yalnız VISUAL_YOLO confirmation; tooltip | PASS (kod) |
 | C-D1 | Büyük grafik alt tarih etiketleri + dokunuş OHLCV kartı | PASS (kod) |
 | B-W1 | AppBar wordmark → Landing | PASS (kod; v48 yatay) |
