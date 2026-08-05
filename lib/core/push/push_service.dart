@@ -88,7 +88,8 @@ class PushService extends ChangeNotifier {
         return false;
       }
       if (!firebaseReady) {
-        statusMessage = 'Bildirimler şu an kurulamadı.';
+        statusMessage =
+            'Firebase yapılandırması eksik (GoogleService-Info.plist).';
         debugPrint('PushService: Firebase not ready; device register skipped');
         notifyListeners();
         return false;
@@ -101,7 +102,8 @@ class PushService extends ChangeNotifier {
       }
       final token = await fetchToken();
       if (token == null || token.length < 20) {
-        statusMessage = 'Bildirimler şu an kurulamadı.';
+        statusMessage =
+            'FCM token alınamadı. Bildirim izni ve APNs/Firebase ayarını kontrol edin.';
         debugPrint('PushService: token missing or too short');
         notifyListeners();
         return false;

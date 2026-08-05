@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-05 (v64 LotlotAccentCard iPad boyama fix; F7 Waiting for Review)
+> Son güncelleme: 2026-08-05 (v65 iOS push: Firebase plist + FCM HTTP v1 prod; USB ship)
 
 ---
 
@@ -17,6 +17,7 @@
 | Monetization kanalı | Yalnızca **StoreKit / Play Billing**. Garanti / WebView checkout **asla** (App Store 3.1.1). |
 | İstemci rolü | Thin client: tier, kota, sinyal, ML kararlarını **yeniden hesaplama**; API’yi render et. |
 | Guest browse | **Evet.** Kayıt/login zorunlu olmadan public keşif (arama, BIST özet, hisse teaser). Watchlist / Pro özellikler auth ister. |
+| Admin yüzey | **Asla.** Web admin panel alanları / `/api/admin/*` / `/api/internal/*` / HPO **kullanıcı mobil veya web dashboard’a açılmaz** (2026-08-05 kilit). |
 
 **Neden IAP sonda:** Auth + watchlist + hisse deneyimi doğrulanmadan paywall scope ve Review riskini büyütür. IAP API CANLI olsa da ürün değeri önce kanıtlanır.
 
@@ -177,7 +178,9 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] 429 rate_limited/busy + 502 anlaşılır
   - [x] Premium: Sihirbaz (`AL`/`SAT`/`TUT`, horizons prod) → `results` → detay
   - [x] 400 `invalid_selection` + `details`
-- **Firebase ekleme:** Console’dan iOS/Android app → dosyaları yerel yollara koy → rebuild. Commit etme.
+- **Firebase ekleme:** Console’dan iOS app → `GoogleService-Info.plist` → `ios/Runner/` (gitignore; project `lotlotnet-8c348`). Kurulum: `tool/ios_push_bootstrap.sh`. APNs Auth Key → Firebase Cloud Messaging (dev+prod).
+- **Prod FCM:** HTTP v1 + service account (`FCM_SERVICE_ACCOUNT_FILE`, `FCM_PROJECT_ID=lotlotnet-8c348`, `FCM_ENABLED=1`). Legacy `FCM_SERVER_KEY` fallback. Secrets: `.secrets/` (commit yok).
+- **APNs entitlements:** Debug `Runner.entitlements` (`development`); Release/Profile `RunnerRelease.entitlements` (`production`).
 - **Privacy / Data safety:** FCM registration token = cihaz tanımlayıcı; App Privacy / Play Data safety’de bildirim + identifiers. Token loglanmaz.
 - **Post-dev matris:** S1–S10 (plan); wizard W1–W7.
 - **Dışı:** StoreKit/Play purchase; VAPID/web-push.
@@ -231,6 +234,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 ### 0.5 Tüm fazlarda bilinçli dışı
 
 - `/api/admin/*`, `/api/internal/*`, `/api/automation/*`, HPO, admin dashboard
+- **Admin panel UI/alanlarının** kullanıcıya (mobil veya normal web dashboard) taşınması — **yasak** (§0.1 kilit)
 - Garanti / in-app WebView checkout
 - Web chart drawing suite kopyası
 - `MOBILE_API_INTEGRATION_GUIDE.md` dosyasına mobil ekibinin “sahiplenerek” edit’i
@@ -298,9 +302,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+64` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+65` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v57` (+64 accent-card fix).  
+**Son kod tag:** `v58` (+65 iOS push Firebase + FCM HTTP v1).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -426,6 +430,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v65 (2026-08-05) — iOS push Firebase + FCM HTTP v1
+- `GoogleService-Info.plist` lokal (gitignore) + Xcode Resources; project `lotlotnet-8c348`
+- Release/Profile: `RunnerRelease.entitlements` (`aps-environment=production`)
+- Hesap push status metinleri (plist / FCM token) netleştirildi
+- `tool/ios_push_bootstrap.sh` + `.secrets/fcm.env.example`
+- Prod: service account + FCM HTTP v1 (`FCM_SERVICE_ACCOUNT_FILE` / `FCM_PROJECT_ID`)
+- Build **1.0.0+65** · git tag **v58**
 
 ### v64 (2026-08-05) — LotlotAccentCard iPad boyama fix
 - Non-uniform `Border` + `borderRadius` → Flutter paint exception; izleme kartları boş kutuya düşüyordu (iPad 13" repro)
@@ -814,7 +826,7 @@ sonar-scanner
 - [x] F7 Add for Review → Waiting for Review (build 63, 2026-08-05)
 - [ ] F7 App Review sonucu + gerekirse +64 patch TF
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
-- [ ] iOS backlog: `pattern-summary` UI (G7; Pro özet endpoint)
+- [x] Admin panel alanları kullanıcıya açılmaz (§0.1 / §0.5 kilit, 2026-08-05)
 
 ### 7.1 Parity review (2026-08-03) — F0–F2
 
@@ -853,7 +865,7 @@ Kaynak: SSH `/opt/bist-pattern` (salt okuma) vs `docs/MOBILE_API_INTEGRATION_GUI
 | G4 | Med | AI success body | Yok | `status,symbol,model,text,cached,duration_s` | Mobil `text` okuyor; **guide’a success örneği ekle** |
 | G5 | Med | AI 429 | `rate_limited` / `busy` | rate 6/60s + busy→429 | OK; guide metinleri netleştir |
 | G6 | Med | Sezgisel / görsel onay | `news_context` kısmen; UI adı yok | FINGPT + `news_context` + `confirmation_sources` | Mobil UI eklendi; guide’a Sezgisel/görsel onay notu |
-| G7 | Low | `user/predictions`, `pattern-summary` | §18.1 listeli | Prod var | Mobil client **yok** (bilinçli; backlog) |
+| G7 | Low | `user/predictions`, `pattern-summary` | §18.1 listeli | Prod API var; **web dashboard UI yok** (çağıran JS yok) | Mobil client **yok** — admin/özel yüzey değil; ihtiyaç doğarsa ayrı ürün kararı |
 | G8 | Low | Batch pattern | §15.1 | Prod var | Mobil yok (bilinçli) |
 | G9 | Med | `overall_signal` | Örnek string `BUY` | Nesne `{signal,confidence,strength,reasoning,signals[]}` veya string | Mobil her iki şekli parse eder; **guide örneğini güncelle** |
 

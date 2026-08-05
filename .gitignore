@@ -54,6 +54,15 @@ app.*.map.json
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 
+# Push / FCM secrets for tool/ios_push_bootstrap.sh
+.secrets/fcm.env
+.secrets/*.p8
+.secrets/AuthKey_*.p8
+.secrets/firebase-adminsdk.json
+.secrets/*-firebase-adminsdk-*.json
+.secrets/*.json
+!.secrets/fcm.env.example
+
 # Local clone of web repo for agent reference
 _ref_bist/
 
