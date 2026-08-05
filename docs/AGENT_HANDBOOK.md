@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-05 (v59 native forgot-password §6.1)
+> Son güncelleme: 2026-08-05 (v64 LotlotAccentCard iPad boyama fix; F7 Waiting for Review)
 
 ---
 
@@ -49,7 +49,7 @@ flowchart TD
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
 | **F6** | IAP paywall | İstemci + prod Apple; **I1/I2 Sandbox PASS** (2026-08-05, USB +58) | **Evet** |
-| **F7** | Mağaza teslimi | Checklist + Review notes + **post-P3 UX cila (v37)**; Add for Review = sandbox I1/I2 veya bilinçli not | Hazırlık |
+| **F7** | Mağaza teslimi | **ASC Waiting for Review** (2026-08-05; build **63**); kod **+64** accent-card fix hazır | Review kuyruk |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
 
@@ -217,15 +217,16 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **ASC app:** **LotLot.net** — `com.lotlot.lotlotnetMobile` (Apple ID `6797657717`). Eski LotLotNet app ile karıştırma.
 - **Skills:** `seo-expert` (ASO), `project-manager` (go/no-go), platform FS.
 - **Acceptance:**
-  - [ ] App Privacy / Data safety formları (aşağı §0.7)
+  - [x] App Privacy / age rating / iPhone+iPad 13" screenshot seti (ASC)
   - [x] Restore + hesap silme UI görünür (Hesap)
   - [x] Export Compliance: `ITSAppUsesNonExemptEncryption=false`
-  - [x] Review notes taslağı (§0.7)
-  - [ ] Screenshot seti (iPhone 6.5"+) — marka ikon/LaunchImage uyumlu
-  - [ ] analyze + sonar + TF smoke yeşil (cihaz T1–T7)
-  - [ ] **Add for Review** yalnızca go/no-go yeşil
-- **Go/no-go (PM):** P1 blocker kapalı + P2 I1/I2 sandbox yeşil (veya Review notes’ta “IAP Sandbox’ta doğrulanacak” bilinçli not) olmadan **Add for Review yok**.
-- **Dışı:** Admin/HPO; aasa/deep link (web ekibine not).
+  - [x] Review notes taslağı (§0.7) + subscription Review Screenshot/Notes
+  - [x] Build **63** + Pro `lotlot_pro_monthly_v2` / Premium ASC + prod map
+  - [x] **Add for Review** → **Waiting for Review** (2026-08-05; Submission ID ASC’de)
+  - [ ] App Review sonucu (Approved / Rejected)
+- **Go/no-go (PM):** I1/I2 **PASS** sonrası gönderildi. Sonraki: onay veya red Resolution Center.
+- **Kod notu:** Review’daki binary **63**; iPad boş kart fix’i **+64** (accent borderRadius) — onay/red sonrası TF/patch.
+- **Dışı:** Admin/HPO; aasa/deep link (web ekibine not); Android/Play (hesap yok).
 
 ### 0.5 Tüm fazlarda bilinçli dışı
 
@@ -297,10 +298,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+63` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
-**Son TF upload:** `1.0.0+63` (hedef) · tag `v56` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
-**ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter — TF **63**.
+**Build (kod):** `1.0.0+64` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
+**Son kod tag:** `v57` (+64 accent-card fix).  
+**ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
 - `GET /api/billing/iap/config` → `enabled=true`, `verify_ready=true`, `platforms.apple=true`, ürün map OK
@@ -425,6 +426,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v64 (2026-08-05) — LotlotAccentCard iPad boyama fix
+- Non-uniform `Border` + `borderRadius` → Flutter paint exception; izleme kartları boş kutuya düşüyordu (iPad 13" repro)
+- Sol accent şerit ayrı `ColoredBox`; uniform `RoundedRectangleBorder`
+- Debug: Runner scheme → `Configuration.storekit` (LaunchAction; Archive etkilemez)
+- F7: ASC **Waiting for Review** (build 63) handbook’a işlendi
+- Build **1.0.0+64** · git tag **v57**
 
 ### v63 (2026-08-05) — Pro IAP Product ID v2
 - ASC’te silinen `lotlot_pro_monthly` reuse edilemez → client `lotlot_pro_monthly_v2`
@@ -803,8 +811,10 @@ sonar-scanner
 - [x] F5 dilim: wizard / AI commentary
 - [x] F6 istemci + prod Apple config + I3/I4 + **I1/I2 cihaz sandbox PASS** — bkz. **§0**
 - [x] Native forgot-password JSON + web reset handoff (BIST v602 / §6.1) — bkz. **§0 F1**
-- [ ] F7 Add for Review — bkz. **§0.7** go/no-go
+- [x] F7 Add for Review → Waiting for Review (build 63, 2026-08-05)
+- [ ] F7 App Review sonucu + gerekirse +64 patch TF
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
+- [ ] iOS backlog: `pattern-summary` UI (G7; Pro özet endpoint)
 
 ### 7.1 Parity review (2026-08-03) — F0–F2
 
