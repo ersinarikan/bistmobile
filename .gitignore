@@ -68,3 +68,6 @@ _ref_bist/
 
 # Cursor rules/skills — local agent config only (do not publish)
 .cursor/
+
+# SonarCloud CLI token (never commit)
+.secrets/sonar.env

@@ -7,12 +7,28 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../api/api_client.dart';
 import '../navigation/deep_link_router.dart';
+import 'apns_token_wait.dart';
 
 /// FCM lifecycle — Firebase yoksa no-op (crash yok).
 class PushService extends ChangeNotifier {
-  PushService({required ApiClient apiClient}) : _api = apiClient;
+  PushService({
+    required ApiClient apiClient,
+    this._readApnsToken,
+    this._readFcmToken,
+    this._ensurePermissionOverride,
+    bool? isIos,
+    this._apnsRetryDelay = const Duration(milliseconds: 400),
+    this._apnsMaxAttempts = 10,
+  })  : _api = apiClient,
+        _isIosOverride = isIos;
 
   final ApiClient _api;
+  final Future<String?> Function()? _readApnsToken;
+  final Future<String?> Function()? _readFcmToken;
+  final Future<bool> Function()? _ensurePermissionOverride;
+  final bool? _isIosOverride;
+  final Duration _apnsRetryDelay;
+  final int _apnsMaxAttempts;
 
   bool firebaseReady = false;
   bool permissionGranted = false;
@@ -21,6 +37,8 @@ class PushService extends ChangeNotifier {
   String? statusMessage;
   StreamSubscription<String>? _tokenSub;
   bool _syncing = false;
+
+  bool get _isIos => _isIosOverride ?? Platform.isIOS;
 
   void attachMessagingHandlers() {
     if (!firebaseReady) return;
@@ -40,6 +58,12 @@ class PushService extends ChangeNotifier {
   }
 
   Future<bool> ensurePermission() async {
+    final permissionOverride = _ensurePermissionOverride;
+    if (permissionOverride != null) {
+      permissionGranted = await permissionOverride();
+      notifyListeners();
+      return permissionGranted;
+    }
     if (Platform.isAndroid) {
       final status = await Permission.notification.request();
       permissionGranted = status.isGranted;
@@ -65,20 +89,22 @@ class PushService extends ChangeNotifier {
     if (!firebaseReady) return null;
     try {
       // iOS: FCM token requires APNs token first (often null right after grant).
-      if (Platform.isIOS) {
-        String? apns;
-        for (var i = 0; i < 10; i++) {
-          apns = await FirebaseMessaging.instance.getAPNSToken();
-          if (apns != null && apns.isNotEmpty) break;
-          await Future<void>.delayed(const Duration(milliseconds: 400));
-        }
+      if (_isIos) {
+        final apns = await waitForApnsToken(
+          readToken: _readApnsToken ??
+              () => FirebaseMessaging.instance.getAPNSToken(),
+          maxAttempts: _apnsMaxAttempts,
+          delay: _apnsRetryDelay,
+        );
         if (apns == null || apns.isEmpty) {
           lastError = 'apns_token_unavailable';
           debugPrint('PushService.fetchToken: APNs token not ready');
           return null;
         }
       }
-      lastToken = await FirebaseMessaging.instance.getToken();
+      final readFcm =
+          _readFcmToken ?? () => FirebaseMessaging.instance.getToken();
+      lastToken = await readFcm();
       return lastToken;
     } catch (e) {
       lastError = e.toString();
@@ -123,7 +149,7 @@ class PushService extends ChangeNotifier {
         return false;
       }
       try {
-        final platform = Platform.isIOS ? 'ios' : 'android';
+        final platform = _isIos ? 'ios' : 'android';
         await _api.registerDevice(token: token, platform: platform);
         statusMessage = 'Bildirim kaydı tamam.';
         lastError = null;

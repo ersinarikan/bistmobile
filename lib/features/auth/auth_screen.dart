@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/oauth_brand_icons.dart';
 import '../shell/main_shell.dart';
 import '../watchlist/watchlist_controller.dart';
 import 'auth_helpers.dart';
@@ -612,14 +613,14 @@ class _AuthScreenState extends State<AuthScreen> {
                         if (showApple) ...[
                           OutlinedButton.icon(
                             onPressed: _loading ? null : _apple,
-                            icon: const Icon(Icons.apple, size: 22),
+                            icon: const AppleLogoMark(size: 20),
                             label: const Text('Apple ile Devam Et'),
                           ),
                           const SizedBox(height: 10),
                         ],
                         OutlinedButton.icon(
                           onPressed: _loading ? null : _google,
-                          icon: const Icon(Icons.g_mobiledata, size: 28),
+                          icon: const GoogleLogoMark(size: 20),
                           label: const Text('Google ile Devam Et'),
                         ),
                         const SizedBox(height: 12),

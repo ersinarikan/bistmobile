@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-06 (v66 iOS APNs/FCM register E2E fix)
+> Son güncelleme: 2026-08-06 (v67 OAuth brand logos + Sonar new_coverage tests)
 
 ---
 
@@ -302,9 +302,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+66` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+67` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v59` (+66 iOS APNs/FCM register E2E).  
+**Son kod tag:** `v60` (+67 OAuth logos + push coverage).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -430,6 +430,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v67 (2026-08-06) — OAuth brand logos + Sonar coverage
+- Giriş: Material `Icons.apple` / `g_mobiledata` → `AppleLogoMark` / `GoogleLogoMark`
+- Push: `waitForApnsToken` + `PushService` unit test; `LotlotAccentCard` widget test
+- `tool/lcov_to_sonar_generic.py`; Sonar QG `new_coverage` OK (~89.7%)
+- Build **1.0.0+67** · git tag **v60**
 
 ### v66 (2026-08-06) — iOS APNs token → FCM register E2E
 - `AppDelegate`: `registerForRemoteNotifications` + `Messaging.apnsToken` (ImplicitEngine swizzle boşluğu)
