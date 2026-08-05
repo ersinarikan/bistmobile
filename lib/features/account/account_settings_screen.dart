@@ -90,7 +90,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(session.lastError ?? 'Güncellenemedi')),
       );
+      return;
     }
+    // Prefs PATCH sonrası FCM kaydını zorla (APNs gecikmesi / ilk izin).
+    final push = context.read<PushService>();
+    await push.syncRegistration(
+      isPremium: session.isPremium,
+      pushOn: value,
+    );
   }
 
   Future<void> _setEmail(bool value) async {

@@ -64,6 +64,20 @@ class PushService extends ChangeNotifier {
   Future<String?> fetchToken() async {
     if (!firebaseReady) return null;
     try {
+      // iOS: FCM token requires APNs token first (often null right after grant).
+      if (Platform.isIOS) {
+        String? apns;
+        for (var i = 0; i < 10; i++) {
+          apns = await FirebaseMessaging.instance.getAPNSToken();
+          if (apns != null && apns.isNotEmpty) break;
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        }
+        if (apns == null || apns.isEmpty) {
+          lastError = 'apns_token_unavailable';
+          debugPrint('PushService.fetchToken: APNs token not ready');
+          return null;
+        }
+      }
       lastToken = await FirebaseMessaging.instance.getToken();
       return lastToken;
     } catch (e) {
