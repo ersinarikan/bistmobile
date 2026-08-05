@@ -46,7 +46,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "lotlot_pro_monthly",
+          "productID" : "lotlot_pro_monthly_v2",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Pro Monthly",
           "subscriptionGroupID" : "21481234",

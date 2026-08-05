@@ -191,10 +191,10 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Prod config (2026-08-04 doğrulandı):**
   ```json
   {"iap":{"enabled":true,"platforms":{"apple":true,"google_play":false},
-   "products":{"lotlot_premium_monthly":"premium","lotlot_pro_monthly":"pro"},
+   "products":{"lotlot_premium_monthly":"premium","lotlot_pro_monthly_v2":"pro","lotlot_pro_monthly":"pro"},
    "verify_ready":true},"status":"success"}
   ```
-- **Client Product ID:** `lotlot_pro_monthly`, `lotlot_premium_monthly` (`iap_service.dart`).
+- **Client Product ID:** `lotlot_pro_monthly_v2`, `lotlot_premium_monthly` (`iap_service.dart`). Eski `lotlot_pro_monthly` ASC silindi (ID reuse yok); backend map’te her iki Pro ID `pro` olabilir.
 - **StoreKit local:** `ios/Configuration.storekit` (Xcode Scheme → StoreKit Configuration).
 - **Skills:** `ios-fullstack-developer`, `cybersecurity-expert`, `test-engineer`.
 - **Acceptance:**
@@ -260,7 +260,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 LOTLOT.NET — BIST market analysis (subscription app).
 
 Digital goods / subscriptions are sold ONLY via Apple IAP
-(product IDs: lotlot_pro_monthly, lotlot_premium_monthly).
+(product IDs: lotlot_pro_monthly_v2, lotlot_premium_monthly).
 No external payment / Garanti / in-app WebView checkout.
 
 Account deletion: Hesap (Account) → Hesabı sil.
@@ -297,14 +297,14 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+62` · Bugbot follow-up (restore already_subscribed + formasyon pencere hizası).  
-**Son TF upload:** `1.0.0+62` (hedef) · tag `v55` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
+**Build (kod):** `1.0.0+63` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Son TF upload:** `1.0.0+63` (hedef) · tag `v56` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter — TF **62**.
+**Upload:** Transporter — TF **63**.
 
 **F6 preflight (2026-08-05 agent):**
 - `GET /api/billing/iap/config` → `enabled=true`, `verify_ready=true`, `platforms.apple=true`, ürün map OK
-- Product ID client/ASC: `lotlot_pro_monthly`, `lotlot_premium_monthly` (ASC ilk grup + fiyat yayılımı sonrası StoreKit her iki ürünü döndürür)
+- Product ID client/ASC: `lotlot_pro_monthly_v2`, `lotlot_premium_monthly`
 - USB release `1.0.0+58` → iPhone 14 Plus (`00008110-0009384E1A46201E`)
 - Play Billing bu dilimde dışı (`google_play=false`)
 
@@ -425,6 +425,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v63 (2026-08-05) — Pro IAP Product ID v2
+- ASC’te silinen `lotlot_pro_monthly` reuse edilemez → client `lotlot_pro_monthly_v2`
+- StoreKit config + handbook; backend `IAP_PRODUCT_TIERS_JSON`’a `lotlot_pro_monthly_v2:pro` eklenmeli
+- Build **1.0.0+63** · git tag **v56**
 
 ### v62 (2026-08-05) — Bugbot follow-up
 - Restore: `already_subscribed` soft-success + `refreshMe` (diğer 409 hata kalır)

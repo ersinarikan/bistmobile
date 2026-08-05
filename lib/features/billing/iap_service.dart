@@ -5,7 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 /// Store ürün ID’leri — guide §9.4 / config fallback.
-const kIapProductPro = 'lotlot_pro_monthly';
+// ASC: eski `lotlot_pro_monthly` silindi — Product ID reuse yok; v2.
+const kIapProductPro = 'lotlot_pro_monthly_v2';
 const kIapProductPremium = 'lotlot_premium_monthly';
 const kDefaultIapProductIds = {kIapProductPro, kIapProductPremium};
 
