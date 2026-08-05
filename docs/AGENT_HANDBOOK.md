@@ -297,10 +297,10 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+61` · formasyon spark↔big index parity + iOS MinimumOSVersion 15.0.  
-**Son TF upload:** `1.0.0+61` (hedef) · tag `v54` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
+**Build (kod):** `1.0.0+62` · Bugbot follow-up (restore already_subscribed + formasyon pencere hizası).  
+**Son TF upload:** `1.0.0+62` (hedef) · tag `v55` · IPA `build/ios/ipa/LOTLOT.NET.ipa`  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717)  
-**Upload:** Transporter — TF **61** (MinimumOSVersion 15.0; 90068 uyarısı kapandı).
+**Upload:** Transporter — TF **62**.
 
 **F6 preflight (2026-08-05 agent):**
 - `GET /api/billing/iap/config` → `enabled=true`, `verify_ready=true`, `platforms.apple=true`, ürün map OK
@@ -425,6 +425,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v62 (2026-08-05) — Bugbot follow-up
+- Restore: `already_subscribed` soft-success + `refreshMe` (diğer 409 hata kalır)
+- Formasyon shade açıkken mum bar penceresi ≥ spark `estimateSparkDisplayCount`
+- Build **1.0.0+62** · git tag **v55**
 
 ### v61 (2026-08-05) — Formasyon chart index hizası + iOS 15
 - Spark ↔ büyük mum: ortak `data_points` offset (`formation_range_math.dart` / `localizeFormationShades`)

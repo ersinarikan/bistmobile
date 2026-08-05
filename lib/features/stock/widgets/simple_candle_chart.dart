@@ -133,10 +133,21 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
       );
     }
 
-    final take = math.min(
-      widget.publicPreview ? 180 : _barCount,
+    final session = context.watch<SessionController>();
+    final publicPreview = widget.publicPreview;
+    final showFormationShade =
+        !publicPreview && _showFormationShade && session.isPro;
+    // Spark ile aynı formasyon penceresi: shade açıkken bar chip daha darsa genişlet.
+    final sparkWindow = estimateSparkDisplayCount(
+      widget.pattern,
       widget.bars.length,
     );
+    final desiredCount = publicPreview
+        ? 180
+        : (showFormationShade
+            ? math.max(_barCount, sparkWindow)
+            : _barCount);
+    final take = math.min(desiredCount, widget.bars.length);
     final display = widget.bars.sublist(widget.bars.length - take);
     final closes = display.map((b) => b.close).toList();
     final ema20 = _ema(closes, 20);
@@ -165,16 +176,12 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
         }
       }
     }
-    final session = context.watch<SessionController>();
-    final publicPreview = widget.publicPreview;
     final showVolume = publicPreview ? true : _showVolume;
     final showEma20 = publicPreview ? false : _showEma20;
     final showEma50 = publicPreview ? false : _showEma50;
     final showBb = publicPreview ? false : _showBb;
     final showRsi = publicPreview ? false : _showRsi;
     final showSr = publicPreview ? false : _showSr;
-    final showFormationShade =
-        publicPreview ? false : _showFormationShade;
     final showForecastLine = !publicPreview &&
         session.isPro &&
         widget.forecasts.isNotEmpty &&
@@ -200,7 +207,7 @@ class _SimpleCandleChartState extends State<SimpleCandleChart> {
         (_selected ?? display.length - 1).clamp(0, display.length - 1);
     final sel = display[selIdx];
 
-    final localRanges = showFormationShade && session.isPro
+    final localRanges = showFormationShade
         ? localizeFormationShades(widget.pattern, display.length)
         : const <FormationShadeRange>[];
 

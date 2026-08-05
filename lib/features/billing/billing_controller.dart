@@ -138,8 +138,9 @@ class BillingController extends ChangeNotifier {
           purchaseToken: payload.purchaseToken,
         );
       } on ApiException catch (e) {
-        // 409 already_subscribed: mağaza işlemini yine bitirmeliyiz (yoksa kuyruk kilitlenir).
-        if (e.errorCode == 'already_subscribed' || e.statusCode == 409) {
+        // already_subscribed: mağaza işlemini yine bitirmeliyiz (yoksa kuyruk kilitlenir).
+        // Not: diğer 409’lar (örn. receipt_owned_by_other_account) başarı sayılmaz.
+        if (e.errorCode == 'already_subscribed') {
           await _session.refreshMe();
           error = null;
           lastErrorCode = e.errorCode;
@@ -257,6 +258,13 @@ class BillingController extends ChangeNotifier {
       await _session.refreshMe();
       return true;
     } on ApiException catch (e) {
+      // Verify ile aynı: only already_subscribed (diğer 409’lar hata kalsın).
+      if (e.errorCode == 'already_subscribed') {
+        await _session.refreshMe();
+        error = null;
+        lastErrorCode = e.errorCode;
+        return true;
+      }
       error = _friendlyBillingError(e);
       lastErrorCode = e.errorCode;
       return false;
