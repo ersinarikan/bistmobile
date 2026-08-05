@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 /// Google "G" mark — giriş butonları için (Material `g_mobiledata` yerine).
+///
+/// Klasik 4 renkli Super G (Sign in with Google stil path, viewBox 0 0 48 48).
 class GoogleLogoMark extends StatelessWidget {
   const GoogleLogoMark({super.key, this.size = 20});
 
@@ -40,6 +42,7 @@ class AppleLogoMark extends StatelessWidget {
 class _GoogleGPainter extends CustomPainter {
   const _GoogleGPainter();
 
+  // Google brand colors.
   static const _blue = Color(0xFF4285F4);
   static const _green = Color(0xFF34A853);
   static const _yellow = Color(0xFFFBBC05);
@@ -47,38 +50,84 @@ class _GoogleGPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final s = size.shortestSide;
-    final stroke = s * 0.175;
-    final inset = stroke / 2;
-    final rect = Rect.fromLTWH(inset, inset, s - stroke, s - stroke);
+    const vb = 48.0;
+    final s = size.shortestSide / vb;
+    canvas.save();
+    canvas.scale(s, s);
 
-    final ring = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke
-      ..strokeCap = StrokeCap.square;
+    // Yellow base (ring + right bar area) — flat-icon / Material G paths.
+    canvas.drawPath(_yellowPath(), Paint()..color = _yellow);
+    canvas.drawPath(_redPath(), Paint()..color = _red);
+    canvas.drawPath(_greenPath(), Paint()..color = _green);
+    canvas.drawPath(_bluePath(), Paint()..color = _blue);
 
-    // Clockwise from top-right gap of the G.
-    ring.color = _red;
-    canvas.drawArc(rect, _rad(-45), _rad(95), false, ring);
-    ring.color = _yellow;
-    canvas.drawArc(rect, _rad(50), _rad(75), false, ring);
-    ring.color = _green;
-    canvas.drawArc(rect, _rad(125), _rad(75), false, ring);
-    ring.color = _blue;
-    canvas.drawArc(rect, _rad(200), _rad(115), false, ring);
-
-    final bar = Paint()..color = _blue;
-    final cy = s * 0.5;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(s * 0.50, cy - stroke / 2, s * 0.40, stroke),
-        Radius.circular(stroke / 5),
-      ),
-      bar,
-    );
+    canvas.restore();
   }
 
-  static double _rad(double deg) => deg * 3.141592653589793 / 180.0;
+  static Path _yellowPath() {
+    final p = Path()..moveTo(43.611, 20.083);
+    p
+      ..lineTo(42, 20.083)
+      ..lineTo(42, 20)
+      ..lineTo(24, 20)
+      ..lineTo(24, 28)
+      ..lineTo(35.303, 28)
+      ..relativeCubicTo(-1.649, 4.657, -6.08, 8, -11.303, 8)
+      ..relativeCubicTo(-6.627, 0, -12, -5.373, -12, -12)
+      ..relativeCubicTo(0, -6.627, 5.373, -12, 12, -12)
+      ..relativeCubicTo(3.059, 0, 5.842, 1.154, 7.961, 3.039)
+      ..relativeLineTo(5.657, -5.657)
+      ..cubicTo(34.046, 6.053, 29.268, 4, 24, 4)
+      ..cubicTo(12.955, 4, 4, 12.955, 4, 24)
+      ..relativeCubicTo(0, 11.045, 8.955, 20, 20, 20)
+      ..relativeCubicTo(11.045, 0, 20, -8.955, 20, -20)
+      ..cubicTo(44, 22.659, 43.862, 21.35, 43.611, 20.083)
+      ..close();
+    return p;
+  }
+
+  static Path _redPath() {
+    final p = Path()..moveTo(6.306, 14.691);
+    p
+      ..relativeLineTo(6.571, 4.819)
+      ..cubicTo(14.655, 15.108, 18.961, 12, 24, 12)
+      ..relativeCubicTo(3.059, 0, 5.842, 1.154, 7.961, 3.039)
+      ..relativeLineTo(5.657, -5.657)
+      ..cubicTo(34.046, 6.053, 29.268, 4, 24, 4)
+      ..cubicTo(16.318, 4, 9.656, 8.337, 6.306, 14.691)
+      ..close();
+    return p;
+  }
+
+  static Path _greenPath() {
+    final p = Path()..moveTo(24, 44);
+    p
+      ..relativeCubicTo(5.166, 0, 9.86, -1.977, 13.409, -5.192)
+      ..relativeLineTo(-6.19, -5.238)
+      ..cubicTo(29.211, 35.091, 26.715, 36, 24, 36)
+      ..relativeCubicTo(-5.202, 0, -9.619, -3.317, -11.283, -7.946)
+      ..relativeLineTo(-6.522, 5.025)
+      ..cubicTo(9.505, 39.556, 16.227, 44, 24, 44)
+      ..close();
+    return p;
+  }
+
+  static Path _bluePath() {
+    final p = Path()..moveTo(43.611, 20.083);
+    p
+      ..lineTo(42, 20.083)
+      ..lineTo(42, 20)
+      ..lineTo(24, 20)
+      ..lineTo(24, 28)
+      ..lineTo(35.303, 28)
+      ..relativeCubicTo(-0.792, 2.237, -2.231, 4.166, -4.087, 5.571)
+      ..relativeCubicTo(0.001, -0.001, 0.002, -0.001, 0.003, -0.002)
+      ..relativeLineTo(6.19, 5.238)
+      ..cubicTo(36.971, 39.205, 44, 34, 44, 24)
+      ..cubicTo(44, 22.659, 43.862, 21.35, 43.611, 20.083)
+      ..close();
+    return p;
+  }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
