@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-06 (v71 IAP debug cleanup)
+> Son güncelleme: 2026-08-06 (v72 deep link `lotlot://symbol/` + resolve unit test)
 
 ---
 
@@ -169,6 +169,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] FCM register (Premium + push on); logout unregister; `onTokenRefresh` → re-register
   - [x] Foreground FCM `onMessage` → SnackBar; Socket `actionable_alert` banner
   - [x] Deep link (`data.deep_link` → StockDetail); cold-start kuyruk + splash flush
+  - [x] `resolveDeepLink`: FCM `/dashboard?symbol=` **ve** guide `lotlot://symbol/{SYM}` → StockDetail; auth `password_reset` handoff; birim test matris
   - [x] Free chart-alerts: soft gate otomatik pop yok (boş + Detay)
   - [x] Hesap push aç → Premium soft gate; watchlist alert + push kapalı → Hesap yönü
   - [x] Tier `/me` — client uydurmaz
@@ -302,9 +303,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+71` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+72` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v64` (+71 IAP debug cleanup).  
+**Son kod tag:** `v65` (+72 deep link `lotlot://symbol/`).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -430,6 +431,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v72 (2026-08-06) — Deep link path `lotlot://symbol/`
+- `resolveDeepLink` pure hedef: auth login, `lotlot://symbol/{SYM}`, query `symbol`/`sembol`
+- `lotlot://` artık `https://lotlot.net/lotlot://…` olarak yeniden yazılmıyor (eski no-op bug)
+- Unit: `test/deep_link_router_test.dart` (FCM kanon + guide örneği YEŞİL)
+- Build **1.0.0+72** · git tag **v65**
 
 ### v71 (2026-08-06) — IAP currency debug cleanup
 - SK1 fallback / `IAP_PRICE_DEBUG` / buy re-query kaldırıldı (TF fiyat sapması Apple sandbox davranışı; sonra bakılacak)
