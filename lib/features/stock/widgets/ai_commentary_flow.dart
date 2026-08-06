@@ -2,14 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../../../core/api/api_client.dart';
 import '../../../core/brand/brand_assets.dart';
 import '../../../core/config/api_config.dart';
+import '../../../core/navigation/deep_link_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/login_screen.dart';
 import '../../auth/session_controller.dart';
 import '../../pro/soft_gate_sheet.dart';
+import '../ai_commentary_session.dart';
 
 /// Web `AI_LOADER_STAGES` — görsel tempo; gerçek backend fazına bağlı değil.
 const aiLoaderStages = <({int atMs, String title})>[
@@ -22,38 +24,17 @@ const aiLoaderStages = <({int atMs, String title})>[
 
 const aiCommentaryTitle = 'lotlot.net Yapay Zeka Yorumu';
 
-/// Marka etiketi — API’deki ham Ollama adı (qwen3…) gösterilmez; web SoT gibi sabit.
-const aiCommentaryModelLabel = 'lotlotLLMv17';
+/// Expected wait for elapsed progress bar (not true LLM %).
+const aiLoaderProgressBudget = Duration(seconds: 100);
 
-/// Web popup meta: `SYM • lotlotLLMv17 • …` (model alanı marka; ham `model` yok).
-String aiCommentaryMetaFromResponse(
-  String symbol,
-  Map<String, dynamic> data,
-) {
-  final parts = <String>[
-    symbol.toUpperCase(),
-    aiCommentaryModelLabel,
-  ];
-  final variant = data['prompt_variant']?.toString();
-  if (variant != null &&
-      variant.isNotEmpty &&
-      variant.toLowerCase() != 'short') {
-    parts.add(variant);
-  }
-  if (data['cached'] == true) parts.add('cache');
-  final dur = data['duration_s'];
-  if (dur is num) parts.add('${dur.toStringAsFixed(2)}s');
-  return parts.join(' • ');
-}
-
-/// Pro gate + loader overlay + sonuç diyaloğu (büyük grafik / Keşfet ortak).
+/// Pro gate + loader overlay + sonuç; iş [AiCommentarySession] içinde.
 Future<void> runAiCommentaryFlow(
   BuildContext context, {
   required String symbol,
   int bars = 300,
 }) async {
-  final session = context.read<SessionController>();
-  if (session.status != AuthStatus.authenticated) {
+  final auth = context.read<SessionController>();
+  if (auth.status != AuthStatus.authenticated) {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => const LoginScreen(popOnSuccess: true),
@@ -61,107 +42,68 @@ Future<void> runAiCommentaryFlow(
     );
     return;
   }
-  if (!session.isPro) {
+  if (!auth.isPro) {
     await showSoftGateSheet(context, kind: SoftGateKind.pro);
     return;
   }
 
-  unawaited(
-    showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      useRootNavigator: true,
-      builder: (_) => const _AiLoaderDialog(),
-    ),
-  );
+  final commentary = context.read<AiCommentarySession>();
 
-  Map<String, dynamic>? data;
-  Object? err;
-  try {
-    data = await context.read<ApiClient>().fetchAiCommentary(
-          symbol: symbol,
-          bars: bars,
-        );
-  } catch (e) {
-    err = e;
-  } finally {
-    if (context.mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
-    }
-  }
+  unawaited(commentary.start(symbol, bars: bars));
 
   if (!context.mounted) return;
 
-  if (err is ApiException) {
-    if (err.statusCode == 403 && tryShowSoftGateForApiError(context, err)) {
-      return;
-    }
-    await _showResult(
-      context,
-      text: _friendlyApi(err),
-      meta: symbol.toUpperCase(),
-      isError: true,
-    );
-    return;
-  }
-  if (err != null || data == null) {
-    await _showResult(
-      context,
-      text: 'Yorum alınamadı; tekrar deneyin.',
-      meta: symbol.toUpperCase(),
-      isError: true,
-    );
+  await showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    useRootNavigator: true,
+    builder: (ctx) => _AiLoaderHost(commentary: commentary),
+  );
+
+  if (!context.mounted) {
+    _showResultIfNeeded(commentary);
     return;
   }
 
-  final status = data['status']?.toString() ?? '';
-  final text = data['text']?.toString();
-  if (status == 'success' && text != null && text.isNotEmpty) {
-    await _showResult(
-      context,
-      text: text,
-      meta: aiCommentaryMetaFromResponse(symbol, data),
-      isError: false,
-    );
-    return;
-  }
-  if (status == 'busy') {
-    await _showResult(
-      context,
-      text: data['message']?.toString() ??
-          'Model meşgul; biraz sonra tekrar deneyin.',
-      meta: symbol.toUpperCase(),
-      isError: true,
-    );
-    return;
-  }
-  await _showResult(
-    context,
-    text: data['message']?.toString() ?? 'Yorum alınamadı.',
-    meta: symbol.toUpperCase(),
-    isError: true,
-  );
+  await _presentTerminal(context, commentary);
 }
 
-String _friendlyApi(ApiException e) {
-  final code = (e.errorCode ?? '').toLowerCase();
-  final status = e.body?['status']?.toString().toLowerCase();
-  if (code == 'busy' || status == 'busy' || e.statusCode == 429) {
-    if (status == 'busy' || code == 'busy') {
-      return e.message.isNotEmpty
-          ? e.message
-          : 'Model meşgul; biraz sonra tekrar deneyin.';
+void _showResultIfNeeded(AiCommentarySession commentary) {
+  if (commentary.phase != AiCommentaryPhase.ready &&
+      commentary.phase != AiCommentaryPhase.failed) {
+    return;
+  }
+  final navCtx = appNavigatorKey.currentContext;
+  if (navCtx == null) return;
+  unawaited(_presentTerminal(navCtx, commentary));
+}
+
+Future<void> _presentTerminal(
+  BuildContext context,
+  AiCommentarySession commentary,
+) async {
+  if (commentary.phase == AiCommentaryPhase.ready) {
+    final text = commentary.text ?? '';
+    final meta = commentary.metaLine ?? (commentary.symbol ?? '');
+    commentary.acknowledge();
+    if (!context.mounted) return;
+    await _showResult(context, text: text, meta: meta, isError: false);
+    return;
+  }
+  if (commentary.phase == AiCommentaryPhase.failed) {
+    final err = commentary.errorMessage ?? 'Yorum alınamadı.';
+    final meta = commentary.symbol ?? '';
+    final status = commentary.lastErrorStatus;
+    if (status == 403) {
+      commentary.acknowledge();
+      if (!context.mounted) return;
+      await showSoftGateSheet(context, kind: SoftGateKind.pro);
+      return;
     }
-    return e.message.isNotEmpty
-        ? e.message
-        : 'Çok sık istek; lütfen biraz bekleyin.';
+    commentary.acknowledge();
+    if (!context.mounted) return;
+    await _showResult(context, text: err, meta: meta, isError: true);
   }
-  if (e.statusCode == 502 || e.statusCode == 500) {
-    return e.message.isNotEmpty
-        ? e.message
-        : 'Yorum üretilemedi; tekrar deneyin.';
-  }
-  return e.message.isNotEmpty ? e.message : 'Yorum alınamadı.';
 }
 
 Future<void> _showResult(
@@ -236,6 +178,45 @@ Future<void> _showResult(
   );
 }
 
+/// Listens to [AiCommentarySession] and pops when ready/failed.
+class _AiLoaderHost extends StatefulWidget {
+  const _AiLoaderHost({required this.commentary});
+
+  final AiCommentarySession commentary;
+
+  @override
+  State<_AiLoaderHost> createState() => _AiLoaderHostState();
+}
+
+class _AiLoaderHostState extends State<_AiLoaderHost> {
+  @override
+  void initState() {
+    super.initState();
+    widget.commentary.addListener(_onCommentary);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _onCommentary();
+    });
+  }
+
+  @override
+  void dispose() {
+    widget.commentary.removeListener(_onCommentary);
+    super.dispose();
+  }
+
+  void _onCommentary() {
+    final p = widget.commentary.phase;
+    if (p == AiCommentaryPhase.ready || p == AiCommentaryPhase.failed) {
+      if (mounted) Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const _AiLoaderDialog();
+  }
+}
+
 class _AiLoaderDialog extends StatefulWidget {
   const _AiLoaderDialog();
 
@@ -243,13 +224,23 @@ class _AiLoaderDialog extends StatefulWidget {
   State<_AiLoaderDialog> createState() => _AiLoaderDialogState();
 }
 
-class _AiLoaderDialogState extends State<_AiLoaderDialog> {
+class _AiLoaderDialogState extends State<_AiLoaderDialog>
+    with SingleTickerProviderStateMixin {
   String _title = aiLoaderStages.first.title;
   final _timers = <Timer>[];
+  late final AnimationController _progress;
 
   @override
   void initState() {
     super.initState();
+    unawaited(WakelockPlus.enable());
+    _progress = AnimationController(
+      vsync: this,
+      duration: aiLoaderProgressBudget,
+    )..forward();
+    _progress.addListener(() {
+      if (mounted) setState(() {});
+    });
     for (final stage in aiLoaderStages) {
       if (stage.atMs <= 0) {
         _title = stage.title;
@@ -269,11 +260,15 @@ class _AiLoaderDialogState extends State<_AiLoaderDialog> {
     for (final t in _timers) {
       t.cancel();
     }
+    _progress.dispose();
+    unawaited(WakelockPlus.disable());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final value = _progress.value.clamp(0.0, 1.0);
+    final overtime = _progress.status == AnimationStatus.completed;
     return PopScope(
       canPop: false,
       child: Dialog(
@@ -312,9 +307,30 @@ class _AiLoaderDialogState extends State<_AiLoaderDialog> {
                   height: 1.35,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 14),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: overtime ? null : value,
+                  minHeight: 6,
+                  backgroundColor: LotlotColors.border,
+                  color: LotlotColors.accent,
+                ),
+              ),
+              if (overtime) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Hâlâ hazırlanıyor…',
+                  style: TextStyle(
+                    color: LotlotColors.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 10),
               const Text(
-                'Son güncel veriye dayanarak yapılan analiz birkaç dakika sürebilir.',
+                'Son güncel veriye dayanarak yapılan analiz birkaç dakika '
+                'sürebilir. Lütfen uygulamadan çıkmayın / ekranı kapatmayın.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: LotlotColors.textSecondary,

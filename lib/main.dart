@@ -16,6 +16,7 @@ import 'features/auth/session_controller.dart';
 import 'features/billing/billing_controller.dart';
 import 'features/browse/browse_controller.dart';
 import 'features/splash/splash_screen.dart';
+import 'features/stock/ai_commentary_session.dart';
 import 'features/stocks/stocks_catalog_controller.dart';
 import 'features/watchlist/watchlist_controller.dart';
 
@@ -47,6 +48,7 @@ class _LotlotAppState extends State<LotlotApp> {
   late final SessionController _session;
   late final PushService _push;
   late final SocketAlertsClient _socket;
+  late final AiCommentarySession _commentary;
   StreamSubscription<Uri>? _appLinkSub;
 
   AuthStatus? _lastAuth;
@@ -77,6 +79,7 @@ class _LotlotAppState extends State<LotlotApp> {
     }
     _socket = SocketAlertsClient()
       ..onAlert = showActionableAlertSnack;
+    _commentary = AiCommentarySession(apiClient: _api);
     _session.addListener(_onSession);
 
     if (widget.firebaseReady) {
@@ -121,6 +124,7 @@ class _LotlotAppState extends State<LotlotApp> {
         if (_lastAuth == AuthStatus.authenticated) {
           await _push.unregisterQuiet(clearAll: true);
           _socket.disconnect();
+          _commentary.clear();
         }
         _lastAuth = status;
         _lastPushOn = null;
@@ -159,6 +163,7 @@ class _LotlotAppState extends State<LotlotApp> {
     _session.removeListener(_onSession);
     _socket.disconnect();
     _session.dispose();
+    _commentary.dispose();
     _push.dispose();
     super.dispose();
   }
@@ -172,6 +177,7 @@ class _LotlotAppState extends State<LotlotApp> {
         ChangeNotifierProvider<PushService>.value(value: _push),
         Provider<SocketAlertsClient>.value(value: _socket),
         ChangeNotifierProvider<SessionController>.value(value: _session),
+        ChangeNotifierProvider<AiCommentarySession>.value(value: _commentary),
         ChangeNotifierProvider(
           create: (ctx) => BillingController(
             apiClient: ctx.read<ApiClient>(),

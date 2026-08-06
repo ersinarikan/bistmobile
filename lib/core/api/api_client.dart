@@ -455,7 +455,10 @@ class ApiClient {
     return delete('/api/chart-alerts/${Uri.encodeComponent(id)}');
   }
 
-  /// `POST /api/ai/commentary` — §18.1 (Pro); success body `text`
+  /// `POST /api/ai/commentary` — §18.1 (Pro); always async poll mode.
+  ///
+  /// Cache hit: `200` `{ status: success, text, cached }`.
+  /// Miss: `202` `{ status: accepted, job_id, poll_after_ms }`.
   Future<Map<String, dynamic>> fetchAiCommentary({
     required String symbol,
     int bars = 300,
@@ -465,7 +468,15 @@ class ApiClient {
       body: {
         'symbol': symbol.toUpperCase(),
         'bars': bars.clamp(120, 900),
+        'async': true,
       },
+    );
+  }
+
+  /// `GET /api/ai/commentary/jobs/<job_id>` — §18.1 poll (body `status`).
+  Future<Map<String, dynamic>> fetchAiCommentaryJob(String jobId) {
+    return get(
+      '/api/ai/commentary/jobs/${Uri.encodeComponent(jobId)}',
     );
   }
 

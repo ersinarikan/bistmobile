@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-06 (v72 deep link `lotlot://symbol/` + resolve unit test)
+> Son güncelleme: 2026-08-07 (v73 AI commentary async poll)
 
 ---
 
@@ -170,6 +170,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Foreground FCM `onMessage` → SnackBar; Socket `actionable_alert` banner
   - [x] Deep link (`data.deep_link` → StockDetail); cold-start kuyruk + splash flush
   - [x] `resolveDeepLink`: FCM `/dashboard?symbol=` **ve** guide `lotlot://symbol/{SYM}` → StockDetail; auth `password_reset` handoff; birim test matris
+  - [x] AI commentary **async poll** (`async: true` + `GET .../jobs/<job_id>`); `job_id` session state; loader wakelock + ~100s progress; `model_public`
   - [x] Free chart-alerts: soft gate otomatik pop yok (boş + Detay)
   - [x] Hesap push aç → Premium soft gate; watchlist alert + push kapalı → Hesap yönü
   - [x] Tier `/me` — client uydurmaz
@@ -303,9 +304,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+72` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+73` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v65` (+72 deep link `lotlot://symbol/`).  
+**Son kod tag:** `v66` (+73 AI commentary async poll).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -431,6 +432,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v73 (2026-08-07) — AI commentary async poll
+- `POST /api/ai/commentary` her zaman `async: true`; cache 200 veya 202 + `job_id` poll
+- `AiCommentarySession` (Provider): job_id dialog’a bağlı değil; resume’da poll; logout clear
+- Loader: wakelock + ~100 sn progress + “ekranı kapatmayın”; meta `model_public` (lotlotLLMv16)
+- Unit: `test/ai_commentary_session_test.dart`
+- Not: lokal guide §18.1 kopyası geride olabilir — kanon BIST/prod v607+
+- Build **1.0.0+73** · git tag **v66**
 
 ### v72 (2026-08-06) — Deep link path `lotlot://symbol/`
 - `resolveDeepLink` pure hedef: auth login, `lotlot://symbol/{SYM}`, query `symbol`/`sembol`
