@@ -1,12 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import 'package:in_app_purchase_storekit/store_kit_2_wrappers.dart';
-import 'package:in_app_purchase_storekit/store_kit_wrappers.dart';
 
 /// Store ürün ID’leri — guide §9.4 / config fallback.
 // ASC: eski `lotlot_pro_monthly` silindi — Product ID reuse yok; v2.
@@ -65,35 +61,11 @@ class IapService {
 
   Future<Map<String, ProductDetails>> queryProducts(Set<String> ids) async {
     if (!available) return {};
-    await _logStorefront('query');
     final response = await _iap.queryProductDetails(ids);
     if (response.error != null) {
       lastError = response.error!.message;
     }
     return {for (final p in response.productDetails) p.id: p};
-  }
-
-  Future<void> _logStorefront(String phase) async {
-    if (!Platform.isIOS) return;
-    try {
-      final sk2Country = await Storefront().countryCode();
-      debugPrint(
-        'IAP_PRICE_DEBUG phase=${phase}_storefront '
-        'sk2_country=$sk2Country '
-        'sk2=${InAppPurchaseStoreKitPlatform.isStoreKit2Enabled}',
-      );
-    } catch (e) {
-      debugPrint('IAP_PRICE_DEBUG phase=${phase}_sk2_storefront_err err=$e');
-    }
-    try {
-      final sk1 = await SKPaymentQueueWrapper().storefront();
-      debugPrint(
-        'IAP_PRICE_DEBUG phase=${phase}_storefront '
-        'sk1_country=${sk1?.countryCode}',
-      );
-    } catch (e) {
-      debugPrint('IAP_PRICE_DEBUG phase=${phase}_sk1_storefront_err err=$e');
-    }
   }
 
   /// Satın alma; tamamlanınca [PurchaseDetails] döner.

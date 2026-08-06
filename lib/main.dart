@@ -1,11 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:app_links/app_links.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:provider/provider.dart';
 
 import 'core/api/api_client.dart';
@@ -23,23 +21,6 @@ import 'features/watchlist/watchlist_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // SK2 Product.displayPrice bazen sandbox TR olsa da USD dönüyor;
-  // ödeme sheet'i TRY. SK1 priceLocale genelde storefront ile uyumlu.
-  if (Platform.isIOS) {
-    try {
-      // ignore: deprecated_member_use
-      await InAppPurchaseStoreKitPlatform.enableStoreKit1();
-      InAppPurchaseStoreKitPlatform.registerPlatform();
-      debugPrint(
-        'IAP_PRICE_DEBUG sk2_enabled='
-        '${InAppPurchaseStoreKitPlatform.isStoreKit2Enabled}',
-      );
-    } catch (e) {
-      debugPrint('IAP_PRICE_DEBUG enableStoreKit1 failed: $e');
-    }
-  }
-
   var firebaseReady = false;
   try {
     await Firebase.initializeApp();

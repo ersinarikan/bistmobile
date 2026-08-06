@@ -57,27 +57,10 @@ class BillingController extends ChangeNotifier {
   /// StoreKit/Play bu ürünü döndürdü mü (fiyat satırı ve satın alma için).
   bool hasStoreProduct(String productId) => storeProducts.containsKey(productId);
 
-  String? priceLabel(String productId) {
-    final p = storeProducts[productId];
-    if (p == null) return null;
-    if (kDebugMode) {
-      return '${p.price} · ${p.currencyCode}';
-    }
-    return p.price;
-  }
+  String? priceLabel(String productId) => storeProducts[productId]?.price;
 
   String tierForProduct(String productId) =>
       productTiers[productId] ?? 'pro';
-
-  /// StoreKit `displayPrice` / currency teşhisi (paywall vs sheet).
-  void _logProductPrice(String phase, ProductDetails p) {
-    debugPrint(
-      'IAP_PRICE_DEBUG phase=$phase '
-      'id=${p.id} price="${p.price}" '
-      'raw=${p.rawPrice} currency=${p.currencyCode} '
-      'symbol="${p.currencySymbol}"',
-    );
-  }
 
   Future<void> load() async {
     loadingConfig = true;
@@ -109,15 +92,6 @@ class BillingController extends ChangeNotifier {
 
       if (storeAvailable && productTiers.isNotEmpty) {
         storeProducts = await _iap.queryProducts(productTiers.keys.toSet());
-        for (final p in storeProducts.values) {
-          _logProductPrice('query', p);
-        }
-        if (storeProducts.isEmpty) {
-          debugPrint(
-            'IAP_PRICE_DEBUG phase=query empty '
-            'ids=${productTiers.keys.join(",")}',
-          );
-        }
       }
     } on ApiException catch (e) {
       error = e.message;
@@ -144,29 +118,13 @@ class BillingController extends ChangeNotifier {
       return false;
     }
 
-    _logProductPrice('buy_before', product);
-
-    // Sheet öncesi taze StoreKit query — cache/stale displayPrice hipotezi.
-    try {
-      final fresh = await _iap.queryProducts({productId});
-      final updated = fresh[productId];
-      if (updated != null) {
-        storeProducts = {...storeProducts, productId: updated};
-        _logProductPrice('buy_requery', updated);
-      }
-    } catch (e) {
-      debugPrint('IAP_PRICE_DEBUG phase=buy_requery_error err=$e');
-    }
-    final buyProduct = storeProducts[productId] ?? product;
-    _logProductPrice('buy_use', buyProduct);
-
     busy = true;
     error = null;
     lastErrorCode = null;
     notifyListeners();
     PurchaseDetails? details;
     try {
-      details = await _iap.buy(buyProduct);
+      details = await _iap.buy(product);
       final payload = _iap.toVerifyPayload(details);
       if (payload == null) {
         error = 'Satın alma doğrulama verisi alınamadı.';
