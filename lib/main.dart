@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 
 import 'core/api/api_client.dart';
 import 'core/navigation/deep_link_router.dart';
+import 'core/push/app_badge.dart';
 import 'core/push/push_service.dart';
 import 'core/push/socket_alerts.dart';
 import 'core/storage/token_storage.dart';
@@ -15,6 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'features/auth/session_controller.dart';
 import 'features/billing/billing_controller.dart';
 import 'features/browse/browse_controller.dart';
+import 'features/notifications/inbox_controller.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/stock/ai_commentary_session.dart';
 import 'features/stocks/stocks_catalog_controller.dart';
@@ -42,13 +44,14 @@ class LotlotApp extends StatefulWidget {
   State<LotlotApp> createState() => _LotlotAppState();
 }
 
-class _LotlotAppState extends State<LotlotApp> {
+class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
   late final TokenStorage _tokens;
   late final ApiClient _api;
   late final SessionController _session;
   late final PushService _push;
   late final SocketAlertsClient _socket;
   late final AiCommentarySession _commentary;
+  late final InboxController _inbox;
   StreamSubscription<Uri>? _appLinkSub;
 
   AuthStatus? _lastAuth;
@@ -59,6 +62,7 @@ class _LotlotAppState extends State<LotlotApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tokens = TokenStorage();
     _api = ApiClient(tokenStorage: _tokens);
     _session = SessionController(tokenStorage: _tokens, apiClient: _api);
@@ -80,14 +84,17 @@ class _LotlotAppState extends State<LotlotApp> {
     _socket = SocketAlertsClient()
       ..onAlert = showActionableAlertSnack;
     _commentary = AiCommentarySession(apiClient: _api);
+    _inbox = InboxController(apiClient: _api);
     _session.addListener(_onSession);
 
     if (widget.firebaseReady) {
       FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+        unawaited(AppBadge.clear());
         openDeepLink(msg.data['deep_link']?.toString());
       });
       FirebaseMessaging.instance.getInitialMessage().then((msg) {
         if (msg != null) {
+          unawaited(AppBadge.clear());
           openDeepLink(msg.data['deep_link']?.toString());
         }
       });
@@ -102,8 +109,27 @@ class _LotlotAppState extends State<LotlotApp> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(AppBadge.clear());
       flushPendingDeepLink();
+      unawaited(_syncInboxBadge());
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(AppBadge.clear());
+      unawaited(_syncInboxBadge());
+    }
+  }
+
+  Future<void> _syncInboxBadge() async {
+    if (_session.status != AuthStatus.authenticated) return;
+    if (!_session.isPremium || !_session.pushNotificationsOn) {
+      await AppBadge.clear();
+      return;
+    }
+    await _inbox.refreshSummary();
   }
 
   void _onPushTokenRefresh() {
@@ -125,6 +151,7 @@ class _LotlotAppState extends State<LotlotApp> {
           await _push.unregisterQuiet(clearAll: true);
           _socket.disconnect();
           _commentary.clear();
+          _inbox.resetLocal();
         }
         _lastAuth = status;
         _lastPushOn = null;
@@ -148,8 +175,10 @@ class _LotlotAppState extends State<LotlotApp> {
       final uid = _session.userId;
       if (access != null && uid != null && premium && pushOn) {
         _socket.connect(accessToken: access, userId: uid);
+        await _inbox.refreshSummary(force: true);
       } else {
         _socket.disconnect();
+        await AppBadge.clear();
       }
     } finally {
       _sessionBusy = false;
@@ -158,12 +187,14 @@ class _LotlotAppState extends State<LotlotApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _appLinkSub?.cancel();
     _push.removeListener(_onPushTokenRefresh);
     _session.removeListener(_onSession);
     _socket.disconnect();
     _session.dispose();
     _commentary.dispose();
+    _inbox.dispose();
     _push.dispose();
     super.dispose();
   }
@@ -178,6 +209,7 @@ class _LotlotAppState extends State<LotlotApp> {
         Provider<SocketAlertsClient>.value(value: _socket),
         ChangeNotifierProvider<SessionController>.value(value: _session),
         ChangeNotifierProvider<AiCommentarySession>.value(value: _commentary),
+        ChangeNotifierProvider<InboxController>.value(value: _inbox),
         ChangeNotifierProvider(
           create: (ctx) => BillingController(
             apiClient: ctx.read<ApiClient>(),

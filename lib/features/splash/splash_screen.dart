@@ -6,6 +6,7 @@ import '../../core/navigation/deep_link_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../auth/session_controller.dart';
 import '../landing/landing_screen.dart';
+import '../notifications/inbox_controller.dart';
 import '../shell/main_shell.dart';
 
 /// Splash: bootstrap → auth ise MainShell, değilse Landing. Ağ/5xx: Yeniden dene (P3).
@@ -32,8 +33,16 @@ class _SplashScreenState extends State<SplashScreen> {
       _retryError = null;
     });
     final session = context.read<SessionController>();
+    final inbox = context.read<InboxController>();
     await session.bootstrap();
     if (!mounted) return;
+
+    if (session.status == AuthStatus.authenticated &&
+        session.isPremium &&
+        session.pushNotificationsOn) {
+      await inbox.refreshSummary(force: true);
+      if (!mounted) return;
+    }
 
     // Token var ama /me geçici hata → shell’e guest düşme; retry (P3).
     if (session.status == AuthStatus.unknown && session.lastError != null) {
@@ -48,6 +57,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final home = session.status == AuthStatus.authenticated
         ? const MainShell()
         : const LandingScreen();
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute<void>(builder: (_) => home),
     );

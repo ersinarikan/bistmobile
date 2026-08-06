@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/auth/auth_helpers.dart';
 import '../../features/auth/auth_screen.dart';
 import '../../features/stock/stock_detail_screen.dart';
+import '../push/app_badge.dart';
 import '../theme/app_theme.dart';
 
 /// Global navigator — deep_link / socket banner / custom scheme handoff.
@@ -113,6 +114,9 @@ String? _normalizeSymbol(String? raw) {
 /// Splash / ilk frame öncesi deep_link sakla; hazır olunca aç.
 void openDeepLink(String? deepLink) {
   if (deepLink == null || deepLink.isEmpty) return;
+  // P0: notification / deep link open clears sticky OS badge.
+  // ignore: discarded_futures
+  AppBadge.clear();
   final nav = appNavigatorKey.currentState;
   if (nav == null) {
     _pendingDeepLink = deepLink;

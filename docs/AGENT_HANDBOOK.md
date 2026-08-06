@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-07 (v73 AI commentary async poll)
+> Son güncelleme: 2026-08-07 (v74 inbox + app badge)
 
 ---
 
@@ -171,6 +171,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
   - [x] Deep link (`data.deep_link` → StockDetail); cold-start kuyruk + splash flush
   - [x] `resolveDeepLink`: FCM `/dashboard?symbol=` **ve** guide `lotlot://symbol/{SYM}` → StockDetail; auth `password_reset` handoff; birim test matris
   - [x] AI commentary **async poll** (`async: true` + `GET .../jobs/<job_id>`); `job_id` session state; loader wakelock + ~100s progress; `model_public`
+  - [x] Push badge P0 (open/resume/tap → 0) + inbox §25.4 (Gelen bildirimler; summary → unread badge); alarm kur `add_alert`
   - [x] Free chart-alerts: soft gate otomatik pop yok (boş + Detay)
   - [x] Hesap push aç → Premium soft gate; watchlist alert + push kapalı → Hesap yönü
   - [x] Tier `/me` — client uydurmaz
@@ -304,9 +305,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+73` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+74` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v66` (+73 AI commentary async poll).  
+**Son kod tag:** `v67` (+74 inbox + app badge).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -432,6 +433,14 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v74 (2026-08-07) — Push badge + bildirim inbox
+- P0: `app_badge_plus` — open/resume/FCM tap/deep link → badge clear
+- P1: §25.4 `GET inbox` / summary / read / delete / clear; Hesap → Gelen bildirimler (`Icons.notifications`)
+- Splash/resume: Premium+pushOn → `unread_count` rozet; grafik alarm `Icons.add_alert_outlined`
+- Unit: `test/inbox_controller_test.dart`
+- Kanon: BIST/prod guide §25.4 (lokal kopya geride olabilir — fork yok)
+- Build **1.0.0+74** · git tag **v67**
 
 ### v73 (2026-08-07) — AI commentary async poll
 - `POST /api/ai/commentary` her zaman `async: true`; cache 200 veya 202 + `job_id` poll

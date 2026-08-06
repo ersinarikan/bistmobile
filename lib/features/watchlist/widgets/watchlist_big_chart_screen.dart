@@ -92,9 +92,9 @@ class _WatchlistBigChartScreenState extends State<WatchlistBigChartScreen> {
             title: Text(widget.symbol),
             actions: [
               IconButton(
-                tooltip: 'Grafik uyarısı',
+                icon: const Icon(Icons.add_alert_outlined),
+                tooltip: 'Grafik uyarısı kur',
                 onPressed: _onAlarm,
-                icon: const Icon(Icons.notification_add_outlined),
               ),
             ],
           ),

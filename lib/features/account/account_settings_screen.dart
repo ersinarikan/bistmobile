@@ -12,6 +12,7 @@ import '../billing/billing_controller.dart';
 import '../billing/paywall_screen.dart';
 import '../chart_alerts/chart_alerts_screen.dart';
 import '../landing/landing_screen.dart';
+import '../notifications/inbox_screen.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../wizard/wizard_screen.dart';
@@ -352,6 +353,27 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                       color: LotlotColors.accent,
                       minHeight: 2,
                     ),
+                  const Divider(height: 16, color: LotlotColors.border),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.notifications_outlined),
+                    title: const Text('Gelen bildirimler'),
+                    subtitle: const Text(
+                      'Push geçmişi — okundu / sil',
+                      style: TextStyle(
+                        color: LotlotColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const InboxScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -442,6 +464,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                 children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.add_alert_outlined),
                     title: const Text('Grafik uyarıları'),
                     subtitle: const Text(
                       'Pro+ teknik koşul uyarıları',

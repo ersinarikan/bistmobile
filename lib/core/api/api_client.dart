@@ -519,6 +519,49 @@ class ApiClient {
     );
   }
 
+  /// `GET /api/notifications/inbox` — §25.4 (Premium + push on)
+  Future<Map<String, dynamic>> fetchNotificationInbox({
+    int limit = 50,
+    String? cursor,
+  }) {
+    final query = <String, String>{
+      'limit': '${limit.clamp(1, 100)}',
+    };
+    if (cursor != null && cursor.isNotEmpty) {
+      query['cursor'] = cursor;
+    }
+    return get('/api/notifications/inbox', query: query);
+  }
+
+  /// `GET /api/notifications/inbox/summary` — §25.4
+  Future<Map<String, dynamic>> fetchNotificationInboxSummary() {
+    return get('/api/notifications/inbox/summary');
+  }
+
+  /// `POST /api/notifications/inbox/<id>/read` — §25.4
+  Future<Map<String, dynamic>> markInboxRead(String id) {
+    return post(
+      '/api/notifications/inbox/${Uri.encodeComponent(id)}/read',
+    );
+  }
+
+  /// `POST /api/notifications/inbox/read-all` — §25.4
+  Future<Map<String, dynamic>> markInboxReadAll() {
+    return post('/api/notifications/inbox/read-all');
+  }
+
+  /// `DELETE /api/notifications/inbox/<id>` — §25.4
+  Future<Map<String, dynamic>> deleteInboxItem(String id) {
+    return delete(
+      '/api/notifications/inbox/${Uri.encodeComponent(id)}',
+    );
+  }
+
+  /// `POST /api/notifications/inbox/clear` — §25.4
+  Future<Map<String, dynamic>> clearInbox() {
+    return post('/api/notifications/inbox/clear');
+  }
+
   /// `GET /api/billing/iap/config` — §9.8 (public)
   Future<Map<String, dynamic>> fetchIapConfig() {
     return get('/api/billing/iap/config', auth: false);
