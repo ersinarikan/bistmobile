@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-06 (v68 Google Super G + prod FCM SA perms)
+> Son güncelleme: 2026-08-06 (v69 formation select fix)
 
 ---
 
@@ -302,9 +302,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+68` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+69` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v61` (+68 Google Super G).  
+**Son kod tag:** `v62` (+69 formation select).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -430,6 +430,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v69 (2026-08-06) — Formasyon seçim çakışması
+- Aynı mum aralığındaki farklı formasyonlar (source/pattern/signal) artık ayrı `normIdx`
+- Önce: üst+orta birlikte seçiliyordu; alt tek başına OK
+- Build **1.0.0+69** · git tag **v62**
 
 ### v68 (2026-08-06) — Google Super G + prod FCM SA perms
 - `GoogleLogoMark`: yay yaklaşımı → klasik 4 renkli Super G path + widget test

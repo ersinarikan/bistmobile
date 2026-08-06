@@ -12,6 +12,9 @@ typedef SparkFormationRange = ({
   int normIdx,
   int startAbs,
   int endAbs,
+  String source,
+  String patternName,
+  String signal,
 });
 
 typedef FormationShadeRange = ({
@@ -136,6 +139,9 @@ List<SparkFormationRange> normalizeSparkFormationRanges(
       normIdx: ranges.length,
       startAbs: startAbs,
       endAbs: endAbs,
+      source: (formation['source'] ?? '').toString(),
+      patternName: (formation['pattern'] ?? '').toString(),
+      signal: (formation['signal'] ?? '').toString(),
     ));
   }
   return ranges;
@@ -186,8 +192,17 @@ int? normIdxForPatternItem(
   }
   final startAbs = (itemRange['start_index'] as num).round();
   final endAbs = (itemRange['end_index'] as num).round();
+  final source = (item['source'] ?? '').toString();
+  final patternName = (item['pattern'] ?? '').toString();
+  final signal = (item['signal'] ?? '').toString();
   for (final range in normalizeSparkFormationRanges(pattern, displayCount)) {
-    if (range.startAbs == startAbs && range.endAbs == endAbs) {
+    // Aynı mum aralığında birden fazla formasyon olabilir (ör. BASIC + ADVANCED).
+    // Yalnız start/end eşleşirse listedeki iki satır aynı normIdx'i alır.
+    if (range.startAbs == startAbs &&
+        range.endAbs == endAbs &&
+        range.source == source &&
+        range.patternName == patternName &&
+        range.signal == signal) {
       return range.normIdx;
     }
   }

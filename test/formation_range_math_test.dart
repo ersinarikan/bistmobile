@@ -16,12 +16,14 @@ Map<String, dynamic> _formation({
   required int start,
   required int end,
   String signal = 'bullish',
+  String pattern = 'double_bottom',
   String? recency,
   num? confidence,
 }) {
   final m = <String, dynamic>{
     'source': source,
     'signal': signal,
+    'pattern': pattern,
     'range': {'start_index': start, 'end_index': end},
   };
   if (recency != null) m['recency_bucket'] = recency;
@@ -137,6 +139,39 @@ void main() {
         expect(shades[i].start, spark[i].start);
         expect(shades[i].end, spark[i].end);
       }
+    });
+
+    test('FR7 same range different sources get distinct normIdx', () {
+      final a = _formation(
+        source: 'BASIC_TA',
+        start: 90,
+        end: 99,
+        pattern: 'double_bottom',
+      );
+      final b = _formation(
+        source: 'ADVANCED_TA',
+        start: 90,
+        end: 99,
+        pattern: 'double_bottom',
+      );
+      final c = _formation(
+        source: 'BASIC_TA',
+        start: 70,
+        end: 79,
+        pattern: 'head_shoulders',
+        signal: 'bearish',
+      );
+      final pattern = _pattern(dataPoints: 100, patterns: [a, b, c]);
+      const display = 60;
+      final spark = normalizeSparkFormationRanges(pattern, display);
+      expect(spark, hasLength(3));
+      expect(normIdxForPatternItem(pattern, a, display), 0);
+      expect(normIdxForPatternItem(pattern, b, display), 1);
+      expect(normIdxForPatternItem(pattern, c, display), 2);
+      expect(
+        normIdxForPatternItem(pattern, a, display),
+        isNot(normIdxForPatternItem(pattern, b, display)),
+      );
     });
   });
 }
