@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-07 (ship = Sonar QG OK hard-stop)
+> Son güncelleme: 2026-08-07 (v76 FCM token exclusive ownership)
 
 ---
 
@@ -306,9 +306,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+75` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+76` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v68` (+75 in-app unread badges; önceki `v67` = +74).  
+**Son kod tag:** `v69` (+76 FCM token ownership; önceki `v68` = +75).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -434,6 +434,13 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v76 (2026-08-07) — FCM cihaz token tek hesap
+- Backend **v612**: `device/register` aynı token’ı diğer kullanıcılardan reclaim eder
+- Mobil: `SessionController.beforeLogout` → unregister (access token silinmeden önce)
+- Prod token dedupe (aynı FCM iki hesapta kalmasın)
+- Unit: `test/session_logout_unregister_test.dart`
+- Build **1.0.0+76** · git tag **v69**
 
 ### v75b (2026-08-07) — Ship ritüeli: Sonar’sız TF yasak
 - Kural güncellemesi: `quality-gate-pre-push` + `bistmobile-git-flow` — “ship/TF/IPA” için **QG OK API kanıtı** zorunlu; atlama yok

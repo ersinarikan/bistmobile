@@ -167,4 +167,48 @@ void main() {
       expect(push.statusMessage, contains('Bildirim izni'));
     });
   });
+
+  group('PushService.unregisterQuiet', () {
+    test('clearAll posts unregister without token body', () async {
+      String? body;
+      final push = _push(
+        handler: (request) async {
+          if (request.url.path.contains('device/unregister')) {
+            body = request.body;
+            return http.Response('{"success":true,"deleted":1}', 200);
+          }
+          return http.Response('{"success":true}', 200);
+        },
+      )..lastToken = 'fcm-token-long-enough-12345';
+
+      await push.unregisterQuiet(clearAll: true);
+      expect(body, isNotNull);
+      expect(body, isNot(contains('fcm-token-long-enough-12345')));
+      expect(push.lastToken, 'fcm-token-long-enough-12345');
+    });
+
+    test('token-specific unregister when clearAll false', () async {
+      String? body;
+      final push = _push(
+        handler: (request) async {
+          if (request.url.path.contains('device/unregister')) {
+            body = request.body;
+            return http.Response('{"success":true,"deleted":1}', 200);
+          }
+          return http.Response('{"success":true}', 200);
+        },
+      )..lastToken = 'fcm-token-long-enough-12345';
+
+      await push.unregisterQuiet(clearAll: false);
+      expect(body, contains('fcm-token-long-enough-12345'));
+    });
+
+    test('API error is swallowed', () async {
+      final push = _push(
+        handler: (request) async => http.Response('{"error":"x"}', 500),
+      )..lastToken = 'fcm-token-long-enough-12345';
+
+      await push.unregisterQuiet(clearAll: true);
+    });
+  });
 }

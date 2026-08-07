@@ -168,16 +168,17 @@ class PushService extends ChangeNotifier {
     }
   }
 
-  /// Logout: tüm cihaz tokenlarını temizle (token yoksa body boş).
+  /// Logout: bu kullanıcının cihaz tokenlarını sunucudan sil.
+  /// Access token hâlâ geçerliyken çağrılmalı (`SessionController.beforeLogout`).
+  /// Yerel [lastToken] tutulur — aynı cihaz FCM token'ı sonraki hesap register'da reclaim edilir.
   Future<void> unregisterQuiet({bool clearAll = false}) async {
     try {
-      if (clearAll || lastToken == null) {
+      if (clearAll || lastToken == null || lastToken!.length < 20) {
         await _api.unregisterDevice();
       } else {
         await _api.unregisterDevice(token: lastToken);
       }
     } catch (_) {}
-    lastToken = null;
   }
 
   @override

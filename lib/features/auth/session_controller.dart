@@ -358,7 +358,18 @@ class SessionController extends ChangeNotifier {
     }
   }
 
+  /// Logout öncesi (access token hâlâ geçerliyken) — örn. FCM unregister.
+  Future<void> Function()? beforeLogout;
+
   Future<void> logout() async {
+    final hook = beforeLogout;
+    if (hook != null) {
+      try {
+        await hook();
+      } catch (_) {
+        // Local wipe yine de devam etsin.
+      }
+    }
     await _api.logout();
     user = null;
     subscription = null;

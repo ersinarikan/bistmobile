@@ -85,6 +85,12 @@ class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
       ..onAlert = showActionableAlertSnack;
     _commentary = AiCommentarySession(apiClient: _api);
     _inbox = InboxController(apiClient: _api);
+    // Unregister FCM while access token is still valid (api.logout clears storage).
+    _session.beforeLogout = () async {
+      await _push.unregisterQuiet(clearAll: true);
+      await AppBadge.clear();
+      _inbox.resetLocal();
+    };
     _session.addListener(_onSession);
 
     if (widget.firebaseReady) {
@@ -148,10 +154,12 @@ class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
       final status = _session.status;
       if (status != AuthStatus.authenticated) {
         if (_lastAuth == AuthStatus.authenticated) {
+          // Prefer SessionController.beforeLogout (authed unregister). Fallback only.
           await _push.unregisterQuiet(clearAll: true);
           _socket.disconnect();
           _commentary.clear();
           _inbox.resetLocal();
+          await AppBadge.clear();
         }
         _lastAuth = status;
         _lastPushOn = null;
