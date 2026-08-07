@@ -28,6 +28,9 @@ class OauthSignIn {
         'veya --dart-define kullanın.',
       );
     }
+    final serverClientId = Platform.isAndroid
+        ? OauthConfig.googleAndroidServerClientId
+        : OauthConfig.googleServerClientId;
     await GoogleSignIn.instance.initialize(
       clientId: Platform.isIOS
           ? (OauthConfig.googleIosClientId.isEmpty
@@ -36,9 +39,7 @@ class OauthSignIn {
           : (OauthConfig.googleAndroidClientId.isEmpty
               ? null
               : OauthConfig.googleAndroidClientId),
-      serverClientId: OauthConfig.googleServerClientId.isEmpty
-          ? null
-          : OauthConfig.googleServerClientId,
+      serverClientId: serverClientId.isEmpty ? null : serverClientId,
     );
     _googleReady = true;
   }
@@ -68,13 +69,34 @@ class OauthSignIn {
   }
 
   /// Sign in with Apple → identityToken + isteğe bağlı isim.
+  ///
+  /// iOS/macOS: native SDK (`aud` = Bundle ID).
+  /// Android: Services ID + HTTPS redirect → app intent (`aud` = Services ID).
   static Future<({String identityToken, Map<String, String?>? fullName})>
       appleIdentity() async {
-    if (kIsWeb || (!Platform.isIOS && !Platform.isMacOS)) {
+    if (kIsWeb) {
       throw OauthSignInException(
-        'Apple ile giriş yalnızca iOS/macOS üzerinde kullanılabilir.',
+        'Apple ile giriş bu platformda desteklenmiyor.',
       );
     }
+
+    WebAuthenticationOptions? webOptions;
+    if (Platform.isAndroid) {
+      if (!OauthConfig.isAppleAndroidConfigured) {
+        throw OauthSignInException(
+          'Android Apple Services ID / redirect URI tanımlı değil.',
+        );
+      }
+      webOptions = WebAuthenticationOptions(
+        clientId: OauthConfig.appleServicesId,
+        redirectUri: Uri.parse(OauthConfig.appleAndroidRedirectUri),
+      );
+    } else if (!Platform.isIOS && !Platform.isMacOS) {
+      throw OauthSignInException(
+        'Apple ile giriş yalnızca iOS/macOS/Android üzerinde kullanılabilir.',
+      );
+    }
+
     final available = await SignInWithApple.isAvailable();
     if (!available) {
       throw OauthSignInException('Bu cihazda Sign in with Apple yok.');
@@ -86,6 +108,7 @@ class OauthSignIn {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        webAuthenticationOptions: webOptions,
       );
       final token = cred.identityToken;
       if (token == null || token.isEmpty) {

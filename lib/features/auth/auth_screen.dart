@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -376,7 +374,6 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
     final isLogin = _mode == AuthMode.login;
-    final showApple = !Platform.isAndroid;
 
     return Scaffold(
       body: DecoratedBox(
@@ -610,14 +607,12 @@ class _AuthScreenState extends State<AuthScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        if (showApple) ...[
-                          OutlinedButton.icon(
-                            onPressed: _loading ? null : _apple,
-                            icon: const AppleLogoMark(size: 20),
-                            label: const Text('Apple ile Devam Et'),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                        OutlinedButton.icon(
+                          onPressed: _loading ? null : _apple,
+                          icon: const AppleLogoMark(size: 20),
+                          label: const Text('Apple ile Devam Et'),
+                        ),
+                        const SizedBox(height: 10),
                         OutlinedButton.icon(
                           onPressed: _loading ? null : _google,
                           icon: const GoogleLogoMark(size: 20),

@@ -34,10 +34,10 @@
 | Katman | iOS (TF / Review) | Android |
 |--------|-------------------|---------|
 | Flutter ürün yüzeyi | Tam (F0–F6) | Kod büyük ölçüde **ortak** |
-| Google Sign-In | E2E OK | Client ID **boş**; SHA/Firebase eksik |
-| Apple Sign-In | E2E OK | UI **gizli** + SDK Android path **yok** → **parity gap (ürün)** |
+| Google Sign-In | E2E OK | Tablet E2E OK (Firebase Web `serverClientId` + Android client) |
+| Apple Sign-In | E2E OK | Android UI + Services ID redirect E2E OK |
 | E-posta + Turnstile | OK | Ortak kod — cihaz smoke açık |
-| FCM push | OK (+76 token ownership) | `google-services.json` **yok** → no-op |
+| FCM push | OK (+76 token ownership) | `google-services.json` var — tablette push E2E açık |
 | IAP | StoreKit Sandbox PASS | `google_play=false`; Play hesabı yok |
 | Release imza | ASC / Team | **debug signing** (Play’e yüklenemez) |
 | Deep link `lotlot://` | OK | Manifest’te var |
@@ -277,16 +277,15 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 - **Amaç:** Android giriş ekranı iOS ile aynı üç kanal.  
 - **Google:**
-  - [ ] Cloud Console Android OAuth client (package + SHA)
-  - [ ] `OauthLocal.googleAndroidClientId` / dart-define
-  - [ ] Backend `GOOGLE_MOBILE_CLIENT_IDS` güncelle (iOS ID kalsın)
-  - [ ] Cihaz E2E: Google → `/api/auth/google-mobile` → `/me`
+  - [x] Cloud Console Android OAuth client (package + SHA)
+  - [x] `OauthLocal.googleAndroidClientId` + Firebase Web `googleAndroidServerClientId`
+  - [x] Backend `GOOGLE_MOBILE_CLIENT_IDS` güncelle (iOS ID kalsın)
+  - [x] Cihaz E2E: Google → `/api/auth/google-mobile` → `/me` (SM-X230)
 - **Apple (ürün zorunlu):**
-  - [ ] Apple Developer: Services ID + return URL (Android `sign_in_with_apple` dokümantasyonu)
-  - [ ] `OauthSignIn.appleIdentity`: Android path (throw kaldırma; iOS path aynen)
-  - [ ] `AuthScreen`: `showApple = !Platform.isAndroid` kaldır; `SignInWithApple.isAvailable()` veya her zaman göster + hata UX
-  - [ ] Backend: mevcut `apple-mobile` + `APPLE_CLIENT_ID` / Services ID aud — web ekibi ile doğrula (Android token `aud` Services ID olur)
-  - [ ] E2E: Apple → aynı kullanıcı iOS’ta da tanınır (hesap birliği)
+  - [x] Kod: Android UI + `WebAuthenticationOptions` + Manifest callback (2026-08-07)
+  - [x] Backend: `GET/POST /callbacks/sign_in_with_apple` → `intent://signinwithapple`
+  - [x] Apple Developer: Services ID Return URL = `https://lotlot.net/callbacks/sign_in_with_apple`
+  - [x] E2E: Apple Android girişi OK (hesap birliği iOS smoke opsiyonel)
 - **E-posta:**
   - [ ] Register / login / Turnstile / verify handoff Android smoke
 - **iOS regression:** Google+Apple login TF’de bir kez smoke.  

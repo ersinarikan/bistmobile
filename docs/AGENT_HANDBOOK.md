@@ -308,7 +308,7 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 **Build (kod):** `1.0.0+76` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v69` (+76 FCM token ownership; önceki `v68` = +75).  
+**Son kod tag:** `v70` (+77 Android Apple/Google auth parity; önceki `v69` = +76).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
