@@ -20,12 +20,15 @@
 
 ### iOS’u bozmama kuralları (zorunlu)
 
-1. `OauthSignIn.initialize` / Google `clientId` seçiminde iOS dalını regresyon test et (veya dokunma + Android-only default).  
-2. Firebase: `google-services.json` yokken iOS build’i kırılmamalı (şu an optional plugin — koru).  
-3. IAP ürün ID’leri (`lotlot_pro_monthly_v2`, `lotlot_premium_monthly`) **paylaşılan**; Play için yeniden adlandırma yok.  
-4. `google_play=true` flip’i yalnız Play ürün + SA hazırsa; aksi halde iOS etkilenmez ama Android paywall “kırık” görünür.  
-5. Deep link / `app_links` değişiklikleri her iki OS’i etkiler — `lotlot://` sözleşmesini koru.  
-6. Her Android PR/self-review’da soru: **“Bu diff iOS TF +76 davranışını değiştirir mi?”**
+Cursor kuralı: `.cursor/rules/android-ios-parity.mdc` (`alwaysApply`).
+
+1. `OauthSignIn` Google: iOS → `googleIosClientId` + `googleServerClientId` (`544107…`); Android → `googleAndroidClientId` + `googleAndroidServerClientId` (`202330…`). Karıştırma.  
+2. Apple: iOS native (`webAuthenticationOptions` null); Android Services ID + redirect.  
+3. Backend `GOOGLE_MOBILE_CLIENT_IDS` / Apple aud: **ekle, iOS ID silme**.  
+4. Firebase: `google-services.json` yokken iOS build kırılmamalı (optional plugin).  
+5. IAP ürün ID’leri paylaşılan; `google_play=true` yalnız Play + SA hazırsa.  
+6. Deep link / `app_links`: `lotlot://` sözleşmesini koru.  
+7. Her Android diff: **“iOS Google/Apple/push/IAP yolunu değiştirir mi?”**
 
 ---
 
@@ -264,11 +267,11 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 - **Amaç:** Play’e yüklenebilir imzalı AAB; uygulama kimliği sabit.  
 - **İşler:**
-  - [ ] Play Console’da uygulama (`com.lotlot.lotlotnet_mobile`)
-  - [ ] Upload keystore + `key.properties` (repoya secret yok; CI/local only)
-  - [ ] `build.gradle.kts` release signing (debug imzayı kaldır)
+  - [x] Play Console’da uygulama (`com.lotlot.lotlotnet_mobile`)
+  - [x] Upload keystore + `key.properties` (repoya secret yok; `~/.lotlot/`)
+  - [x] `build.gradle.kts` release signing (key.properties varsa release; yoksa debug fallback)
   - [ ] `flutter build appbundle --release` yeşil
-  - [ ] Internal testing track’e boş/iskelet yükleme (opsiyonel smoke)
+  - [ ] Internal testing track’e AAB yükleme
 - **iOS:** dokunulmaz.  
 - **Skills:** `android-fullstack-developer`, `project-manager`.  
 - **Dışı:** Billing, OAuth doldurma (sonraki faz).
@@ -280,14 +283,16 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
   - [x] Cloud Console Android OAuth client (package + SHA)
   - [x] `OauthLocal.googleAndroidClientId` + Firebase Web `googleAndroidServerClientId`
   - [x] Backend `GOOGLE_MOBILE_CLIENT_IDS` güncelle (iOS ID kalsın)
-  - [x] Cihaz E2E: Google → `/api/auth/google-mobile` → `/me` (SM-X230)
+  - [x] Cihaz E2E: Google → `/api/auth/google-mobile` → `/me` (SM-X230; USB + Play v79)
+  - [x] Play App Signing: klasik + prev + PQ SHA → Cloud Android OAuth clients + Firebase fingerprints
+  - [x] Android `GoogleSignIn`: `clientId=null` (Play SHA client seçimi); yalnız Web `serverClientId`
 - **Apple (ürün zorunlu):**
   - [x] Kod: Android UI + `WebAuthenticationOptions` + Manifest callback (2026-08-07)
   - [x] Backend: `GET/POST /callbacks/sign_in_with_apple` → `intent://signinwithapple`
   - [x] Apple Developer: Services ID Return URL = `https://lotlot.net/callbacks/sign_in_with_apple`
   - [x] E2E: Apple Android girişi OK (hesap birliği iOS smoke opsiyonel)
 - **E-posta:**
-  - [ ] Register / login / Turnstile / verify handoff Android smoke
+  - [ ] Register / login / Turnstile / verify handoff Android smoke (v80: Turnstile false-red düzeltmesi)
 - **iOS regression:** Google+Apple login TF’de bir kez smoke.  
 - **Skills:** `cybersecurity-expert`, `ios-fullstack-developer` (Apple Services ID), `android-fullstack-developer`, `test-engineer`, `ux-expert`.
 
@@ -372,6 +377,22 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | TA8 | `lotlot://symbol/THYAO` | A0+ |
 | TR-iOS | Her A1/A2/A3 sonrası iOS Google+Apple+push smoke | Hep |
 
+### 7.1 Fiziksel test listesi (Play dahili — sen işaretle)
+
+**Build:** `1.0.0+80` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
+
+| ID | Senaryo | Beklenen | Sen |
+|----|---------|----------|-----|
+| PT1 | Play’den **80** güncelle / yükle | Sürüm 80 | [ ] |
+| PT2 | **Google** ile giriş (Play imzalı) | Hesap açılır; `[16] reauth` yok | [ ] |
+| PT3 | **Apple** ile giriş | Hesap açılır (önceki gibi) | [ ] |
+| PT4 | E-posta **kayıt** + Turnstile | Köprü açılır; kırmızı “yüklenemedi” **yanlış alarm olmamalı**; verify mail → login | [ ] |
+| PT5 | E-posta **login** | Giriş OK; DNS/host lookup yoksa ağ kontrol | [ ] |
+| PT6 | Chrome: `https://lotlot.net/mobile/turnstile` | Sayfa açılır (ağ smoke) | [ ] |
+| PT7 | Logout → tekrar Google | Temiz giriş | [ ] |
+
+**Sonraki faz (A2 — push):** PT listesi geçince TA5/TA6.
+
 ---
 
 ## 8. İlerleme kaydı
@@ -381,7 +402,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | 2026-08-07 | İlk envanter; A0–A5 plan; Apple-on-Android ürün kararı; iOS Review beklemede |
 | 2026-08-07 | §0b: Firebase ≠ Play; sıfırdan Play Developer + paralel Firebase Android yönlendirmesi |
 | 2026-08-07 | Play: kimlik doğrulama kuyrukta; cihaz doğrulaması “gerçek Android” şart; beklemede yapılabilir işler §0c |
-| 2026-08-07 | Firebase Android app + SHA; OAuth Android client `202330846225-qhvl2p3i94nt76n05bg9dhr1gaqbtv29…` → OauthLocal |
+| 2026-08-08 | Play Google Sign-In: App Signing klasik/prev/PQ SHA → Cloud OAuth; Android clientId=null; v80 Turnstile main-frame-only error; PT listesi §7.1 |
 
 ### Acceptance özeti
 

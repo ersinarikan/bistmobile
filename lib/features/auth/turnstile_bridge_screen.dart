@@ -70,6 +70,9 @@ class _TurnstileBridgeScreenState extends State<TurnstileBridgeScreen> {
             if (mounted) setState(() => _loading = false);
           },
           onWebResourceError: (err) {
+            // Android WebView sıkça favicon/CF alt kaynağı için de hata basar;
+            // ana sayfa + Turnstile yine çalışır. Yalnız main-frame göster.
+            if (err.isForMainFrame != true) return;
             if (mounted) {
               setState(() {
                 _loading = false;

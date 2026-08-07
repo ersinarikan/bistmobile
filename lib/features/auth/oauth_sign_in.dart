@@ -31,14 +31,16 @@ class OauthSignIn {
     final serverClientId = Platform.isAndroid
         ? OauthConfig.googleAndroidServerClientId
         : OauthConfig.googleServerClientId;
+    // Android: clientId verme. Play App Signing her SHA için ayrı OAuth
+    // client oluşturur; sabit Android clientId (debug/upload) Play build'de
+    // DEVELOPER_ERROR → çoğu zaman "iptal edildi" gibi görünür. GPS
+    // package+SHA ile doğru client'ı seçer; idToken için serverClientId yeter.
     await GoogleSignIn.instance.initialize(
       clientId: Platform.isIOS
           ? (OauthConfig.googleIosClientId.isEmpty
               ? null
               : OauthConfig.googleIosClientId)
-          : (OauthConfig.googleAndroidClientId.isEmpty
-              ? null
-              : OauthConfig.googleAndroidClientId),
+          : null,
       serverClientId: serverClientId.isEmpty ? null : serverClientId,
     );
     _googleReady = true;
@@ -59,12 +61,14 @@ class OauthSignIn {
       }
       return idToken;
     } on GoogleSignInException catch (e) {
+      final detail = e.description?.trim();
+      final suffix =
+          detail == null || detail.isEmpty ? e.code.name : '${e.code.name}: $detail';
       if (e.code == GoogleSignInExceptionCode.canceled) {
-        throw OauthSignInException('Google girişi iptal edildi.');
+        // API 10 / SHA uyumsuzluğu bazen canceled olarak gelir.
+        throw OauthSignInException('Google girişi iptal edildi ($suffix).');
       }
-      throw OauthSignInException(
-        'Google girişi başarısız: ${e.description ?? e.code.name}',
-      );
+      throw OauthSignInException('Google girişi başarısız: $suffix');
     }
   }
 

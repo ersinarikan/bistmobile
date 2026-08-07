@@ -61,7 +61,7 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 - **Amaç:** iOS+Android ortak iskelet, marka, kalite/git ritüeli.
 - **Ekranlar:** Splash (marka), minimal home (geçici).
 - **API:** — (config `baseUrl` = `https://lotlot.net`).
-- **Skills / kurallar:** `project-manager`, `clean-mobile-dev`, `quality-gate-pre-push`, `agent-handbook`, `risk-integrity-mobile`.
+- **Skills / kurallar:** `project-manager`, `clean-mobile-dev`, `android-ios-parity`, `quality-gate-pre-push`, `agent-handbook`, `risk-integrity-mobile`.
 - **Acceptance:**
   - [x] Flutter iskelet, Provider, secure storage, tema
   - [x] Brand CDN logo + launcher ikon
@@ -385,6 +385,7 @@ Hepsi `alwaysApply: true` (özet):
 8. **agent-handbook** — Bu kılavuzu her değişiklik sonrası güncelle (özellikle §0 faz durumu).
 9. **brand-visual-parity** — Renk/tema/font/logo web (`brand.css` / lotlot.net) ile aynı; görsel işi siteden doğrula.
 10. **test-and-review** — **Web incele → geliştir → test/parity**; analyze yetmez.
+11. **android-ios-parity** — Android işi iOS Google/Apple/push/IAP yollarını bozmaz; OAuth ID’leri platforma göre ayır.
 
 ## 2b. Agent skills (`.cursor/skills/`)
 
