@@ -2,7 +2,7 @@
 
 > Android ilerleme, gap ve iOS-güvenli plan. **iOS Review beklerken** bu dosya takip kaynağıdır.  
 > Ana ürün roadmap: [`AGENT_HANDBOOK.md`](AGENT_HANDBOOK.md) §0.  
-> Son güncelleme: 2026-08-07 (ilk envanter + A0–A5 plan)
+> Son güncelleme: 2026-08-07 (Play hesabı sıfırdan yönlendirme §0b)
 
 ---
 
@@ -43,7 +43,127 @@
 | Deep link `lotlot://` | OK | Manifest’te var |
 | HTTPS App Links / aasa | İkisi de dışı (web) | Aynı |
 
-**Blokleyenler (Android ship):** Play hesabı · release keystore · Firebase Android app · Google Android OAuth · (ürün) Apple-on-Android config · Play Billing + backend SA.
+**Blokleyenler (Android ship):** Play Developer hesabı ($25, Firebase’den ayrı) · release keystore · Firebase Android app · Google Android OAuth · (ürün) Apple-on-Android config · Play Billing + backend SA.
+
+---
+
+## 0b. Sıfırdan hesap yönlendirmesi (senin durumun)
+
+### Ne zaten var? (yeniden açma)
+
+Aynı Google hesabında büyük ihtimalle şunlar **zaten** duruyor — **Play Console değil**:
+
+| Servis | Ne işe yarar | Bizim kullanım |
+|--------|----------------|----------------|
+| **Firebase** `lotlotnet-8c348` | FCM, Analytics | iOS push hazır; Android app **eklenecek** |
+| **Google Cloud** (aynı proje numarası `544107298661…`) | OAuth client’lar | iOS + Web Google client var; **Android OAuth client eksik** |
+| Search Console / Analytics vb. | SEO / web | Android app için zorunlu değil |
+
+Bunları silme / yeni proje açma. Android işi **aynı Firebase + aynı Cloud projesine** eklenir.
+
+### Ne yok? (ayrı ürün — zorunlu)
+
+| Servis | Ne işe yarar | Not |
+|--------|----------------|-----|
+| **Google Play Console** | Uygulamayı mağazaya koyma + abonelik (Billing) | Firebase ≠ Play. **Ayrı kayıt**, bir kerelik **$25 USD** |
+| Play’de “LOTLOT.NET” uygulaması | AAB yükleme, internal test, ürünler | Console açılınca oluşturulur |
+
+```text
+Firebase / Cloud  →  push + Google Sign-In (ücretsiz, mevcut proje)
+Play Console      →  dağıtım + ücretli abonelik (ayrı, $25)
+```
+
+Apple App Store Connect nasıl Firebase’den ayrıysa, Play de Firebase’den ayrıdır.
+
+### Senin yapman gereken sıra (bugün / bu hafta)
+
+Checkbox’ları handbook’ta işaretleyeceğiz; biten adımı sohbete yaz.
+
+#### Adım 1 — Play Developer hesabı aç (sen)
+
+1. Bilgisayarda (tercihen): [https://play.google.com/console/signup](https://play.google.com/console/signup)  
+2. **Firebase’i açtığın aynı Google hesabı** ile giriş yap (önerilir — fatura/ekip tek yerde).  
+3. Geliştirici profili: ülke, iletişim, geliştirici adı (ör. **Lotlot** / **lotlot.net**).  
+4. **$25** tek seferlik ücreti öde.  
+5. Google bazen kimlik / D-U-N-S / doğrulama isteyebilir (kişisel vs kurumsal). Gelen e-postayı tamamla; **onay 48 saat–birkaç gün** sürebilir.  
+6. Bittiğinde: Play Console ana sayfada “Uygulama oluştur” görebilmelisin.
+
+**Bana yaz:** “Play hesabı açıldı / onay bekliyor / takıldım: …”
+
+#### Adım 2 — Play’de uygulama oluştur (sen; hesap onayından sonra)
+
+1. Play Console → **Uygulama oluştur**  
+2. Uygulama adı: **LOTLOT.NET**  
+3. Varsayılan dil: Türkçe  
+4. Uygulama / oyun: **Uygulama**  
+5. Ücretsiz / ücretli: **Ücretsiz** (içinde abonelik olacak — bu normal)  
+6. Beyanlar: politika + geliştirici program politikası onayları  
+7. Paket adı (applicationId) **sonra** AAB ile sabitlenir; hedefimiz: `com.lotlot.lotlotnet_mobile`  
+   - İlk yüklemede bu ID **değişmez** — yanlış yazma.
+
+**Henüz store listing / production zorunlu değil** — Internal testing yeter.
+
+**Bana yaz:** “Play’de uygulama oluşturuldu.”
+
+#### Adım 3 — (Paralel, Play onayı beklerken) Firebase’e Android app (sen + ben)
+
+Play olmadan da yapılabilir:
+
+1. [Firebase Console](https://console.firebase.google.com/) → proje **lotlotnet-8c348**  
+2. **Add app → Android**  
+3. Package name: `com.lotlot.lotlotnet_mobile` (tıpatıp)  
+4. App nickname: LOTLOT.NET Android  
+5. `google-services.json` indir  
+6. Dosyayı bana ver / `android/app/` altına koy (gitignore’da — commit etme)  
+7. Ben: Gradle plugin + smoke.
+
+**Debug SHA-1** (Google Sign-In için sonra lazım): Mac’te:
+
+```bash
+keytool -list -v -alias androiddebugkey \
+  -keystore ~/.android/debug.keystore -storepass android -keypass android
+```
+
+SHA-1 / SHA-256’yı Cloud OAuth Android client’a ekleyeceğiz (Adım 5).
+
+**Bana yaz:** “google-services.json hazır” + SHA-1 yapıştır (public; secret değil).
+
+#### Adım 4 — Upload keystore (birlikte; Play hesabı olunca)
+
+- Mac’te keystore üretiriz (`lotlot-upload.jks`) — **şifreyi sen sakla**, chat’e yazma.  
+- `key.properties` lokal (gitignore).  
+- Release AAB imzası debug’dan çıkar.  
+- Play App Signing’e ilk AAB yüklemede kayıt.
+
+#### Adım 5 — Google Android OAuth (mevcut Cloud proje)
+
+1. [Google Cloud Console](https://console.cloud.google.com/) → **aynı** proje (`544107298661` / lotlot Firebase projesi)  
+2. APIs & Services → Credentials → **Create OAuth client ID** → **Android**  
+3. Package: `com.lotlot.lotlotnet_mobile`  
+4. SHA-1: debug (+ sonra release upload key)  
+5. Client ID’yi `OauthLocal.googleAndroidClientId` için bana ver.  
+6. Ops: prod `GOOGLE_MOBILE_CLIENT_IDS` listesine ekle (iOS ID’yi silme).
+
+#### Adım 6 — Kod fazları (ben)
+
+Play + JSON + OAuth geldikçe handbook A0 → A1 → A2…  
+Apple-on-Android ayrı (Apple Developer — sende zaten var).
+
+### Sık karışıklıklar
+
+| Sanı | Gerçek |
+|------|--------|
+| “Firebase var = Play var” | Hayır |
+| “Yeni Google hesabı açayım” | Gerekmez; **aynı hesap** + aynı Firebase proje |
+| “Önce Billing” | Hayır; önce **Play hesabı + uygulama + imza** |
+| “iOS Bundle ID’yi Android’e kopyala” | Hayır; Android ID: `com.lotlot.lotlotnet_mobile` |
+
+### Şimdi senden tek net aksiyon
+
+1. [Play Console signup](https://play.google.com/console/signup) → $25 → onay sürecini başlat.  
+2. Onay beklerken (istersen): Firebase’e Android app + `google-services.json` + debug SHA-1.
+
+Ben kod/imza/OAuth adımlarında yanında olacağım; sen konsol hesaplarını açmadan A0 tamamlanmaz.
 
 ---
 
@@ -233,6 +353,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | Tarih | Not |
 |-------|-----|
 | 2026-08-07 | İlk envanter; A0–A5 plan; Apple-on-Android ürün kararı; iOS Review beklemede |
+| 2026-08-07 | §0b: Firebase ≠ Play; sıfırdan Play Developer + paralel Firebase Android yönlendirmesi |
 
 ### Acceptance özeti
 
@@ -259,6 +380,6 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ## 10. Sonraki 3 iş (önerilen kickoff)
 
-1. **A0:** Play app + keystore + release AAB.  
-2. **A1 Google:** Android OAuth client + SHA + `OauthLocal` + backend allowlist.  
-3. **A1 Apple:** Services ID / redirect tasarımı + `AuthScreen`/`OauthSignIn` planlı patch (iOS regression checklist ile).
+1. **Sen:** Play Developer kaydı ($25) — §0b Adım 1.  
+2. **Sen (paralel):** Firebase’e Android app + `google-services.json` + debug SHA-1 — §0b Adım 3.  
+3. **Birlikte (Play onayı + JSON sonrası):** keystore + release AAB + Android OAuth client — A0/A1.
