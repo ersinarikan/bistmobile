@@ -58,5 +58,6 @@ class OauthLocal {
   static const String googleServerClientId =
       '544107298661-40cqi5v09peic8bqkmohl4rctuddgtms.apps.googleusercontent.com';
 
-  static const String googleAndroidClientId = '';
+  static const String googleAndroidClientId =
+      '202330846225-qhvl2p3i94nt76n05bg9dhr1gaqbtv29.apps.googleusercontent.com';
 }

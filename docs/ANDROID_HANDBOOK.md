@@ -167,6 +167,33 @@ Ben kod/imza/OAuth adımlarında yanında olacağım; sen konsol hesaplarını a
 
 ---
 
+## 0c. Bekleme penceresi — şimdi yapılabilir / yapılamaz
+
+Play’de **kimlik doğrulanıyor** + **gerçek Android cihaz** şartı varken:
+
+### Yapılamaz (Play kilidi)
+
+- Mağazaya uygulama yayınlama / production  
+- (Çoğu hesapta) AAB ile “ilk uygulama oluştur + yükle” tam akışı doğrulama bitene kadar kısıtlı olabilir  
+- Play Billing ürünlerini canlıya alma  
+
+### Yapılabilir (beklemeden — önerilen sıra)
+
+| # | Kim | İş | Sonuç |
+|---|-----|-----|--------|
+| 1 | Sen | Firebase → **lotlotnet-8c348** → Add Android app → paket `com.lotlot.lotlotnet_mobile` → `google-services.json` | FCM iskeleti |
+| 2 | Sen / birlikte | Debug SHA-1 üret, sohbete yapıştır | Google OAuth Android client |
+| 3 | Birlikte | Cloud’da Android OAuth client + `OauthLocal` doldur | Google giriş kod yolu |
+| 4 | Birlikte | Mac’te Android emülatör (API 34 + Google Play image) | Geliştirme testi |
+| 5 | Birlikte | Upload keystore üret (şifre sende) + release gradle | İmza hazır; Play yükleme sonra |
+| 6 | Birlikte | Kod: Firebase eksik metinleri Android’e göre; (isteğe bağlı) Apple-on-Android tasarım/patch | A1 hazırlık |
+| 7 | Sen | Ucuz/ödünç **gerçek** Android + Play Console uygulaması | Hesap doğrulama kapanır |
+
+**Emülatör:** kod ve FCM/Google Sign-In denemesi için evet.  
+**Play “cihaz doğrulama”:** hayır — gerçek telefon şart (ekrandaki metin bunu söylüyor).
+
+---
+
 ## 2. Kod envanteri (platform farkları)
 
 ### 2.1 Bilinçli `Platform` dalları
@@ -354,6 +381,8 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 |-------|-----|
 | 2026-08-07 | İlk envanter; A0–A5 plan; Apple-on-Android ürün kararı; iOS Review beklemede |
 | 2026-08-07 | §0b: Firebase ≠ Play; sıfırdan Play Developer + paralel Firebase Android yönlendirmesi |
+| 2026-08-07 | Play: kimlik doğrulama kuyrukta; cihaz doğrulaması “gerçek Android” şart; beklemede yapılabilir işler §0c |
+| 2026-08-07 | Firebase Android app + SHA; OAuth Android client `202330846225-qhvl2p3i94nt76n05bg9dhr1gaqbtv29…` → OauthLocal |
 
 ### Acceptance özeti
 
