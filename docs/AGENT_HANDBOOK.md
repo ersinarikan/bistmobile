@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-07 (v75 in-app unread badges)
+> Son güncelleme: 2026-08-07 (ship = Sonar QG OK hard-stop)
 
 ---
 
@@ -247,7 +247,8 @@ Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 
 1. Risk analizi (`risk-integrity-mobile`) — iOS+Android
 2. Minimal kod + skills
 3. Bu §0’da faz **Durum** / acceptance checkbox güncelle
-4. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push (`bistmobile-git-flow`)
+4. `flutter analyze` → `sonar-scanner` → **QG OK** → commit → tag `vN` → push (`bistmobile-git-flow`)
+5. Ship istenirse (TF/IPA): **yalnızca QG OK sonrası** `flutter build ipa` → Transporter Deliver — Sonar’sız TF **yasak**
 
 ### 0.7 F7 mağaza paket notları (ASC)
 
@@ -378,8 +379,8 @@ Hepsi `alwaysApply: true` (özet):
 2. **clean-mobile-dev** — Temiz kod; gereksiz kod yok; anlaşılır “neden” comment’leri; yazınca test/review.
 3. **post-change-refactor** — Değişiklik sonrası ilgili dosyalarda refaktör fırsatını değerlendir.
 4. **web-bist-repo** — Web kodu: ersinarikan/BIST.
-5. **bistmobile-git-flow** — İş bitince: kalite → commit → sıradaki tag (`vN`) → push bistmobile.
-6. **quality-gate-pre-push** — Commit/push öncesi: **test+review** + `flutter analyze` + `sonar-scanner`.
+5. **bistmobile-git-flow** — İş bitince: kalite (QG OK) → commit → tag → push; ship’te IPA/TF yalnızca QG sonrası.
+6. **quality-gate-pre-push** — Commit/push/**ship/TF** öncesi: test+review + `flutter analyze` + `sonar-scanner` + **QG OK API kanıtı**. QG kırmızıysa IPA/Deliver yok.
 7. **risk-integrity-mobile** — Kod öncesi risk/etki analizi; iOS+Android bütünlüğü; yan etkiyi kırma.
 8. **agent-handbook** — Bu kılavuzu her değişiklik sonrası güncelle (özellikle §0 faz durumu).
 9. **brand-visual-parity** — Renk/tema/font/logo web (`brand.css` / lotlot.net) ile aynı; görsel işi siteden doğrula.
@@ -433,6 +434,11 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v75b (2026-08-07) — Ship ritüeli: Sonar’sız TF yasak
+- Kural güncellemesi: `quality-gate-pre-push` + `bistmobile-git-flow` — “ship/TF/IPA” için **QG OK API kanıtı** zorunlu; atlama yok
+- Öğrenilen: +75 IPA Sonar atlanarak üretilmişti; bundan sonra QG kırmızı/unknown iken Deliver yok
+- Handbook §0.6 / §2 yansıtıldı (`.cursor/` gitignore — kural local)
 
 ### v75 (2026-08-07) — In-app okunmamış rozetleri
 - AppBar profil ikonu + Hesap → Gelen bildirimler çanı: `UnreadCountBadge` (kırmızı sayı, 99+)
@@ -858,14 +864,18 @@ State: **Provider**. Token: **flutter_secure_storage**.
 4. Minimal / temiz kod; API guide **oku** (yazma); thin client
 5. **`test-engineer` post-dev** + kural `test-and-review` → bulguları düzelt
 6. Refaktör değerlendirmesi + **§0 durum güncelle**
-7. `flutter analyze` → `sonar-scanner` → commit → tag `vN` → push
+7. `flutter analyze` → `sonar-scanner` → **QG OK API kanıtı** → commit → tag `vN` → push
+8. Ship/TF istenirse: QG OK değilse **DUR**; yeşilse `flutter build ipa` → Transporter Deliver
 
 ```bash
 # Döngü: web anla → kod → davranış testi → sonra:
 flutter analyze
+flutter test --coverage && python3 tool/lcov_to_sonar_generic.py
 export SONAR_TOKEN='…'   # ortama; commit etme
-sonar-scanner
+sonar-scanner -Dsonar.token="$SONAR_TOKEN"
+# QG: projectStatus.status == OK (yoksa commit/push/IPA yok)
 # sonra git commit + tag + push
+# ship: flutter build ipa → Deliver
 ```
 
 ## 6. Marka / ikon / tema
