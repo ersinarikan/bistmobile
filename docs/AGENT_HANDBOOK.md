@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-07 (v74 inbox + app badge)
+> Son güncelleme: 2026-08-07 (v75 in-app unread badges)
 
 ---
 
@@ -305,9 +305,9 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 ### 0.9 TF42 mağaza yolu — cihaz koşu sayfası (2026-08-04)
 
-**Build (kod):** `1.0.0+74` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
+**Build (kod):** `1.0.0+75` · Pro IAP ID `lotlot_pro_monthly_v2` (ASC silinen ID reuse yok).  
 **Review binary:** `1.0.0+63` · tag `v56` · **Waiting for Review**.  
-**Son kod tag:** `v67` (+74 inbox + app badge).  
+**Son kod tag:** `v68` (+75 in-app unread badges; önceki `v67` = +74).  
 **ASC:** LotLot.net `com.lotlot.lotlotnetMobile` (6797657717).
 
 **F6 preflight (2026-08-05 agent):**
@@ -433,6 +433,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v75 (2026-08-07) — In-app okunmamış rozetleri
+- AppBar profil ikonu + Hesap → Gelen bildirimler çanı: `UnreadCountBadge` (kırmızı sayı, 99+)
+- Kaynak: `InboxController.unreadCount` (summary/inbox API); Hesap açılışında summary yenilenir
+- Unit: `test/unread_count_badge_test.dart`
+- Build **1.0.0+75** · git tag **v68**
 
 ### v74 (2026-08-07) — Push badge + bildirim inbox
 - P0: `app_badge_plus` — open/resume/FCM tap/deep link → badge clear

@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../../core/brand/brand_assets.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/unread_count_badge.dart';
 import '../account/account_settings_screen.dart';
 import '../auth/auth_screen.dart';
 import '../auth/session_controller.dart';
 import '../browse/browse_screen.dart';
 import '../landing/landing_screen.dart';
+import '../notifications/inbox_controller.dart';
 import '../stocks/stocks_search_screen.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../watchlist/watchlist_screen.dart';
@@ -69,6 +71,9 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final session = context.watch<SessionController>();
     final authenticated = session.status == AuthStatus.authenticated;
+    final unread = authenticated
+        ? context.watch<InboxController>().unreadCount
+        : 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,12 +116,17 @@ class _MainShellState extends State<MainShell> {
               child: const Text('Giriş'),
             ),
           IconButton(
-            tooltip: authenticated ? 'Hesap' : 'Bilgi',
+            tooltip: authenticated
+                ? (unread > 0 ? 'Hesap · $unread okunmamış' : 'Hesap')
+                : 'Bilgi',
             onPressed: _openAccount,
-            icon: Icon(
-              authenticated
-                  ? Icons.account_circle_outlined
-                  : Icons.info_outline,
+            icon: UnreadCountBadge(
+              count: unread,
+              child: Icon(
+                authenticated
+                    ? Icons.account_circle_outlined
+                    : Icons.info_outline,
+              ),
             ),
           ),
         ],

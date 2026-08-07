@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/legal/legal_urls.dart';
 import '../../core/push/push_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/unread_count_badge.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
@@ -12,6 +13,7 @@ import '../billing/billing_controller.dart';
 import '../billing/paywall_screen.dart';
 import '../chart_alerts/chart_alerts_screen.dart';
 import '../landing/landing_screen.dart';
+import '../notifications/inbox_controller.dart';
 import '../notifications/inbox_screen.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../watchlist/watchlist_controller.dart';
@@ -57,6 +59,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     if (session.status != AuthStatus.authenticated) return;
     setState(() => _refreshing = true);
     await session.refreshMe();
+    if (!mounted) return;
+    await context.read<InboxController>().refreshSummary(force: true);
     if (mounted) setState(() => _refreshing = false);
   }
 
@@ -178,6 +182,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final prefsReady = !_refreshing || user != null;
     final pushOn = user?['push_notifications'] == true;
     final emailOn = user?['email_notifications'] == true;
+    final unread =
+        auth ? context.watch<InboxController>().unreadCount : 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -356,11 +362,16 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
                   const Divider(height: 16, color: LotlotColors.border),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.notifications_outlined),
+                    leading: UnreadCountBadge(
+                      count: unread,
+                      child: const Icon(Icons.notifications_outlined),
+                    ),
                     title: const Text('Gelen bildirimler'),
-                    subtitle: const Text(
-                      'Push geçmişi — okundu / sil',
-                      style: TextStyle(
+                    subtitle: Text(
+                      unread > 0
+                          ? '$unread okunmamış · Push geçmişi'
+                          : 'Push geçmişi — okundu / sil',
+                      style: const TextStyle(
                         color: LotlotColors.textSecondary,
                         fontSize: 12,
                       ),
