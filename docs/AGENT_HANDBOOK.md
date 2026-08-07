@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-07 (v76 FCM token exclusive ownership)
+> Son güncelleme: 2026-08-07 (Android handbook + gap plan)
 
 ---
 
@@ -11,7 +11,7 @@
 
 | Konu | Karar |
 |------|--------|
-| Yol haritası yazım yeri | **Yalnızca bu handbook (§0)** |
+| Yol haritası yazım yeri | **Yalnızca bu handbook (§0)**; Android detay takip: [`ANDROID_HANDBOOK.md`](ANDROID_HANDBOOK.md) |
 | API sözleşmesi | [`docs/MOBILE_API_INTEGRATION_GUIDE.md`](MOBILE_API_INTEGRATION_GUIDE.md) + web [ersinarikan/BIST](https://github.com/ersinarikan/BIST) — **salt okuma**. Web ekibi günceller; mobil ekip guide’ı fork’lamaz / §0 oraya yazmaz. |
 | Ürün sırası | **Önce uygulamayı tam geliştir** (auth + **guest keşif** → watchlist → hisse → hesap → Pro yüzey/push). **IAP / paywall en sonda** (F6). |
 | Monetization kanalı | Yalnızca **StoreKit / Play Billing**. Garanti / WebView checkout **asla** (App Store 3.1.1). |
@@ -434,6 +434,10 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### docs (2026-08-07) — Android handbook kickoff
+- [`docs/ANDROID_HANDBOOK.md`](ANDROID_HANDBOOK.md): kod envanteri, gap (G1–G12), A0–A5, Apple-on-Android ürün kararı, iOS-güvenli kurallar
+- Ana handbook §0.1 + README işaretçi; iOS Review beklerken Android takip buradan
 
 ### v76 (2026-08-07) — FCM cihaz token tek hesap
 - Backend **v612**: `device/register` aynı token’ı diğer kullanıcılardan reclaim eder
@@ -905,7 +909,8 @@ sonar-scanner -Dsonar.token="$SONAR_TOKEN"
 - [x] F6 istemci + prod Apple config + I3/I4 + **I1/I2 cihaz sandbox PASS** — bkz. **§0**
 - [x] Native forgot-password JSON + web reset handoff (BIST v602 / §6.1) — bkz. **§0 F1**
 - [x] F7 Add for Review → Waiting for Review (build 63, 2026-08-05)
-- [ ] F7 App Review sonucu + gerekirse +64 patch TF
+- [ ] F7 App Review sonucu + gerekirse patch TF
+- [ ] **Android:** [`ANDROID_HANDBOOK.md`](ANDROID_HANDBOOK.md) A0–A4 (Play; Google+Apple auth parity; FCM; Billing)
 - [ ] Web: `/metodoloji` 404 (landing link kırık olabilir; web ekibi)
 - [x] Admin panel alanları kullanıcıya açılmaz (§0.1 / §0.5 kilit, 2026-08-05)
 

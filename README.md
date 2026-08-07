@@ -5,6 +5,7 @@ Flutter istemcisi — Android + iOS. Backend: `https://lotlot.net`
 ## Doküman
 
 - [Agent kılavuzu — §0 Mobil ürün yol haritası](docs/AGENT_HANDBOOK.md) — aşamalı plan (F0–F7), kurallar, ritüel
+- [Android handbook — gap + A0–A5](docs/ANDROID_HANDBOOK.md) — Play / auth parity (Google+Apple) / FCM / Billing; iOS’u bozmama kuralları
 - [Mobil API entegrasyon rehberi](docs/MOBILE_API_INTEGRATION_GUIDE.md) — web ekibinin yaşayan sözleşmesi (**salt okuma**; yol haritası handbook §0’da)
 
 ## Çalıştırma
