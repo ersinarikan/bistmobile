@@ -2,7 +2,7 @@
 
 > Android ilerleme, gap ve iOS-güvenli plan. **iOS Review beklerken** bu dosya takip kaynağıdır.  
 > Ana ürün roadmap: [`AGENT_HANDBOOK.md`](AGENT_HANDBOOK.md) §0.  
-> Son güncelleme: 2026-08-07 (Play hesabı sıfırdan yönlendirme §0b)
+> Son güncelleme: 2026-08-08 (A2 FCM Android polish + §7.2)
 
 ---
 
@@ -40,7 +40,7 @@ Cursor kuralı: `.cursor/rules/android-ios-parity.mdc` (`alwaysApply`).
 | Google Sign-In | E2E OK | Tablet E2E OK (Firebase Web `serverClientId` + Android client) |
 | Apple Sign-In | E2E OK | Android UI + Services ID redirect E2E OK |
 | E-posta + Turnstile | OK | Ortak kod — cihaz smoke açık |
-| FCM push | OK (+76 token ownership) | `google-services.json` var — tablette push E2E açık |
+| FCM push | OK (+76 token ownership) | JSON + channel/icon + bootstrap; **§7.2 tablet E2E açık** |
 | IAP | StoreKit Sandbox PASS | `google_play=false`; Play hesabı yok |
 | Release imza | ASC / Team | **debug signing** (Play’e yüklenemez) |
 | Deep link `lotlot://` | OK | Manifest’te var |
@@ -58,7 +58,7 @@ Aynı Google hesabında büyük ihtimalle şunlar **zaten** duruyor — **Play C
 
 | Servis | Ne işe yarar | Bizim kullanım |
 |--------|----------------|----------------|
-| **Firebase** `lotlotnet-8c348` | FCM, Analytics | iOS push hazır; Android app **eklenecek** |
+| **Firebase** `lotlotnet-8c348` | FCM, Analytics | iOS + Android app OK; lokal `google-services.json` (gitignore) |
 | **Google Cloud** (aynı proje numarası `544107298661…`) | OAuth client’lar | iOS + Web Google client var; **Android OAuth client eksik** |
 | Search Console / Analytics vb. | SEO / web | Android app için zorunlu değil |
 
@@ -215,11 +215,11 @@ Play’de **kimlik doğrulanıyor** + **gerçek Android cihaz** şartı varken:
 | Öğe | Yol / not |
 |-----|-----------|
 | `applicationId` | `android/app/build.gradle.kts` → `com.lotlot.lotlotnet_mobile` |
-| Release signing | `signingConfig = debug` — **A0 blocker** |
-| Manifest | INTERNET + POST_NOTIFICATIONS + `lotlot` scheme — OK iskelet |
-| `google-services.json` | **Yok** (plugin conditional) |
+| Release signing | `key.properties` + upload keystore → release; yoksa debug fallback |
+| Manifest | INTERNET + POST_NOTIFICATIONS + `lotlot` + FCM channel/icon meta-data |
+| `google-services.json` | Lokal (gitignore); plugin conditional apply |
 | iOS `GoogleService-Info.plist` | Lokal (gitignore) — dokunma |
-| Keystore / `key.properties` | **Yok** |
+| Keystore / `key.properties` | Lokal (`~/.lotlot/` + `android/key.properties`, gitignore) |
 
 ### 2.3 Zaten ortak (Android için yeniden yazma yok)
 
@@ -233,21 +233,21 @@ Splash, session, e-posta auth, Turnstile, watchlist, browse, hisse, soft gate, A
 
 | ID | Gap | iOS risk |
 |----|-----|----------|
-| G1 | Play Console uygulama + internal testing track yok | Yok |
-| G2 | Release upload keystore yok (debug imza) | Yok |
-| G3 | Firebase Android app + `google-services.json` yok → FCM/Google native kırık | Düşük (optional plugin) |
-| G4 | Google Cloud **Android** OAuth client + SHA-1/256; `OauthLocal.googleAndroidClientId`; backend `GOOGLE_MOBILE_CLIENT_IDS` | Orta — listeye ekle, iOS ID’yi silme |
-| G5 | **Apple Sign-In Android** (UI + `sign_in_with_apple` Android config + Services ID redirect) | Orta — iOS `appleIdentity` dalını koru |
+| G1 | ~~Play Console + internal testing~~ **DONE** (dahili test v80+) | Yok |
+| G2 | ~~Release upload keystore~~ **DONE** | Yok |
+| G3 | ~~Firebase Android + `google-services.json`~~ **DONE** (gitignore) | Düşük |
+| G4 | ~~Android OAuth + Play SHA clients~~ **DONE** (debug/Play/prev/PQ) | Orta |
+| G5 | ~~Apple Sign-In Android~~ **DONE** | Orta |
 | G6 | Play Billing ürünleri + backend SA + `platforms.google_play=true` | Düşük (flag ayrı) |
 
 ### P1 — Parity / polish
 
 | ID | Gap |
 |----|-----|
-| G7 | Push status metni iOS plist adını hardcode ediyor |
-| G8 | `tool/android_push_bootstrap.sh` yok |
+| G7 | ~~Push status plist hardcode~~ **DONE** (A2: platforma göre json/plist) |
+| G8 | ~~`android_push_bootstrap.sh`~~ **DONE** (A2) |
 | G9 | F4 Android smoke checklist (§0) işaretsiz |
-| G10 | Notification channel (Android 8+) bilinçli ayar |
+| G10 | ~~Notification channel + icon~~ **DONE** (A2) |
 | G11 | Play Data safety formu |
 | G12 | HTTPS App Links + `assetlinks.json` (iOS aasa ile birlikte — ortak web işi) |
 
@@ -300,12 +300,14 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 - **Amaç:** F5 push parity (+76 token ownership Android’de de).  
 - **İşler:**
-  - [ ] Firebase Console → Android app (`com.lotlot.lotlotnet_mobile`)
-  - [ ] `android/app/google-services.json` (gitignore politikasına uy)
-  - [ ] google-services plugin apply doğrula
-  - [ ] Status string platforma göre
-  - [ ] Premium + pushOn → register; logout → unregister; hesap değişince çift push yok
-  - [ ] Foreground / background / killed + deep_link
+  - [x] Firebase Console → Android app (`com.lotlot.lotlotnet_mobile`)
+  - [x] `android/app/google-services.json` (gitignore politikasına uy)
+  - [x] google-services plugin apply doğrula (JSON varken)
+  - [x] Status string platforma göre (G7)
+  - [x] Default FCM channel + `ic_stat_lotlot` (G10)
+  - [x] `tool/android_push_bootstrap.sh` (G8)
+  - [ ] Premium + pushOn → register; logout → unregister; hesap değişince çift push yok (**§7.2 TA5/TA6**)
+  - [ ] Foreground / background / killed + deep_link (**§7.2**)
 - **iOS:** plist / APNs’e dokunma.  
 - **Skills:** `android-fullstack-developer`, `cybersecurity-expert`.
 
@@ -379,11 +381,11 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### 7.1 Fiziksel test listesi (Play dahili — sen işaretle)
 
-**Build:** `1.0.0+80` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
+**Build:** `1.0.0+81` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
 
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
-| PT1 | Play’den **80** güncelle / yükle | Sürüm 80 | [ ] |
+| PT1 | Play’den **81** güncelle / yükle | Sürüm 81 | [ ] |
 | PT2 | **Google** ile giriş (Play imzalı) | Hesap açılır; `[16] reauth` yok | [ ] |
 | PT3 | **Apple** ile giriş | Hesap açılır (önceki gibi) | [ ] |
 | PT4 | E-posta **kayıt** + Turnstile | Köprü açılır; kırmızı “yüklenemedi” **yanlış alarm olmamalı**; verify mail → login | [ ] |
@@ -391,7 +393,21 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | PT6 | Chrome: `https://lotlot.net/mobile/turnstile` | Sayfa açılır (ağ smoke) | [ ] |
 | PT7 | Logout → tekrar Google | Temiz giriş | [ ] |
 
-**Sonraki faz (A2 — push):** PT listesi geçince TA5/TA6.
+**Sonraki faz (A2 — push):** PT listesi geçince §7.2.
+
+### 7.2 A2 Push fiziksel test (Premium + pushOn)
+
+**Önkoşul:** Premium hesap · Hesap → push açık · build A2 ship (channel/icon) · `ersin@lotlot.net`
+
+| ID | Senaryo | Beklenen | Sen |
+|----|---------|----------|-----|
+| TA5a | Push aç → OS bildirim izni | `POST_NOTIFICATIONS` / izin diyaloğu | [ ] |
+| TA5b | Register | Hesap status “Bildirim kaydı tamam” (veya eşdeğeri); `platform=android` | [ ] |
+| TA5c | Uygulama ön planda test FCM | SnackBar / inbox | [ ] |
+| TA5d | Arka plan / killed → bildirime dokun | `deep_link` → hisse detay | [ ] |
+| TA6a | Logout | Token unregister; eski hesaba push gitmez | [ ] |
+| TA6b | İkinci hesap login + push | Çift teslimat yok (ownership) | [ ] |
+| TR-iOS | TF: Google + Apple + push bir kez | iOS regresyon yok | [ ] |
 
 ---
 
@@ -403,6 +419,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | 2026-08-07 | §0b: Firebase ≠ Play; sıfırdan Play Developer + paralel Firebase Android yönlendirmesi |
 | 2026-08-07 | Play: kimlik doğrulama kuyrukta; cihaz doğrulaması “gerçek Android” şart; beklemede yapılabilir işler §0c |
 | 2026-08-08 | Play Google Sign-In: App Signing klasik/prev/PQ SHA → Cloud OAuth; Android clientId=null; v80 Turnstile main-frame-only error; PT listesi §7.1 |
+| 2026-08-08 | A2: FCM channel/icon, platform status strings, `android_push_bootstrap.sh`, §7.2 TA5/TA6 |
 
 ### Acceptance özeti
 

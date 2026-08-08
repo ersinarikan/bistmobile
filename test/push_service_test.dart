@@ -109,12 +109,37 @@ void main() {
       expect(registered, isFalse);
     });
 
-    test('firebase missing → status message', () async {
+    test('firebase missing → status message (iOS hint)', () async {
       final push = _push(ensurePermissionOverride: () async => true)
         ..firebaseReady = false;
       final ok = await push.syncRegistration(isPremium: true, pushOn: true);
       expect(ok, isFalse);
       expect(push.statusMessage, contains('Firebase'));
+      expect(push.statusMessage, contains('GoogleService-Info.plist'));
+    });
+
+    test('firebase missing → status message (Android hint)', () async {
+      final push = _push(
+        ensurePermissionOverride: () async => true,
+        isIos: false,
+      )..firebaseReady = false;
+      final ok = await push.syncRegistration(isPremium: true, pushOn: true);
+      expect(ok, isFalse);
+      expect(push.statusMessage, contains('Firebase'));
+      expect(push.statusMessage, contains('google-services.json'));
+    });
+
+    test('short FCM token → Android status omits APNs', () async {
+      final push = _push(
+        isIos: false,
+        readFcmToken: () async => 'short',
+        ensurePermissionOverride: () async => true,
+      )..firebaseReady = true;
+
+      final ok = await push.syncRegistration(isPremium: true, pushOn: true);
+      expect(ok, isFalse);
+      expect(push.statusMessage, contains('FCM token'));
+      expect(push.statusMessage, isNot(contains('APNs')));
     });
 
     test('short FCM token → status message', () async {

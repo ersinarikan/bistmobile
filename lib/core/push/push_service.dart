@@ -40,6 +40,13 @@ class PushService extends ChangeNotifier {
 
   bool get _isIos => _isIosOverride ?? Platform.isIOS;
 
+  /// Missing Firebase config hint — iOS plist vs Android google-services.json.
+  static String missingConfigMessage({bool? isIos}) {
+    final ios = isIos ?? Platform.isIOS;
+    final file = ios ? 'GoogleService-Info.plist' : 'google-services.json';
+    return 'Firebase yapılandırması eksik ($file).';
+  }
+
   void attachMessagingHandlers() {
     if (!firebaseReady) return;
     FirebaseMessaging.onMessage.listen((msg) {
@@ -128,8 +135,7 @@ class PushService extends ChangeNotifier {
         return false;
       }
       if (!firebaseReady) {
-        statusMessage =
-            'Firebase yapılandırması eksik (GoogleService-Info.plist).';
+        statusMessage = missingConfigMessage(isIos: _isIos);
         debugPrint('PushService: Firebase not ready; device register skipped');
         notifyListeners();
         return false;
@@ -142,8 +148,9 @@ class PushService extends ChangeNotifier {
       }
       final token = await fetchToken();
       if (token == null || token.length < 20) {
-        statusMessage =
-            'FCM token alınamadı. Bildirim izni ve APNs/Firebase ayarını kontrol edin.';
+        statusMessage = _isIos
+            ? 'FCM token alınamadı. Bildirim izni ve APNs/Firebase ayarını kontrol edin.'
+            : 'FCM token alınamadı. Bildirim izni ve google-services.json / Firebase ayarını kontrol edin.';
         debugPrint('PushService: token missing or too short');
         notifyListeners();
         return false;

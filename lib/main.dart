@@ -68,9 +68,8 @@ class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
     _session = SessionController(tokenStorage: _tokens, apiClient: _api);
     _push = PushService(apiClient: _api)
       ..firebaseReady = widget.firebaseReady
-      ..statusMessage = widget.firebaseReady
-          ? null
-          : 'Firebase yapılandırması eksik (GoogleService-Info.plist).';
+      ..statusMessage =
+          widget.firebaseReady ? null : PushService.missingConfigMessage();
     if (!widget.firebaseReady) {
       debugPrint(
         'Firebase init skipped earlier; push registration unavailable '
