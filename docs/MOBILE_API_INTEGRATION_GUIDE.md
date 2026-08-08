@@ -1,6 +1,6 @@
 # Mobile API Integration Guide
 
-**Son güncelleme:** 2026-06-24  
+**Son güncelleme:** 2026-08-08 (Google ilk kayıt Turnstile — backend v619)  
 **Hedef ortam:** Production — `https://lotlot.net` (preprod / HPO host mobil istemci için kullanılmaz)
 
 Bu doküman mobil geliştirici için hazırlanmıştır. Mobil uygulamanın temel görevi backend'den gelen JSON verilerini render etmektir. Kullanıcı yetkisi, üyelik seviyesi, trial, watchlist kotası, aktif/pasif sembol kararı, sinyal ve tahmin hesapları mobilde yapılmaz; backend API response içinde açıkça döner.
@@ -107,8 +107,8 @@ Mobil uçların **neden** bazen gecikmeli veri döndürdüğünü, fiyatların n
 
 Mobil uygulama üç kimlik kanalı destekler:
 
-1. **Google Sign-In (native)** → `POST /api/auth/google-mobile` (`idToken`)
-2. **Sign in with Apple (native)** → `POST /api/auth/apple-mobile` (`identityToken`)
+1. **Google Sign-In (native)** → `POST /api/auth/google-mobile` (`idToken`; **yeni e-posta** için lazy Turnstile — §8.4)
+2. **Sign in with Apple (native)** → `POST /api/auth/apple-mobile` (`identityToken`; Turnstile yok)
 3. **E-posta + şifre** → `POST /api/auth/register` / `POST /api/auth/login` (prod'da Turnstile zorunlu; bkz. §5, §8.6)
 
 Mobil uygulama ayrıca:
@@ -501,7 +501,7 @@ Hatalar:
 
 Login Turnstile kuralı register'dan farklıdır: **ilk denemelerde zorunlu değildir**. Aynı e-posta/IP için başarısız giriş sayısı `LOGIN_CAPTCHA_AFTER_FAILURES` (varsayılan **5**) eşiğini geçince sonraki isteklerde gövdeye geçerli `turnstile_token` eklenmelidir.
 
-**Lazy WebView (login):** `400 captcha_required` veya `401 invalid_credentials` yanıtında `captcha_required: true` görüldüğünde §8.6 köprüsünü açın, token alın ve aynı email/şifre ile login'i tekrarlayın. OAuth (Google/Apple) akışında Turnstile yoktur.
+**Lazy WebView (login):** `400 captcha_required` veya `401 invalid_credentials` yanıtında `captcha_required: true` görüldüğünde §8.6 köprüsünü açın, token alın ve aynı email/şifre ile login'i tekrarlayın. Apple OAuth'ta Turnstile yoktur. Google'da yalnızca **ilk kayıt** (yeni e-posta) için lazy Turnstile vardır (§8.4).
 
 **Akış diyagramı (e-posta login — lazy captcha):**
 
@@ -717,13 +717,13 @@ Sonrasında refresh token’lar revoke edilir; kullanıcı kaydı anonimleştiri
 
 Mobil uygulama **native Google / Apple SDK** ile kimlik kanıtı alır ve backend'e JSON POST eder. Web OAuth (tarayıcı redirect + session cookie) mobil sözleşmesinden ayrıdır; ancak **hesap birleştirme kuralları aynıdır** (§8.7).
 
-Turnstile, OAuth mobil endpoint'lerinde **uygulanmaz** (token = kimlik kanıtı).
+Apple OAuth'ta Turnstile **yoktur**. Google'da yalnızca **yeni e-posta (ilk kayıt)** için lazy Turnstile zorunludur (backend v619+; §8.4). Mevcut Google hesabı girişi tek POST ile tamamlanır.
 
 ### 8.4 Google Mobile — `POST /api/auth/google-mobile`
 
-Native Google Sign-In sonrası `idToken` gönderilir.
+Native Google Sign-In sonrası `idToken` gönderilir. **Yeni e-posta** ise prod'da Turnstile gerekir; mevcut hesapta gerekmez.
 
-Request:
+Request (mevcut hesap / ilk deneme):
 
 ```json
 {
@@ -731,7 +731,26 @@ Request:
 }
 ```
 
-Alternatif alan (aynı anlam): `id_token`. **camelCase tercih edilir**; yanıt her zaman **snake_case**'dir.
+Request (yeni kayıt — Turnstile sonrası retry):
+
+```json
+{
+  "idToken": "<Google ID token>",
+  "turnstile_token": "<Cloudflare Turnstile response>"
+}
+```
+
+Alternatif alanlar: `id_token`, `cf_turnstile_response`. **camelCase tercih edilir**; yanıt her zaman **snake_case**'dir.
+
+**Lazy Turnstile (yeni Google hesabı — CANLI v619):**
+
+1. Native Google Sign-In → `idToken`
+2. `POST /api/auth/google-mobile` `{ "idToken": "..." }`
+3. Yeni e-posta → `400` + `error: "signup_turnstile_required"`
+4. WebView: `https://lotlot.net/mobile/turnstile` → `turnstile_token` (§8.6)
+5. Aynı endpoint'e tekrar: `{ "idToken": "...", "turnstile_token": "..." }` → `200` JWT
+6. Mevcut hesap: adım 2 doğrudan `200` (Turnstile yok)
+7. Geçersiz Turnstile → `400` + `error: "invalid_turnstile"` (köprüyü tekrar açın)
 
 Başarılı yanıt (`200`): `POST /api/auth/login` ile **birebir aynı şema** — `status: success`, `access_token`, `refresh_token`, `user`, `subscription`, token metadata alanları.
 
@@ -740,6 +759,8 @@ Hatalar:
 | HTTP | `error` | Anlam |
 |------|---------|--------|
 | 400 | `id_token_required` | Gövde boş veya token yok |
+| 400 | `signup_turnstile_required` | Yeni e-posta; `turnstile_token` gerekli (§8.6) |
+| 400 | `invalid_turnstile` | Turnstile token eksik/geçersiz/süresi dolmuş |
 | 401 | `invalid_oauth_token` | Token geçersiz, süresi dolmuş veya audience uyuşmuyor |
 | 403 | `inactive_user` | Hesap devre dışı |
 | 429 | `rate_limited` | Çok sık deneme |
@@ -784,25 +805,33 @@ Hatalar:
 
 Prod ortamında backend önce `GOOGLE_MOBILE_CLIENT_IDS` (Android + iOS client ID'leri, virgülle) ile audience doğrular. Bu env **boşsa** geçici olarak web `GOOGLE_CLIENT_ID` kabul edilir — prod'da mobil client ID'lerin **ayrı tanımlanması zorunludur**; web ID ile karıştırılmamalıdır.
 
-**Kayıt vs giriş:** Mobilde ayrı “Google kayıt” endpoint'i **yoktur**. Aynı `POST /api/auth/google-mobile` çağrısı hem ilk kez gelen kullanıcıyı **oluşturur** hem mevcut hesaba **giriş yapar** (find-or-create). Başarılı yanıt her zaman JWT + `user` + `subscription` döner. UI'da tek “Google ile devam et” butonu yeterlidir.
+**Kayıt vs giriş:** Mobilde ayrı “Google kayıt” endpoint'i **yoktur**. Aynı `POST /api/auth/google-mobile` çağrısı hem ilk kez gelen kullanıcıyı **oluşturur** hem mevcut hesaba **giriş yapar** (find-or-create). Yeni e-postada lazy Turnstile zorunlu; mevcut hesapta tek POST yeter. UI'da tek “Google ile devam et” butonu yeterlidir.
 
 **SDK tarafı (mobil ekip):** Android/iOS OAuth client ID'lerini backend ekibine iletin (`GOOGLE_MOBILE_CLIENT_IDS` env). `idToken` audience bu ID'lerden biri olmalıdır.
 
-**Akış diyagramı (Google — kayıt = giriş, CANLI):**
+**Akış diyagramı (Google — kayıt = giriş + lazy Turnstile, CANLI v619):**
 
 ```mermaid
 sequenceDiagram
   participant User
   participant App as MobileApp
   participant G as GoogleSDK
+  participant Bridge as TurnstileBridge
   participant API as LotlotAPI
 
   User->>App: Google ile devam et
   App->>G: Native Sign-In
   G-->>App: idToken
-  App->>API: POST google-mobile
-  Note over API: find-or-create user
-  API-->>App: JWT user subscription
+  App->>API: POST google-mobile idToken
+  alt Yeni e-posta
+    API-->>App: 400 signup_turnstile_required
+    App->>Bridge: WebView /mobile/turnstile
+    Bridge-->>App: turnstile_token
+    App->>API: POST google-mobile idToken plus turnstile_token
+    API-->>App: JWT user subscription
+  else Mevcut hesap
+    API-->>App: JWT user subscription
+  end
   App->>User: Ana ekran
 ```
 
@@ -824,7 +853,7 @@ Request:
 
 Alternatifler: `identity_token`, `full_name` (snake_case alias).
 
-Başarılı yanıt ve hata kodları §8.4 ile aynı sözleşmededir (`identity_token_required` → 400).
+Başarılı yanıt §8.4 ile aynı JWT şemasındadır. Hata kodları: `identity_token_required` (400), `invalid_oauth_token` (401), `inactive_user` (403), `rate_limited` (429), `token_issue_failed` (500). Apple'da Turnstile **yoktur** (`signup_turnstile_required` dönmez).
 
 Private relay e-posta (`@privaterelay.appleid.com`) desteklenir; web ile aynı provisioning kuralları uygulanır.
 
@@ -852,7 +881,7 @@ sequenceDiagram
 
 ### 8.6 Turnstile WebView köprüsü — `GET /mobile/turnstile`
 
-E-posta/şifre kayıt ve (gerekirse) login için Turnstile token almak üzere in-app WebView açın.
+E-posta/şifre kayıt, (gerekirse) login/forgot-password ve **Google ilk kayıt** (`signup_turnstile_required`) için Turnstile token almak üzere in-app WebView açın.
 
 **Akış diyagramı (Turnstile köprüsü — lazy WebView):**
 
@@ -862,8 +891,8 @@ sequenceDiagram
   participant Bridge as TurnstileBridge
   participant API as LotlotAPI
 
-  App->>API: POST register veya login tokensiz
-  API-->>App: invalid_turnstile veya captcha_required
+  App->>API: POST register login veya google-mobile tokensiz
+  API-->>App: invalid_turnstile captcha_required veya signup_turnstile_required
   App->>Bridge: WebView lotlot.net/mobile/turnstile
   Bridge-->>App: postMessage turnstile_token
   App->>API: Ayni istek plus turnstile_token
@@ -893,7 +922,7 @@ Token **iletimi** otomatiktir (`postMessage`); challenge **her zaman** otomatik 
     const data = JSON.parse(event.nativeEvent.data);
     const token = data.turnstile_token;
     if (!token) return; // expired/error boş string — yok sayın
-    // Sonra POST /api/auth/register veya /login gövdesine turnstile_token ekleyin
+    // Sonra POST register / login / google-mobile gövdesine turnstile_token ekleyin
   }}
 />
 ```
@@ -908,7 +937,7 @@ Boş `turnstile_token` (süre dolumu/hata) mobil tarafça yok sayılmalıdır; m
 
 Ek köprüler: `window.parent.postMessage({ turnstile_token }, '*')` (generic WebView), iOS `webkit.messageHandlers.turnstileBridge`.
 
-Sayfa `noindex` işaretlidir; yalnızca token iletir — oturum açmaz. Google/Apple OAuth akışlarında bu köprü **kullanılmaz**.
+Sayfa `noindex` işaretlidir; yalnızca token iletir — oturum açmaz. Apple OAuth'ta bu köprü **kullanılmaz**. Google'da yalnızca `signup_turnstile_required` sonrası kullanılır.
 
 ### 8.7 Hesap birleştirme (web parity)
 
@@ -924,7 +953,8 @@ Tüm kimlik akışları tek bakışta:
 |---------|----------------|-----------|----------------|
 | **E-posta kayıt** | `POST /api/auth/register` (+ lazy köprü) | Evet (prod her kayıt) | `201 pending_verification` — JWT **yok** |
 | **E-posta giriş** | `POST /api/auth/login` (+ lazy köprü eşik sonrası) | Eşik sonrası | JWT + `user` + `subscription` |
-| **Google kayıt/giriş** | `POST /api/auth/google-mobile` | **Hayır** | JWT (yeni veya mevcut hesap) |
+| **Google kayıt (yeni e-posta)** | `POST /api/auth/google-mobile` (+ lazy köprü) | Evet (`signup_turnstile_required`) | JWT + trial |
+| **Google giriş (mevcut)** | `POST /api/auth/google-mobile` | **Hayır** | JWT |
 | **Apple kayıt/giriş** | `POST /api/auth/apple-mobile` | **Hayır** | JWT (yeni veya mevcut hesap) |
 | **E-posta doğrulama** | Mail → `GET https://lotlot.net/verify-email/<token>` (web) | Hayır | Sonra mobil `POST /login` |
 | **Doğrulama maili tekrar** | `POST /api/auth/resend-verification` | Hayır (JSON API) | `200` generic mesaj |
@@ -950,7 +980,9 @@ flowchart TD
   T -->|register| Bridge[TurnstileBridge]
   T -->|login esik| Bridge
   Bridge --> API[Lotlot API auth]
-  G --> API
+  G --> GT{Yeni e-posta mi}
+  GT -->|evet signup_turnstile| Bridge
+  GT -->|hayir mevcut| API
   A --> API
   API --> JWT[JWT plus subscription]
   JWT --> Me[GET /api/auth/me]
@@ -2424,7 +2456,7 @@ Mobil state backend response'u kopyalar; üyelik veya sinyal hesaplaması yapmaz
 
 | Akış | Turnstile | İlk API çağrısı |
 |------|-----------|-----------------|
-| Google native | Hayır | `POST /api/auth/google-mobile` |
+| Google native | Lazy (yalnızca yeni e-posta) | `POST /api/auth/google-mobile` → `signup_turnstile_required` → köprü → retry |
 | Apple native | Hayır | `POST /api/auth/apple-mobile` |
 | E-posta kayıt | Lazy (prod ALWAYS=1) | `POST /api/auth/register` → `invalid_turnstile` → köprü → retry |
 | E-posta login | Lazy (eşik sonrası) | `POST /api/auth/login` → `captcha_required` → köprü → retry |
@@ -2444,8 +2476,10 @@ Register screen (e-posta/şifre — lazy WebView):
 Google login screen:
 
 1. Native Google Sign-In → `idToken`
-2. `POST /api/auth/google-mobile`
-3. Tokenları kaydet → ana ekran
+2. `POST /api/auth/google-mobile` (`idToken`)
+3. Yeni e-posta → `400 signup_turnstile_required` → §8.6 köprüsü → `turnstile_token` ile retry
+4. Mevcut hesap → doğrudan JWT
+5. Tokenları kaydet → ana ekran
 
 Apple login screen:
 
@@ -2533,11 +2567,11 @@ Mobil uygulama şunları yapmamalıdır:
 
 Mobil geliştirici ilk entegrasyonda şunları tamamlamalı:
 
-- Google native → `POST /api/auth/google-mobile` (prod client ID onayı; Turnstile yok)
+- Google native → `POST /api/auth/google-mobile` (prod client ID onayı; **yeni e-posta** → lazy Turnstile `signup_turnstile_required`)
 - Apple native → `POST /api/auth/apple-mobile` (bundle ID; ilk girişte `fullName`; Turnstile yok)
 - E-posta register: **lazy** akış — önce token'sız register → `invalid_turnstile` → köprü `https://lotlot.net/mobile/turnstile` → retry
 - E-posta login: **lazy** köprü yalnızca `captcha_required` sonrası
-- OAuth: tek buton kayıt+giriş (`google-mobile` / `apple-mobile`); Turnstile yok
+- OAuth: tek buton kayıt+giriş (`google-mobile` / `apple-mobile`); Google ilk kayıtta Turnstile, Apple'da yok
 - E-posta doğrulama: mail web linki → sonra mobil login; `resend-verification` JSON API
 - Şifre sıfırlama: WebView `https://lotlot.net/login` — JSON API yok
 - Köprü URL **prod hostname** (`https://lotlot.net`); localhost yasak; `TURNSTILE_SITE_KEY` yoksa köprü 404
@@ -2581,7 +2615,7 @@ Mobil için desteklenen ana JSON contract (özet liste):
 
 **E-posta doğrulama (web, JSON API değil):** mail linki `GET https://lotlot.net/verify-email/<token>`
 
-**Turnstile köprü (WebView, JSON API değil):** `GET /mobile/turnstile` → `turnstile_token` → register/login/forgot-password gövdesi (`TURNSTILE_SITE_KEY` yoksa 404)
+**Turnstile köprü (WebView, JSON API değil):** `GET /mobile/turnstile` → `turnstile_token` → register / login / forgot-password / **google-mobile ilk kayıt** gövdesi (`TURNSTILE_SITE_KEY` yoksa 404)
 
 **Şifre sıfırlama:** `POST /api/auth/forgot-password` → mail → `GET|POST https://lotlot.net/reset-password/<token>?src=mobile` → `lotlot://auth/login?…&password_reset=1` (§6.1). Yeni şifre web formunda; mobil JSON reset yok.
 
@@ -2778,7 +2812,7 @@ Mobil yalnızca **§25 Backend Contract Özeti** listesindeki JSON uçlarını k
 
 Backend endpoint veya response şeması değiştiğinde bu dosya güncellenmelidir; aksi halde mobil ekip eski sözleşmeye göre entegrasyon yapabilir.
 
-**Son AUTH ship:** mobil Google/Apple OAuth + Turnstile köprüsü (2026-06-22). **v536:** lazy WebView + köprü UX (2026-06-23). **v537-doc:** §0.7, §29 öncelik tablosu, IAP config/smoke uyumu (2026-06-24). **v537:** IAP cross-user makbuz reddi (`409 receipt_owned_by_other_account`) (2026-06-24). Word başlıkları MD ile aynı numaralandırılır (`--number-sections` kapalı). Deploy: `docs/DEPLOYMENT_GUIDE.md` §28.6.
+**Son AUTH ship:** mobil Google/Apple OAuth + Turnstile köprüsü (2026-06-22). **v536:** lazy WebView + köprü UX (2026-06-23). **v537-doc:** §0.7, §29 öncelik tablosu, IAP config/smoke uyumu (2026-06-24). **v537:** IAP cross-user makbuz reddi (`409 receipt_owned_by_other_account`) (2026-06-24). **v619:** Google ilk kayıt Turnstile (`signup_turnstile_required`) — §8.4 / §8.6 / §8.8 (2026-08-08). Word başlıkları MD ile aynı numaralandırılır (`--number-sections` kapalı). Deploy: `docs/DEPLOYMENT_GUIDE.md` §28.6.
 
 ---
 

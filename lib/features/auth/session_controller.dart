@@ -221,11 +221,18 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  Future<LoginResult> loginWithGoogleIdToken(String idToken) async {
+  Future<LoginResult> loginWithGoogleIdToken(
+    String idToken, {
+    String? turnstileToken,
+  }) async {
     lastError = null;
+    lastErrorCode = null;
     notifyListeners();
     try {
-      final data = await _api.loginWithGoogle(idToken: idToken);
+      final data = await _api.loginWithGoogle(
+        idToken: idToken,
+        turnstileToken: turnstileToken,
+      );
       await _api.persistAuthResponse(data);
       final me = data['user'] != null ? data : await _api.fetchMe();
       _applyMe(me);
@@ -233,14 +240,47 @@ class SessionController extends ChangeNotifier {
       notifyListeners();
       return LoginResult.success;
     } on ApiException catch (e) {
+      lastErrorCode = e.errorCode;
+      if (e.errorCode == 'signup_turnstile_required' ||
+          e.errorCode == 'invalid_turnstile' ||
+          (e.statusCode == 400 &&
+              (e.message.toLowerCase().contains('turnstile')))) {
+        lastError = _friendlyAuthMessage(e);
+        notifyListeners();
+        return LoginResult.needsTurnstile;
+      }
       lastError = _friendlyAuthMessage(e);
       notifyListeners();
       return LoginResult.failed;
     } catch (e) {
       lastError = e.toString();
+      lastErrorCode = null;
       notifyListeners();
       return LoginResult.failed;
     }
+  }
+
+  /// Google native + lazy Turnstile (yalnızca yeni e-posta / §8.4).
+  /// [obtainTurnstile] null/boş dönerse [LoginResult.failed].
+  Future<LoginResult> loginWithGoogleIdTokenLazy(
+    String idToken, {
+    required Future<String?> Function() obtainTurnstile,
+  }) async {
+    var result = await loginWithGoogleIdToken(idToken);
+    if (result != LoginResult.needsTurnstile) return result;
+    final token = await obtainTurnstile();
+    if (token == null || token.isEmpty) {
+      lastError = AuthCopy.turnstileRequired;
+      notifyListeners();
+      return LoginResult.failed;
+    }
+    result = await loginWithGoogleIdToken(idToken, turnstileToken: token);
+    if (result == LoginResult.needsTurnstile) {
+      lastError = AuthCopy.turnstileRetry;
+      notifyListeners();
+      return LoginResult.failed;
+    }
+    return result;
   }
 
   Future<LoginResult> loginWithAppleIdentity({
@@ -470,6 +510,8 @@ class SessionController extends ChangeNotifier {
         return 'Bu özellik Pro planında.';
       case 'inactive_user':
         return 'Hesap pasif. Destek ile iletişime geçin.';
+      case 'signup_turnstile_required':
+        return 'Yeni hesap için güvenlik doğrulaması gerekli.';
       case 'invalid_turnstile':
         return 'Güvenlik doğrulaması geçersiz veya süresi doldu. Tekrar deneyin.';
       case 'captcha_required':

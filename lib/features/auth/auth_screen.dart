@@ -225,16 +225,38 @@ class _AuthScreenState extends State<AuthScreen> {
     final session = context.read<SessionController>();
     try {
       final idToken = await OauthSignIn.googleIdToken();
-      final result = await session.loginWithGoogleIdToken(idToken);
+      final result = await session.loginWithGoogleIdTokenLazy(
+        idToken,
+        obtainTurnstile: () async {
+          if (!mounted) return null;
+          return TurnstileBridgeScreen.open(context);
+        },
+      );
       if (!mounted) return;
       setState(() => _loading = false);
+      if (result == LoginResult.failed && session.lastError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(session.lastError!)),
+        );
+        return;
+      }
       await _goShellIfOk(result);
     } on OauthSignInException catch (e) {
       session.setError(e.message);
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     } catch (e) {
       session.setError(e.toString());
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
     }
   }
 

@@ -250,10 +250,18 @@ class ApiClient {
   }
 
   /// `POST /api/auth/google-mobile` — §8.4
-  Future<Map<String, dynamic>> loginWithGoogle({required String idToken}) {
+  /// Yeni Google hesapta `turnstile_token` gerekir (`signup_turnstile_required`).
+  Future<Map<String, dynamic>> loginWithGoogle({
+    required String idToken,
+    String? turnstileToken,
+  }) {
+    final body = <String, dynamic>{'idToken': idToken};
+    if (turnstileToken != null && turnstileToken.isNotEmpty) {
+      body['turnstile_token'] = turnstileToken;
+    }
     return post(
       '/api/auth/google-mobile',
-      body: {'idToken': idToken},
+      body: body,
       auth: false,
     );
   }

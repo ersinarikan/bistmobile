@@ -531,7 +531,7 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | Firebase proje | `lotlotnet-8c348` |
 | API | `https://lotlot.net` |
 | Son iOS kod | `1.0.0+76` / tag `v69` |
-| Son Android AAB | `1.0.0+85` / tag `v77` (dahili; inbox/badge FCM parity) |
+| Son Android AAB | `1.0.0+86` / tag `v78` (dahili; Google ilk kayıt Turnstile) |
 | Sonar | `ersinarikan_bistmobile` |
 
 ---
