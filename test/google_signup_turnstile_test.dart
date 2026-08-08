@@ -223,4 +223,38 @@ void main() {
     expect(result, LoginResult.failed);
     expect(session.lastError, AuthCopy.turnstileRetry);
   });
+
+  test('400 turnstile message without error code → needsTurnstile', () async {
+    final api = ApiClient(
+      tokenStorage: storage,
+      httpClient: MockClient((request) async {
+        return http.Response(
+          jsonEncode({'message': 'Please complete turnstile challenge'}),
+          400,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    final session = SessionController(tokenStorage: storage, apiClient: api);
+
+    final result = await session.loginWithGoogleIdToken('id-token');
+
+    expect(result, LoginResult.needsTurnstile);
+  });
+
+  test('unexpected exception during Google login → failed', () async {
+    final api = ApiClient(
+      tokenStorage: storage,
+      httpClient: MockClient((request) async {
+        throw StateError('network down');
+      }),
+    );
+    final session = SessionController(tokenStorage: storage, apiClient: api);
+
+    final result = await session.loginWithGoogleIdToken('id-token');
+
+    expect(result, LoginResult.failed);
+    expect(session.lastErrorCode, isNull);
+    expect(session.lastError, contains('network down'));
+  });
 }
