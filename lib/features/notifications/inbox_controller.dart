@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/push/app_badge.dart';
+import '../../core/push/push_service.dart';
 
 class InboxItem {
   InboxItem({
@@ -75,6 +76,19 @@ class InboxController extends ChangeNotifier {
   bool loading = false;
   String? error;
   DateTime? _lastSummaryAt;
+
+  /// FCM/socket `unread_count` ipucu — profil + ikon badge anında (API SoT sonra).
+  void applyUnreadHint(Object? raw) {
+    final n = parsePushUnreadCount(raw);
+    if (n == null) return;
+    if (n == unreadCount) {
+      unawaited(AppBadge.set(n));
+      return;
+    }
+    unreadCount = n;
+    unawaited(AppBadge.set(n));
+    notifyListeners();
+  }
 
   Future<void> refreshSummary({bool force = false}) async {
     if (!force &&

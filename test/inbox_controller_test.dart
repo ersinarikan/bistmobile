@@ -38,6 +38,17 @@ void main() {
       c.dispose();
     });
 
+    test('applyUnreadHint updates count immediately', () {
+      final c = InboxController(
+        apiClient: _api((request) async => http.Response('{}', 500)),
+      );
+      c.applyUnreadHint('4');
+      expect(c.unreadCount, 4);
+      c.applyUnreadHint(-1);
+      expect(c.unreadCount, 4);
+      c.dispose();
+    });
+
     test('load parses items', () async {
       final c = InboxController(
         apiClient: _api((request) async {

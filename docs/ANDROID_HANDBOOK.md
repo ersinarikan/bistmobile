@@ -428,11 +428,11 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### 7.1 Fiziksel test listesi (Play dahili — sen işaretle)
 
-**Build:** `1.0.0+84` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
+**Build:** `1.0.0+85` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
 
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
-| PT1 | Play’den **84** güncelle / yükle | Sürüm 84 | [ ] |
+| PT1 | Play’den **85** güncelle / yükle | Sürüm 85 | [ ] |
 | PT2 | **Google** ile giriş (Play imzalı) | Hesap açılır; `[16] reauth` yok | [ ] |
 | PT3 | **Apple** ile giriş | Hesap açılır (önceki gibi) | [ ] |
 | PT4 | E-posta **kayıt** + Turnstile | Köprü açılır; kırmızı “yüklenemedi” **yanlış alarm olmamalı**; verify mail → login | [ ] |
@@ -450,7 +450,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 |----|---------|----------|-----|
 | TA5a | Push aç → OS bildirim izni | `POST_NOTIFICATIONS` / izin diyaloğu | [ ] |
 | TA5b | Register | Hesap status “Bildirim kaydı tamam” (veya eşdeğeri); `platform=android` | [ ] |
-| TA5c | Uygulama ön planda test FCM | SnackBar / inbox | [ ] |
+| TA5c | Uygulama ön planda test FCM | SnackBar; **inbox/badge yalnız dispatcher yolu** (API unread) | [ ] |
 | TA5d | Arka plan / killed → bildirime dokun | `deep_link` → hisse detay | [ ] |
 | TA6a | Logout | Token unregister; eski hesaba push gitmez | [ ] |
 | TA6b | İkinci hesap login + push | Çift teslimat yok (ownership) | [ ] |
@@ -531,13 +531,13 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | Firebase proje | `lotlotnet-8c348` |
 | API | `https://lotlot.net` |
 | Son iOS kod | `1.0.0+76` / tag `v69` |
-| Son Android AAB | `1.0.0+84` / tag `v76` (dahili; Pro→Premium upgrade fix; commit/AAB onay) |
+| Son Android AAB | `1.0.0+85` / tag `v77` (dahili; inbox/badge FCM parity) |
 | Sonar | `ersinarikan_bistmobile` |
 
 ---
 
 ## 10. Sonraki 3 iş (önerilen kickoff)
 
-1. **Sen:** Play dahili → **84** yükle (Pro→Premium upgrade fix).
-2. **Sen:** Tablet **I1b-A** Premium yükselt + **§7.2** push.
+1. **Sen:** Play dahili → **85** yükle (inbox/badge FCM parity + launcher badge).
+2. **Sen:** Tablet **TA5d** deep link + ikon badge; **§7.2** kalanı.
 3. **Sonra:** A4 store listing / production.

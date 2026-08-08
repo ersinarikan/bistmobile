@@ -77,11 +77,14 @@ class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
       );
     }
     if (widget.firebaseReady) {
-      _push.attachMessagingHandlers();
+      _push.attachMessagingHandlers(onMessageData: _onPushMessageData);
       _push.addListener(_onPushTokenRefresh);
     }
     _socket = SocketAlertsClient()
-      ..onAlert = showActionableAlertSnack;
+      ..onAlert = (payload) {
+        showActionableAlertSnack(payload);
+        _onPushMessageData(payload);
+      };
     _commentary = AiCommentarySession(apiClient: _api);
     _inbox = InboxController(apiClient: _api);
     // Unregister FCM while access token is still valid (api.logout clears storage).
@@ -94,13 +97,13 @@ class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
 
     if (widget.firebaseReady) {
       FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-        unawaited(AppBadge.clear());
         openDeepLink(msg.data['deep_link']?.toString());
+        unawaited(_onPushOpened(msg.data));
       });
       FirebaseMessaging.instance.getInitialMessage().then((msg) {
         if (msg != null) {
-          unawaited(AppBadge.clear());
           openDeepLink(msg.data['deep_link']?.toString());
+          unawaited(_onPushOpened(msg.data));
         }
       });
     }
@@ -135,6 +138,16 @@ class _LotlotAppState extends State<LotlotApp> with WidgetsBindingObserver {
       return;
     }
     await _inbox.refreshSummary();
+  }
+
+  void _onPushMessageData(Map<String, dynamic> data) {
+    _inbox.applyUnreadHint(data['unread_count']);
+    unawaited(_inbox.refreshSummary(force: true));
+  }
+
+  Future<void> _onPushOpened(Map<String, dynamic> data) async {
+    _inbox.applyUnreadHint(data['unread_count']);
+    await _syncInboxBadge();
   }
 
   void _onPushTokenRefresh() {

@@ -236,4 +236,27 @@ void main() {
       await push.unregisterQuiet(clearAll: true);
     });
   });
+
+  group('parsePushUnreadCount', () {
+    test('parses num and string', () {
+      expect(parsePushUnreadCount(3), 3);
+      expect(parsePushUnreadCount('7'), 7);
+      expect(parsePushUnreadCount(0), 0);
+    });
+
+    test('rejects invalid / negative', () {
+      expect(parsePushUnreadCount(null), isNull);
+      expect(parsePushUnreadCount(-1), isNull);
+      expect(parsePushUnreadCount('x'), isNull);
+      expect(parsePushUnreadCount(''), isNull);
+    });
+  });
+
+  group('PushService.attachMessagingHandlers', () {
+    test('no-op when firebase not ready', () {
+      final push = _push();
+      push.attachMessagingHandlers(onMessageData: (_) {});
+      // Does not throw; stream not attached without Firebase.
+    });
+  });
 }

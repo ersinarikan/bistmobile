@@ -2,12 +2,20 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../api/api_client.dart';
 import '../navigation/deep_link_router.dart';
 import 'apns_token_wait.dart';
+import 'app_badge.dart';
+
+/// FCM/socket `unread_count` — negatif / parse edilemez → null.
+int? parsePushUnreadCount(Object? raw) {
+  final n = raw is num ? raw.toInt() : int.tryParse('$raw');
+  if (n == null || n < 0) return null;
+  return n;
+}
 
 /// FCM lifecycle — Firebase yoksa no-op (crash yok).
 class PushService extends ChangeNotifier {
@@ -47,14 +55,19 @@ class PushService extends ChangeNotifier {
     return 'Firebase yapılandırması eksik ($file).';
   }
 
-  void attachMessagingHandlers() {
+  /// Foreground FCM: snack + isteğe bağlı inbox/badge senkronu (iOS/Android parity).
+  void attachMessagingHandlers({
+    void Function(Map<String, dynamic> data)? onMessageData,
+  }) {
     if (!firebaseReady) return;
     FirebaseMessaging.onMessage.listen((msg) {
+      final data = Map<String, dynamic>.from(msg.data);
       showFcmForegroundSnack(
-        Map<String, dynamic>.from(msg.data),
+        data,
         title: msg.notification?.title,
         body: msg.notification?.body,
       );
+      onMessageData?.call(data);
     });
     _tokenSub?.cancel();
     _tokenSub = FirebaseMessaging.instance.onTokenRefresh.listen((token) {
@@ -197,5 +210,15 @@ class PushService extends ChangeNotifier {
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Arka plan: sistem tepsisi yeter; deep_link cold-start main’de işlenir.
+  // Arka plan: tray OS’ta; unread → launcher badge (iOS APNs badge parity).
+  // Inbox listesi API SoT — foreground/resume refreshSummary ile gelir.
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    final n = parsePushUnreadCount(message.data['unread_count']);
+    if (n != null) {
+      await AppBadge.set(n);
+    }
+  } catch (e) {
+    debugPrint('background badge: $e');
+  }
 }
