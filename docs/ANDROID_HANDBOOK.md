@@ -428,11 +428,11 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### 7.1 Fiziksel test listesi (Play dahili — sen işaretle)
 
-**Build:** `1.0.0+83` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
+**Build:** `1.0.0+84` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
 
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
-| PT1 | Play’den **83** güncelle / yükle | Sürüm 83 | [ ] |
+| PT1 | Play’den **84** güncelle / yükle | Sürüm 84 | [ ] |
 | PT2 | **Google** ile giriş (Play imzalı) | Hesap açılır; `[16] reauth` yok | [ ] |
 | PT3 | **Apple** ile giriş | Hesap açılır (önceki gibi) | [ ] |
 | PT4 | E-posta **kayıt** + Turnstile | Köprü açılır; kırmızı “yüklenemedi” **yanlış alarm olmamalı**; verify mail → login | [ ] |
