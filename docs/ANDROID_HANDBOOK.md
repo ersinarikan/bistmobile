@@ -460,13 +460,15 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 **Önkoşul:** §0e A+B+C tamam · config `google_play:true` · Play’den yüklü build · `ersin@lotlot.net` license tester
 
+> **2026-08-08:** Tablet Pro→Premium **90s timeout** — Play ayrı subscription ürünleri için `ChangeSubscriptionParam` yoktu; `+84` / `GooglePlayPurchaseParam` + `ReplacementMode.withTimeProration` ile düzeldi. I1b-A’yı **84** üzerinde tekrarla.
+
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
 | N1 | Free Hesap → Bildirim tercihleri | Switch yok; Plan CTA; push/e-posta açık görünmez | [ ] |
 | TA7a | Flag kapalıyken paywall (SA öncesi) | Crash yok; satın alma kapalı / net neden | [ ] |
 | TA7b | `google_play:true` sonrası paywall | Pro/Premium fiyatları görünür | [ ] |
-| I1a-A | Pro satın al | verify → `/me` Pro | [ ] |
-| I1b-A | Premium upgrade | `/me` Premium | [ ] |
+| I1a-A | Pro satın al | verify → `/me` Pro | [x] (+83) |
+| I1b-A | Premium upgrade | `/me` Premium | [ ] (**84** bekliyor) |
 | I2-A | Restore | Tier geri | [ ] |
 | TA7c | Aboneliği yönet | Play subscriptions URL | [ ] |
 | TA7e | Başka hesaba ait makbuz | `receipt_owned_by_other_account` UX | [ ] |
@@ -529,13 +531,13 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | Firebase proje | `lotlotnet-8c348` |
 | API | `https://lotlot.net` |
 | Son iOS kod | `1.0.0+76` / tag `v69` |
-| Son Android AAB | `1.0.0+83` / tag `v75` (dahili; AAB kullanıcı onayı) |
+| Son Android AAB | `1.0.0+84` / tag `v76` (dahili; Pro→Premium upgrade fix; commit/AAB onay) |
 | Sonar | `ersinarikan_bistmobile` |
 
 ---
 
 ## 10. Sonraki 3 iş (önerilen kickoff)
 
-1. **Sen:** Play dahili → **82** yükle / tablette güncelle.
-2. **Sen:** Tablet **§7.3** billing + **§7.2** push.
+1. **Sen:** Play dahili → **84** yükle (Pro→Premium upgrade fix).
+2. **Sen:** Tablet **I1b-A** Premium yükselt + **§7.2** push.
 3. **Sonra:** A4 store listing / production.

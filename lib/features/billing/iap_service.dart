@@ -3,12 +3,37 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/billing_client_wrappers.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 
 /// Store ürün ID’leri — guide §9.4 / config fallback.
 // ASC: eski `lotlot_pro_monthly` silindi — Product ID reuse yok; v2.
 const kIapProductPro = 'lotlot_pro_monthly_v2';
 const kIapProductPremium = 'lotlot_premium_monthly';
 const kDefaultIapProductIds = {kIapProductPro, kIapProductPremium};
+
+/// Android Pro↔Premium yükseltme: eski abonelik purchase’ını seç.
+///
+/// Play, ayrı subscription ürünleri arasında geçişte `ChangeSubscriptionParam`
+/// ister; yoksa sheet/stream takılıp client timeout olabilir.
+GooglePlayPurchaseDetails? findAndroidUpgradeOldPurchase({
+  required String targetProductId,
+  required Iterable<PurchaseDetails> pastPurchases,
+  Set<String> knownSubscriptionIds = kDefaultIapProductIds,
+}) {
+  GooglePlayPurchaseDetails? found;
+  for (final p in pastPurchases) {
+    if (p is! GooglePlayPurchaseDetails) continue;
+    if (p.productID == targetProductId) continue;
+    if (!knownSubscriptionIds.contains(p.productID)) continue;
+    if (p.status != PurchaseStatus.purchased &&
+        p.status != PurchaseStatus.restored) {
+      continue;
+    }
+    found = p;
+  }
+  return found;
+}
 
 class IapPurchaseResult {
   const IapPurchaseResult({
@@ -68,10 +93,43 @@ class IapService {
     return {for (final p in response.productDetails) p.id: p};
   }
 
+  Future<PurchaseParam> _purchaseParamFor(ProductDetails product) async {
+    if (!Platform.isAndroid) {
+      return PurchaseParam(productDetails: product);
+    }
+    GooglePlayPurchaseDetails? oldSub;
+    try {
+      final android = _iap
+          .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+      final past = await android.queryPastPurchases();
+      oldSub = findAndroidUpgradeOldPurchase(
+        targetProductId: product.id,
+        pastPurchases: past.pastPurchases,
+      );
+      // Stream’de bekleyen Pro (henüz complete edilmemiş) de eski olabilir.
+      oldSub ??= findAndroidUpgradeOldPurchase(
+        targetProductId: product.id,
+        pastPurchases: _unhandled.values,
+      );
+    } catch (e) {
+      lastError = e.toString();
+    }
+    return GooglePlayPurchaseParam(
+      productDetails: product,
+      changeSubscriptionParam: oldSub == null
+          ? null
+          : ChangeSubscriptionParam(
+              oldPurchaseDetails: oldSub,
+              replacementMode: ReplacementMode.withTimeProration,
+            ),
+    );
+  }
+
   /// Satın alma; tamamlanınca [PurchaseDetails] döner.
   ///
   /// iOS’ta önceki oturumda `completePurchase` çağrılmadıysa StoreKit
   /// `storekit_duplicate_product_object` fırlatır — bekleyen işlemi alırız.
+  /// Android Pro→Premium: [GooglePlayPurchaseParam] + eski abonelik.
   Future<PurchaseDetails> buy(ProductDetails product) async {
     if (!available) {
       throw StateError(lastError ?? 'Mağaza kullanılamıyor');
@@ -100,7 +158,7 @@ class IapService {
       return raced;
     }
 
-    final param = PurchaseParam(productDetails: product);
+    final param = await _purchaseParamFor(product);
     try {
       final ok = await _iap.buyNonConsumable(purchaseParam: param);
       if (!ok) {
