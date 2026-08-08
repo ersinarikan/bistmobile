@@ -199,7 +199,7 @@ Play’de **kimlik doğrulanıyor** + **gerçek Android cihaz** şartı varken:
 
 ## 0e. A3 Play Billing — senin Console + SA adımları
 
-Flutter client hazır (`purchaseToken` / `platform:google`). Prod `GET /api/billing/iap/config` → `google_play:false` çünkü sunucuda **Play SA yok**. Flag, SA + paket adı set edilince **otomatik** `true` olur (`apple:true` değişmez).
+Flutter client hazır (`purchaseToken` / `platform:google`). Prod config (2026-08-08 smoke): `apple:true` · `google_play:true` · `verify_ready:true`. Play API list: `lotlot_pro_monthly_v2` + `lotlot_premium_monthly` (`monthly:ACTIVE`). Flag, SA + paket adı set edilince **otomatik** `true` olur (`apple:true` değişmez).
 
 ### Kopyala-yapıştır ürün ID’leri
 
@@ -284,7 +284,7 @@ Splash, session, e-posta auth, Turnstile, watchlist, browse, hisse, soft gate, A
 | G3 | ~~Firebase Android + `google-services.json`~~ **DONE** (gitignore) | Düşük |
 | G4 | ~~Android OAuth + Play SHA clients~~ **DONE** (debug/Play/prev/PQ) | Orta |
 | G5 | ~~Apple Sign-In Android~~ **DONE** | Orta |
-| G6 | Play Billing ürünleri + backend SA + `platforms.google_play=true` — **§0e** (SA gelince flag otomatik) | Düşük (flag ayrı) |
+| G6 | ~~Play Billing ürünleri + SA + `google_play=true`~~ **DONE** (API smoke OK) — tablet E2E **§7.3** açık | Düşük |
 
 ### P1 — Parity / polish
 
@@ -361,10 +361,10 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 - **Amaç:** Pro/Premium satın alma + restore Android’de.  
 - **İşler:**
-  - [ ] Play Console abonelikler: `lotlot_pro_monthly_v2` + `lotlot_premium_monthly` (**§0e Adım A**)
-  - [ ] License testers: `ersin@lotlot.net` (**§0e Adım B**)
-  - [ ] Backend: Play SA JSON + `GOOGLE_PLAY_*` (**§0e Adım C** / `tool/android_play_billing_bootstrap.sh`) → config `google_play:true`
-  - [ ] E2E I1/I2 Android mirror (**§7.3**)
+  - [x] Play Console abonelikler: `lotlot_pro_monthly_v2` + `lotlot_premium_monthly` (**§0e Adım A**)
+  - [x] License testers: `ersin@lotlot.net` (**§0e Adım B**)
+  - [x] Backend: Play SA JSON + `GOOGLE_PLAY_*` (**§0e Adım C** / bootstrap) → config `google_play:true` + API smoke OK
+  - [ ] E2E I1/I2 Android mirror (**§7.3**) — tablet
 - **iOS:** StoreKit / `apple:true` değişmesin.  
 - **Skills:** `android-fullstack-developer`, `project-manager`.
 - **Client:** Dart verify/restore path hazır — A3’te davranış değişikliği yok.
@@ -428,11 +428,11 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### 7.1 Fiziksel test listesi (Play dahili — sen işaretle)
 
-**Build:** `1.0.0+81` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
+**Build:** `1.0.0+82` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
 
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
-| PT1 | Play’den **81** güncelle / yükle | Sürüm 81 | [ ] |
+| PT1 | Play’den **82** güncelle / yükle | Sürüm 82 | [ ] |
 | PT2 | **Google** ile giriş (Play imzalı) | Hesap açılır; `[16] reauth` yok | [ ] |
 | PT3 | **Apple** ile giriş | Hesap açılır (önceki gibi) | [ ] |
 | PT4 | E-posta **kayıt** + Turnstile | Köprü açılır; kırmızı “yüklenemedi” **yanlış alarm olmamalı**; verify mail → login | [ ] |
@@ -491,6 +491,7 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | 2026-08-08 | Play Google Sign-In: App Signing klasik/prev/PQ SHA → Cloud OAuth; Android clientId=null; v80 Turnstile main-frame-only error; PT listesi §7.1 |
 | 2026-08-08 | A2: FCM channel/icon, platform status strings, `android_push_bootstrap.sh`, §7.2 TA5/TA6 |
 | 2026-08-08 | A3 plan: §0e Play Billing Console+SA rehberi; §7.3/§7.4 tablet notları; `android_play_billing_bootstrap.sh` (SA gelince) |
+| 2026-08-08 | A3 ops: Play abonelikler ACTIVE + SA + Publisher API smoke; config `google_play:true`; ship **1.0.0+82** dahili |
 
 ### Acceptance özeti
 
@@ -511,14 +512,13 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | Firebase proje | `lotlotnet-8c348` |
 | API | `https://lotlot.net` |
 | Son iOS kod | `1.0.0+76` / tag `v69` |
+| Son Android AAB | `1.0.0+82` / tag `v74` (dahili) |
 | Sonar | `ersinarikan_bistmobile` |
 
 ---
 
 ## 10. Sonraki 3 iş (önerilen kickoff)
 
-1. **Sen:** §0e Adım A+B — Play abonelikleri + license testers.  
-2. **Sen:** §0e Adım C — Play SA JSON indir → `tool/android_play_billing_bootstrap.sh install`.  
-3. **Sen:** Tablet §7.2 (push) + §7.3 (billing); AAB en sonda Play dahili.  
-2. **Sen (paralel):** Firebase’e Android app + `google-services.json` + debug SHA-1 — §0b Adım 3.  
-3. **Birlikte (Play onayı + JSON sonrası):** keystore + release AAB + Android OAuth client — A0/A1.
+1. **Sen:** Play dahili → **82** yükle / tablette güncelle.
+2. **Sen:** Tablet **§7.3** billing + **§7.2** push.
+3. **Sonra:** A4 store listing / production.
