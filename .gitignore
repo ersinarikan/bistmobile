@@ -62,6 +62,7 @@ ios/Runner/GoogleService-Info.plist
 .secrets/*-firebase-adminsdk-*.json
 .secrets/*.json
 !.secrets/fcm.env.example
+!.secrets/google_play.env.example
 
 # Local clone of web repo for agent reference
 _ref_bist/

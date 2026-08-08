@@ -2,7 +2,7 @@
 
 > Android ilerleme, gap ve iOS-güvenli plan. **iOS Review beklerken** bu dosya takip kaynağıdır.  
 > Ana ürün roadmap: [`AGENT_HANDBOOK.md`](AGENT_HANDBOOK.md) §0.  
-> Son güncelleme: 2026-08-08 (A2 FCM Android polish + §7.2)
+> Son güncelleme: 2026-08-08 (A3 Play Billing §0e / §7.3)
 
 ---
 
@@ -41,12 +41,12 @@ Cursor kuralı: `.cursor/rules/android-ios-parity.mdc` (`alwaysApply`).
 | Apple Sign-In | E2E OK | Android UI + Services ID redirect E2E OK |
 | E-posta + Turnstile | OK | Ortak kod — cihaz smoke açık |
 | FCM push | OK (+76 token ownership) | JSON + channel/icon + bootstrap; **§7.2 tablet E2E açık** |
-| IAP | StoreKit Sandbox PASS | `google_play=false`; Play hesabı yok |
+| IAP | StoreKit Sandbox PASS | Client hazır; **`google_play=false`** (Play SA yok); ürün/license §0e |
 | Release imza | ASC / Team | **debug signing** (Play’e yüklenemez) |
 | Deep link `lotlot://` | OK | Manifest’te var |
 | HTTPS App Links / aasa | İkisi de dışı (web) | Aynı |
 
-**Blokleyenler (Android ship):** Play Developer hesabı ($25, Firebase’den ayrı) · release keystore · Firebase Android app · Google Android OAuth · (ürün) Apple-on-Android config · Play Billing + backend SA.
+**Blokleyenler (Android ship):** ~~Play hesabı~~ · ~~keystore~~ · ~~Firebase Android~~ · ~~Google OAuth~~ · ~~Apple-on-Android~~ · **Play Billing SA + abonelik ürünleri (A3)** · A4 listing.
 
 ---
 
@@ -197,6 +197,52 @@ Play’de **kimlik doğrulanıyor** + **gerçek Android cihaz** şartı varken:
 
 ---
 
+## 0e. A3 Play Billing — senin Console + SA adımları
+
+Flutter client hazır (`purchaseToken` / `platform:google`). Prod `GET /api/billing/iap/config` → `google_play:false` çünkü sunucuda **Play SA yok**. Flag, SA + paket adı set edilince **otomatik** `true` olur (`apple:true` değişmez).
+
+### Kopyala-yapıştır ürün ID’leri
+
+```
+lotlot_pro_monthly_v2
+```
+
+```
+lotlot_premium_monthly
+```
+
+Paket: `com.lotlot.lotlotnet_mobile`
+
+### Adım A — Play Console abonelikler
+
+1. [Play Console](https://play.google.com/console) → **LOTLOT.NET**
+2. **Google Play ile para kazanın** → **Abonelikler** (veya Monetize → Products → Subscriptions)
+3. **Abonelik oluştur** ×2:
+   - Product ID: `lotlot_pro_monthly_v2` · ad: LOTLOT Pro (aylık)
+   - Product ID: `lotlot_premium_monthly` · ad: LOTLOT Premium (aylık)
+4. Her biri için **base plan** (aylık) + **TRY** fiyat
+5. Aktifleştir / yayına al (dahili test için yeterli durum)
+
+### Adım B — License testers
+
+1. Play Console → **Ayarlar** → **License testing** (veya Setup → License testers)
+2. E-posta ekle: `ersin@lotlot.net` (tablette Play’e giriş aynı hesap)
+3. Uygulamayı **dahili test** linkinden yükle (license tester + internal track)
+
+### Adım C — Play Developer API service account
+
+1. [Google Cloud](https://console.cloud.google.com/) → proje **`lotlotnet-8c348`**
+2. IAM → **Service accounts** → Create → ad: `lotlot-play-billing`
+3. Key → JSON indir → örn. `~/Downloads/lotlot-play-billing.json` (**commit yok**)
+4. [Play Console](https://play.google.com/console) → **Kullanıcılar ve izinler** → **Yeni kullanıcılar davet et** / service account e-postasını ekle
+5. İzin: **View financial data**, **Manage orders and subscriptions** (veya “View app information and download bulk reports” + monetization — guide §9.5)
+6. Mac’te: `tool/android_play_billing_bootstrap.sh install` (JSON’u sunucuya koyar, servisi restart eder)
+7. Kontrol: `curl -s https://lotlot.net/api/billing/iap/config | jq .iap.platforms` → `"google_play": true`
+
+**iOS:** StoreKit / `apple:true` / ASC ürünlerine dokunma.
+
+---
+
 ## 2. Kod envanteri (platform farkları)
 
 ### 2.1 Bilinçli `Platform` dalları
@@ -238,7 +284,7 @@ Splash, session, e-posta auth, Turnstile, watchlist, browse, hisse, soft gate, A
 | G3 | ~~Firebase Android + `google-services.json`~~ **DONE** (gitignore) | Düşük |
 | G4 | ~~Android OAuth + Play SHA clients~~ **DONE** (debug/Play/prev/PQ) | Orta |
 | G5 | ~~Apple Sign-In Android~~ **DONE** | Orta |
-| G6 | Play Billing ürünleri + backend SA + `platforms.google_play=true` | Düşük (flag ayrı) |
+| G6 | Play Billing ürünleri + backend SA + `platforms.google_play=true` — **§0e** (SA gelince flag otomatik) | Düşük (flag ayrı) |
 
 ### P1 — Parity / polish
 
@@ -315,12 +361,13 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 - **Amaç:** Pro/Premium satın alma + restore Android’de.  
 - **İşler:**
-  - [ ] Play Console abonelikler: aynı product ID’ler
-  - [ ] License testers
-  - [ ] Backend: Play SA JSON, `GOOGLE_PLAY_PACKAGE_NAME`, verify path, **sonra** `google_play=true`
-  - [ ] E2E I1/I2 Android mirror (satın al / restore / hesap sil)
+  - [ ] Play Console abonelikler: `lotlot_pro_monthly_v2` + `lotlot_premium_monthly` (**§0e Adım A**)
+  - [ ] License testers: `ersin@lotlot.net` (**§0e Adım B**)
+  - [ ] Backend: Play SA JSON + `GOOGLE_PLAY_*` (**§0e Adım C** / `tool/android_play_billing_bootstrap.sh`) → config `google_play:true`
+  - [ ] E2E I1/I2 Android mirror (**§7.3**)
 - **iOS:** StoreKit / `apple:true` değişmesin.  
 - **Skills:** `android-fullstack-developer`, `project-manager`.
+- **Client:** Dart verify/restore path hazır — A3’te davranış değişikliği yok.
 
 ### A4 — Play teslim (F7 Android)
 
@@ -409,6 +456,29 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | TA6b | İkinci hesap login + push | Çift teslimat yok (ownership) | [ ] |
 | TR-iOS | TF: Google + Apple + push bir kez | iOS regresyon yok | [ ] |
 
+### 7.3 A3 Billing fiziksel test (license tester)
+
+**Önkoşul:** §0e A+B+C tamam · config `google_play:true` · Play’den yüklü build · `ersin@lotlot.net` license tester
+
+| ID | Senaryo | Beklenen | Sen |
+|----|---------|----------|-----|
+| TA7a | Flag kapalıyken paywall (SA öncesi) | Crash yok; satın alma kapalı / net neden | [ ] |
+| TA7b | `google_play:true` sonrası paywall | Pro/Premium fiyatları görünür | [ ] |
+| I1a-A | Pro satın al | verify → `/me` Pro | [ ] |
+| I1b-A | Premium upgrade | `/me` Premium | [ ] |
+| I2-A | Restore | Tier geri | [ ] |
+| TA7c | Aboneliği yönet | Play subscriptions URL | [ ] |
+| TA7e | Başka hesaba ait makbuz | `receipt_owned_by_other_account` UX | [ ] |
+| TR-iOS-A3 | iOS Sandbox buy veya restore bir kez | StoreKit bozulmadı | [ ] |
+
+### 7.4 Birikimli tablet notu (AAB en sonda)
+
+AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yüklemesi** yeterli. O zamana kadar işaretle:
+
+1. **§7.2** (push) — TA5/TA6 / TR-iOS  
+2. **§7.3** (billing) — TA7 / I1 / I2 / TR-iOS-A3  
+3. **§7.1** (auth smoke) — hâlâ açıksa PT2–PT7  
+
 ---
 
 ## 8. İlerleme kaydı
@@ -420,6 +490,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | 2026-08-07 | Play: kimlik doğrulama kuyrukta; cihaz doğrulaması “gerçek Android” şart; beklemede yapılabilir işler §0c |
 | 2026-08-08 | Play Google Sign-In: App Signing klasik/prev/PQ SHA → Cloud OAuth; Android clientId=null; v80 Turnstile main-frame-only error; PT listesi §7.1 |
 | 2026-08-08 | A2: FCM channel/icon, platform status strings, `android_push_bootstrap.sh`, §7.2 TA5/TA6 |
+| 2026-08-08 | A3 plan: §0e Play Billing Console+SA rehberi; §7.3/§7.4 tablet notları; `android_play_billing_bootstrap.sh` (SA gelince) |
 
 ### Acceptance özeti
 
@@ -446,6 +517,8 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ## 10. Sonraki 3 iş (önerilen kickoff)
 
-1. **Sen:** Play Developer kaydı ($25) — §0b Adım 1.  
+1. **Sen:** §0e Adım A+B — Play abonelikleri + license testers.  
+2. **Sen:** §0e Adım C — Play SA JSON indir → `tool/android_play_billing_bootstrap.sh install`.  
+3. **Sen:** Tablet §7.2 (push) + §7.3 (billing); AAB en sonda Play dahili.  
 2. **Sen (paralel):** Firebase’e Android app + `google-services.json` + debug SHA-1 — §0b Adım 3.  
 3. **Birlikte (Play onayı + JSON sonrası):** keystore + release AAB + Android OAuth client — A0/A1.
