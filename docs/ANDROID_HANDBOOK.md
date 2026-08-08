@@ -428,11 +428,11 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### 7.1 Fiziksel test listesi (Play dahili — sen işaretle)
 
-**Build:** `1.0.0+82` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
+**Build:** `1.0.0+83` · track: Dahili test · cihaz: tablet (SM-X230) · hesap: `ersin@lotlot.net`
 
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
-| PT1 | Play’den **82** güncelle / yükle | Sürüm 82 | [ ] |
+| PT1 | Play’den **83** güncelle / yükle | Sürüm 83 | [ ] |
 | PT2 | **Google** ile giriş (Play imzalı) | Hesap açılır; `[16] reauth` yok | [ ] |
 | PT3 | **Apple** ile giriş | Hesap açılır (önceki gibi) | [ ] |
 | PT4 | E-posta **kayıt** + Turnstile | Köprü açılır; kırmızı “yüklenemedi” **yanlış alarm olmamalı**; verify mail → login | [ ] |
@@ -462,6 +462,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 | ID | Senaryo | Beklenen | Sen |
 |----|---------|----------|-----|
+| N1 | Free Hesap → Bildirim tercihleri | Switch yok; Plan CTA; push/e-posta açık görünmez | [ ] |
 | TA7a | Flag kapalıyken paywall (SA öncesi) | Crash yok; satın alma kapalı / net neden | [ ] |
 | TA7b | `google_play:true` sonrası paywall | Pro/Premium fiyatları görünür | [ ] |
 | I1a-A | Pro satın al | verify → `/me` Pro | [ ] |
@@ -470,6 +471,21 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 | TA7c | Aboneliği yönet | Play subscriptions URL | [ ] |
 | TA7e | Başka hesaba ait makbuz | `receipt_owned_by_other_account` UX | [ ] |
 | TR-iOS-A3 | iOS Sandbox buy veya restore bir kez | StoreKit bozulmadı | [ ] |
+
+### 7.3b Bildirim prefs (N matrisi — 2026-08-08)
+
+Backend deploy + Free cleanup (111 kullanıcı normalize) tamam. Cihazda doğrula:
+
+| ID | Senaryo | Beklenen | Sen |
+|----|---------|----------|-----|
+| N1 | Free Hesap bildirimleri | Switch yok; Planları incele | [ ] |
+| N2 | Pro: e-posta aç/kapa; push kilit | Soft gate Premium | [ ] |
+| N3 | Premium: ikisi OK | FCM yalnız push ON | [ ] |
+| N4 | Premium→Free | Flag kapalı; Free UI | [ ] |
+| N5 | iOS + Android | Aynı davranış (shared lib) | [ ] |
+| N6 | Web Hesabım | Free CTA / Pro e-posta / Premium ikisi | [ ] |
+
+Sonra §7.3 I1a Pro satın alma.
 
 ### 7.4 Birikimli tablet notu (AAB en sonda)
 
@@ -492,6 +508,7 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | 2026-08-08 | A2: FCM channel/icon, platform status strings, `android_push_bootstrap.sh`, §7.2 TA5/TA6 |
 | 2026-08-08 | A3 plan: §0e Play Billing Console+SA rehberi; §7.3/§7.4 tablet notları; `android_play_billing_bootstrap.sh` (SA gelince) |
 | 2026-08-08 | A3 ops: Play abonelikler ACTIVE + SA + Publisher API smoke; config `google_play:true`; ship **1.0.0+82** dahili |
+| 2026-08-08 | Bildirim prefs tier parity: Free CTA / Pro e-posta / Premium push; backend PATCH gate + Free cleanup |
 
 ### Acceptance özeti
 
@@ -512,7 +529,7 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | Firebase proje | `lotlotnet-8c348` |
 | API | `https://lotlot.net` |
 | Son iOS kod | `1.0.0+76` / tag `v69` |
-| Son Android AAB | `1.0.0+82` / tag `v74` (dahili) |
+| Son Android AAB | `1.0.0+83` / tag `v75` (dahili; AAB kullanıcı onayı) |
 | Sonar | `ersinarikan_bistmobile` |
 
 ---

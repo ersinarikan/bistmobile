@@ -293,8 +293,8 @@ Kaynak: `subscription.is_pro` / `is_premium` (`GET /me`); client uydurmaz.
 |---------|------|-----|---------|
 | İzleme CRUD + muted AL/SAT | Evet | Evet | Evet |
 | Kart sinyal bildirimi (`alert_enabled`) | Ekleme + salt metin; Detay Switch; ON Premium | Aynı | Toggle Detay’da |
-| Hesap Push ON | Soft gate Premium | Soft gate Premium | Evet (+ FCM) |
-| E-posta bildirimi | Evet | Evet | Evet |
+| Hesap Push ON | Yok (CTA / soft gate Premium) | Soft gate Premium | Evet (+ FCM) |
+| E-posta bildirimi (grafik alarm) | Yok (CTA / soft gate Pro) | Evet | Evet |
 | AI yorum / Öngörü / Formasyon shade | Soft gate Pro | Evet | Evet |
 | Chart alerts | Soft gate Pro | Evet (e-posta) | Evet (+ push kanalı) |
 | Hisse Sihirbazı | Soft gate Premium | Soft gate Premium | Evet |
@@ -339,7 +339,7 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 | ID | Senaryo | Beklenen | Sonuç |
 |----|---------|----------|--------|
-| T-F1 | Free: Bildirim (Premium) + Push ON | Premium soft gate | _bekliyor_ |
+| T-F1 | Free: Bildirim tercihleri; Push/E-posta ON denemesi | Switch yok + Plan CTA; soft gate Pro/Premium | _bekliyor_ |
 | T-F2 | Free: muted AL/SAT; AI/Öngörü/Formasyon/Wizard | Soft gate | _bekliyor_ |
 | T-P1 | Pro: AI/Öngörü/Formasyon/chart alerts OK; Wizard+push gate | OK / Premium gate | _bekliyor_ |
 | T-M1 | Premium: alert toggle + Push + Wizard | OK | _bekliyor_ |

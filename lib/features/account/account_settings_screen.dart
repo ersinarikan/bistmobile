@@ -5,7 +5,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/legal/legal_urls.dart';
 import '../../core/push/push_service.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/unread_count_badge.dart';
 import '../auth/login_screen.dart';
 import '../auth/register_screen.dart';
 import '../auth/session_controller.dart';
@@ -18,6 +17,8 @@ import '../notifications/inbox_screen.dart';
 import '../pro/soft_gate_sheet.dart';
 import '../watchlist/watchlist_controller.dart';
 import '../wizard/wizard_screen.dart';
+import 'notification_pref_display.dart';
+import 'notification_prefs_section.dart';
 
 /// F4 Hesap / yasal — auth: profil+tercihler; guest: yasal + giriş.
 class AccountSettingsScreen extends StatefulWidget {
@@ -107,6 +108,10 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
   Future<void> _setEmail(bool value) async {
     final session = context.read<SessionController>();
+    if (value && !session.isPro) {
+      await showSoftGateSheet(context, kind: SoftGateKind.pro);
+      return;
+    }
     setState(() => _patchingEmail = true);
     final ok = await session.updateNotificationPrefs(emailNotifications: value);
     if (!mounted) return;
@@ -116,6 +121,14 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         SnackBar(content: Text(session.lastError ?? 'Güncellenemedi')),
       );
     }
+  }
+
+  void _openPaywall({SoftGateKind highlight = SoftGateKind.pro}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PaywallScreen(highlight: highlight),
+      ),
+    );
   }
 
   Future<void> _logout() async {
@@ -180,8 +193,15 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     final limit = sub?['watchlist_limit'];
     final mutRemaining = sub?['monthly_watchlist_mutations_remaining'];
     final prefsReady = !_refreshing || user != null;
-    final pushOn = user?['push_notifications'] == true;
-    final emailOn = user?['email_notifications'] == true;
+    // Effective display: never show sticky True beyond entitlement.
+    final emailOn = effectiveEmailNotificationsOn(
+      isPro: session.isPro,
+      rawEmailOn: user?['email_notifications'] == true,
+    );
+    final pushOn = effectivePushNotificationsOn(
+      isPremium: session.isPremium,
+      rawPushOn: user?['push_notifications'] == true,
+    );
     final unread =
         auth ? context.watch<InboxController>().unreadCount : 0;
 
@@ -301,91 +321,32 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
             ),
             const SizedBox(height: 8),
             _SurfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Premium’da cihaz bildirimleri açılabilir. Sistem izni gerekir.',
-                    style: TextStyle(
-                      color: LotlotColors.textSecondary,
-                      fontSize: 12,
-                      height: 1.35,
+              child: NotificationPrefsSection(
+                layout: notificationPrefsLayout(
+                  isPro: session.isPro,
+                  isPremium: session.isPremium,
+                ),
+                emailOn: emailOn,
+                pushOn: pushOn,
+                unread: unread,
+                prefsReady: prefsReady,
+                patchingEmail: _patchingEmail,
+                patchingPush: _patchingPush,
+                statusMessage: context.watch<PushService>().statusMessage,
+                onEmailChanged: _setEmail,
+                onPushChanged: _setPush,
+                onOpenPlans: _openPaywall,
+                onPremiumGate: () => showSoftGateSheet(
+                  context,
+                  kind: SoftGateKind.premium,
+                ),
+                onOpenInbox: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const InboxScreen(),
                     ),
-                  ),
-                  if (context.watch<PushService>().statusMessage != null) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      context.watch<PushService>().statusMessage!,
-                      style: const TextStyle(
-                        color: LotlotColors.warning,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 8),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Push bildirimleri'),
-                    subtitle: session.isPremium
-                        ? null
-                        : const Text(
-                            'Premium gerekir',
-                            style: TextStyle(
-                              color: LotlotColors.textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                    value: pushOn,
-                    onChanged: (!prefsReady || _patchingPush) ? null : _setPush,
-                    activeThumbColor: LotlotColors.onAccent,
-                    activeTrackColor: LotlotColors.accent,
-                  ),
-                  if (_patchingPush)
-                    const LinearProgressIndicator(
-                      color: LotlotColors.accent,
-                      minHeight: 2,
-                    ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('E-posta bildirimleri'),
-                    value: emailOn,
-                    onChanged:
-                        (!prefsReady || _patchingEmail) ? null : _setEmail,
-                    activeThumbColor: LotlotColors.onAccent,
-                    activeTrackColor: LotlotColors.accent,
-                  ),
-                  if (_patchingEmail)
-                    const LinearProgressIndicator(
-                      color: LotlotColors.accent,
-                      minHeight: 2,
-                    ),
-                  const Divider(height: 16, color: LotlotColors.border),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: UnreadCountBadge(
-                      count: unread,
-                      child: const Icon(Icons.notifications_outlined),
-                    ),
-                    title: const Text('Gelen bildirimler'),
-                    subtitle: Text(
-                      unread > 0
-                          ? '$unread okunmamış · Push geçmişi'
-                          : 'Push geçmişi — okundu / sil',
-                      style: const TextStyle(
-                        color: LotlotColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const InboxScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 16),

@@ -464,6 +464,10 @@ class SessionController extends ChangeNotifier {
         return 'OAuth token eksik.';
       case 'identity_token_required':
         return 'Apple token eksik.';
+      case 'premium_required':
+        return 'Bu özellik Premium planında.';
+      case 'pro_required':
+        return 'Bu özellik Pro planında.';
       case 'inactive_user':
         return 'Hesap pasif. Destek ile iletişime geçin.';
       case 'invalid_turnstile':
