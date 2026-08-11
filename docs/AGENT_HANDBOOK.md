@@ -440,6 +440,7 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Yeni Google e-posta: `signup_turnstile_required` → lazy `/mobile/turnstile` → `turnstile_token` retry
 - Mevcut Google girişi / Apple: Turnstile yok
 - Guide §8.4 / §8.6 / §8.8 (backend v619)
+- Build **1.0.0+89** · git tag **v81** (progressive watchlist: §10 erken liste → §14/pattern enrich)
 - Build **1.0.0+88** · git tag **v80** (watchlist rate-limit UX: nginx HTML 429 → friendly; liste korunur)
 - Build **1.0.0+87** · git tag **v79** (Play closed Alpha AAB; store listing / App content)
 

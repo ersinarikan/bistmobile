@@ -217,6 +217,24 @@ class _AuthWatchlistBody extends StatelessWidget {
               ),
             ),
           ],
+          if (wl.enriching && wl.items.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            const LinearProgressIndicator(
+              minHeight: 2,
+              color: LotlotColors.accent,
+              backgroundColor: LotlotColors.border,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              wl.enrichingPredictions
+                  ? 'Sinyaller yükleniyor…'
+                  : 'Kartlar güncelleniyor…',
+              style: const TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Text(
             'Takip Edilen Hisseler',

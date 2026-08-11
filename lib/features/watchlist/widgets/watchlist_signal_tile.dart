@@ -199,6 +199,18 @@ class WatchlistSignalTile extends StatelessWidget {
                               : LotlotColors.textSecondary,
                         ),
                       ),
+                    )
+                  else if (wl.enrichingPredictions && active)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 14, right: 4),
+                      child: SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: LotlotColors.textSecondary,
+                        ),
+                      ),
                     ),
                   IconButton(
                     tooltip: 'Kaldır',

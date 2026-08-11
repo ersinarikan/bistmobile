@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import '../../core/api/api_client.dart';
 
 /// Auth watchlist + predictions (guide §10–§14). Guest çağırmaz.
+///
+/// Progressive enrich: §10 liste erken boyanır; §14 + pattern arka planda.
 class WatchlistController extends ChangeNotifier {
   WatchlistController({required ApiClient apiClient}) : _api = apiClient;
 
@@ -15,12 +17,21 @@ class WatchlistController extends ChangeNotifier {
   Map<String, dynamic>? subscription;
   String selectedHorizon = '7d';
   bool loading = false;
+  /// §14 predictions isteği sürüyor.
+  bool enrichingPredictions = false;
+  /// Pattern-analysis chunk’ları sürüyor.
+  bool enrichingPatterns = false;
   bool mutating = false;
   String? lastError;
   ApiException? lastApiError;
 
+  /// Ardışık refresh yarışında eski enrich’i düşürmek için.
+  int _refreshGeneration = 0;
+
   /// Son başarılı ekleme liste 0→1 ise true; [takePendingFirstStockGuide] ile alınır.
   bool _pendingFirstStockGuide = false;
+
+  bool get enriching => enrichingPredictions || enrichingPatterns;
 
   bool takePendingFirstStockGuide() {
     final v = _pendingFirstStockGuide;
@@ -45,11 +56,18 @@ class WatchlistController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    loading = true;
+    final gen = ++_refreshGeneration;
+    final hadItems = items.isNotEmpty;
+    // Stale kartlar varsa tam ekran spinner yok; pull/login’de liste kalsın.
+    loading = !hadItems;
     lastError = null;
+    enrichingPredictions = false;
+    enrichingPatterns = false;
     notifyListeners();
     try {
       final wl = await _api.fetchWatchlist();
+      if (gen != _refreshGeneration) return;
+
       final raw = wl['watchlist'];
       items = raw is List
           ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
@@ -57,9 +75,25 @@ class WatchlistController extends ChangeNotifier {
       subscription = wl['subscription'] is Map
           ? Map<String, dynamic>.from(wl['subscription'] as Map)
           : null;
+      // Sembol seti değiştiyse eski pred/pattern’ı temizle (yanlış kart sinyali yok).
+      final keys = items
+          .map((e) => (e['symbol']?.toString() ?? '').toUpperCase())
+          .where((s) => s.isNotEmpty)
+          .toSet();
+      predictions = predictions
+          .where((e) => keys.contains((e['symbol']?.toString() ?? '').toUpperCase()))
+          .toList();
+      patternBySymbol = Map<String, Map<String, dynamic>>.fromEntries(
+        patternBySymbol.entries.where((e) => keys.contains(e.key)),
+      );
+      loading = false;
+      notifyListeners();
 
+      enrichingPredictions = true;
+      notifyListeners();
       try {
         final pred = await _api.fetchWatchlistPredictions();
+        if (gen != _refreshGeneration) return;
         final pRaw = pred['items'];
         predictions = pRaw is List
             ? pRaw
@@ -68,16 +102,25 @@ class WatchlistController extends ChangeNotifier {
                 .toList()
             : [];
       } on ApiException catch (e) {
+        if (gen != _refreshGeneration) return;
         // Predictions ikincil; 429/403 listeyi boşaltmaz (§14 soft).
         predictions = [];
         if (e.statusCode != 403) {
           lastError = _friendly(e);
         }
+      } finally {
+        if (gen == _refreshGeneration) {
+          enrichingPredictions = false;
+          notifyListeners();
+        }
       }
 
-      // Kart rozetleri — web gibi pattern-analysis (chunked).
-      await _hydratePatterns();
+      if (gen != _refreshGeneration) return;
+      enrichingPatterns = true;
+      notifyListeners();
+      await _hydratePatterns(gen);
     } on ApiException catch (e) {
+      if (gen != _refreshGeneration) return;
       // Geçici limit/5xx: mevcut kartları silme (boş liste + eski kota yanılsaması).
       if (e.statusCode == 429 || e.statusCode >= 500) {
         lastError = _friendly(e);
@@ -92,25 +135,34 @@ class WatchlistController extends ChangeNotifier {
         }
       }
     } catch (e) {
+      if (gen != _refreshGeneration) return;
       lastError = e.toString();
     } finally {
-      loading = false;
-      notifyListeners();
+      if (gen == _refreshGeneration) {
+        loading = false;
+        enrichingPredictions = false;
+        enrichingPatterns = false;
+        notifyListeners();
+      }
     }
   }
 
-  Future<void> _hydratePatterns() async {
+  Future<void> _hydratePatterns(int gen) async {
     final symbols = items
         .map((e) => (e['symbol']?.toString() ?? '').toUpperCase())
         .where((s) => s.isNotEmpty)
         .toList();
     if (symbols.isEmpty) {
+      if (gen != _refreshGeneration) return;
       patternBySymbol = {};
+      enrichingPatterns = false;
+      notifyListeners();
       return;
     }
     final next = <String, Map<String, dynamic>>{};
     const chunk = 4;
     for (var i = 0; i < symbols.length; i += chunk) {
+      if (gen != _refreshGeneration) return;
       final slice = symbols.sublist(
         i,
         i + chunk > symbols.length ? symbols.length : i + chunk,
@@ -123,8 +175,15 @@ class WatchlistController extends ChangeNotifier {
           // Rozet yumuşak; listeyi bozma
         }
       }));
+      if (gen != _refreshGeneration) return;
+      // Chunk sonrası merge — progressive rozet boyama.
+      patternBySymbol = {...patternBySymbol, ...next};
+      notifyListeners();
     }
+    if (gen != _refreshGeneration) return;
     patternBySymbol = next;
+    enrichingPatterns = false;
+    notifyListeners();
   }
 
   Future<bool> addSymbol(
@@ -184,6 +243,8 @@ class WatchlistController extends ChangeNotifier {
           .toList();
       patternBySymbol = Map<String, Map<String, dynamic>>.from(patternBySymbol)
         ..remove(key);
+      // Enrich beklerken sil butonu kilitli kalmasın.
+      mutating = false;
       notifyListeners();
       await refresh();
       return true;
@@ -192,13 +253,14 @@ class WatchlistController extends ChangeNotifier {
       if (e.body?['subscription'] is Map) {
         subscription = Map<String, dynamic>.from(e.body!['subscription'] as Map);
       }
+      mutating = false;
+      notifyListeners();
       return false;
     } catch (e) {
       lastError = e.toString();
-      return false;
-    } finally {
       mutating = false;
       notifyListeners();
+      return false;
     }
   }
 
@@ -240,6 +302,7 @@ class WatchlistController extends ChangeNotifier {
   }
 
   void clear() {
+    _refreshGeneration++;
     items = [];
     predictions = [];
     patternBySymbol = {};
@@ -247,6 +310,8 @@ class WatchlistController extends ChangeNotifier {
     lastError = null;
     lastApiError = null;
     loading = false;
+    enrichingPredictions = false;
+    enrichingPatterns = false;
     notifyListeners();
   }
 
