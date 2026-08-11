@@ -123,9 +123,22 @@ class ApiClient {
 
     Map<String, dynamic>? decoded;
     if (response.body.isNotEmpty) {
-      final raw = jsonDecode(response.body);
-      if (raw is Map<String, dynamic>) {
-        decoded = raw;
+      try {
+        final raw = jsonDecode(response.body);
+        if (raw is Map<String, dynamic>) {
+          decoded = raw;
+        } else if (raw is Map) {
+          decoded = Map<String, dynamic>.from(raw);
+        }
+      } on FormatException {
+        // nginx 429 vb. HTML dönebilir; JSON bekleyen istemciyi çökertme.
+        throw ApiException(
+          statusCode: response.statusCode,
+          message: _httpFallbackMessage(response.statusCode),
+          errorCode: response.statusCode == 429
+              ? 'rate_limited'
+              : 'invalid_response',
+        );
       }
     }
 
@@ -137,10 +150,18 @@ class ApiClient {
       statusCode: response.statusCode,
       message: decoded?['message']?.toString() ??
           decoded?['error']?.toString() ??
-          'İstek başarısız',
+          _httpFallbackMessage(response.statusCode),
       body: decoded,
-      errorCode: decoded?['error']?.toString(),
+      errorCode: decoded?['error']?.toString() ??
+          (response.statusCode == 429 ? 'rate_limited' : null),
     );
+  }
+
+  static String _httpFallbackMessage(int statusCode) {
+    if (statusCode == 429) {
+      return 'Çok hızlı istek gönderildi. Biraz bekleyip tekrar deneyin.';
+    }
+    return 'İstek başarısız';
   }
 
   /// `POST /api/auth/refresh` — §7

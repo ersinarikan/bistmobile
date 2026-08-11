@@ -212,7 +212,9 @@ class WatchlistSignalTile extends StatelessWidget {
                       Icons.remove_circle_outline,
                       color: LotlotColors.danger,
                     ),
-                    onPressed: symbol.isEmpty
+                    // mutating: çift DELETE + rate-limit fırtınasını kes.
+                    onPressed: symbol.isEmpty ||
+                            context.watch<WatchlistController>().mutating
                         ? null
                         : () => _remove(context, symbol),
                   ),

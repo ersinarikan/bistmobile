@@ -68,26 +68,30 @@ class WatchlistController extends ChangeNotifier {
                 .toList()
             : [];
       } on ApiException catch (e) {
+        // Predictions ikincil; 429/403 listeyi boşaltmaz (§14 soft).
         predictions = [];
         if (e.statusCode != 403) {
-          lastError = e.message;
+          lastError = _friendly(e);
         }
       }
 
       // Kart rozetleri — web gibi pattern-analysis (chunked).
       await _hydratePatterns();
     } on ApiException catch (e) {
-      items = [];
-      predictions = [];
-      patternBySymbol = {};
-      lastError = _friendly(e);
-      if (e.body?['subscription'] is Map) {
-        subscription = Map<String, dynamic>.from(e.body!['subscription'] as Map);
+      // Geçici limit/5xx: mevcut kartları silme (boş liste + eski kota yanılsaması).
+      if (e.statusCode == 429 || e.statusCode >= 500) {
+        lastError = _friendly(e);
+      } else {
+        items = [];
+        predictions = [];
+        patternBySymbol = {};
+        lastError = _friendly(e);
+        if (e.body?['subscription'] is Map) {
+          subscription =
+              Map<String, dynamic>.from(e.body!['subscription'] as Map);
+        }
       }
     } catch (e) {
-      items = [];
-      predictions = [];
-      patternBySymbol = {};
       lastError = e.toString();
     } finally {
       loading = false;
@@ -161,14 +165,26 @@ class WatchlistController extends ChangeNotifier {
   }
 
   Future<bool> removeSymbol(String symbol) async {
+    if (mutating) return false;
     mutating = true;
     lastError = null;
     notifyListeners();
+    final key = symbol.toUpperCase();
     try {
-      final data = await _api.removeWatchlist(symbol);
+      // DELETE §13 — başarıdan sonra yerel çıkar; refresh 429 olsa da kart kalmaz.
+      final data = await _api.removeWatchlist(key);
       if (data['subscription'] is Map) {
         subscription = Map<String, dynamic>.from(data['subscription'] as Map);
       }
+      items = items
+          .where((e) => (e['symbol']?.toString() ?? '').toUpperCase() != key)
+          .toList();
+      predictions = predictions
+          .where((e) => (e['symbol']?.toString() ?? '').toUpperCase() != key)
+          .toList();
+      patternBySymbol = Map<String, Map<String, dynamic>>.from(patternBySymbol)
+        ..remove(key);
+      notifyListeners();
       await refresh();
       return true;
     } on ApiException catch (e) {
@@ -176,16 +192,13 @@ class WatchlistController extends ChangeNotifier {
       if (e.body?['subscription'] is Map) {
         subscription = Map<String, dynamic>.from(e.body!['subscription'] as Map);
       }
-      mutating = false;
-      notifyListeners();
       return false;
     } catch (e) {
       lastError = e.toString();
-      mutating = false;
-      notifyListeners();
       return false;
     } finally {
       mutating = false;
+      notifyListeners();
     }
   }
 
@@ -278,7 +291,14 @@ class WatchlistController extends ChangeNotifier {
         return e.message.isNotEmpty
             ? e.message
             : 'Aylık liste değişiklik kotanız doldu.';
+      case 'rate_limited':
+        return e.message.isNotEmpty
+            ? e.message
+            : 'Çok hızlı istek gönderildi. Biraz bekleyip tekrar deneyin.';
       default:
+        if (e.statusCode == 429) {
+          return 'Çok hızlı istek gönderildi. Biraz bekleyip tekrar deneyin.';
+        }
         return e.message;
     }
   }
