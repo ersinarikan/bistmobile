@@ -350,7 +350,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
   - [x] `android/app/google-services.json` (gitignore politikasına uy)
   - [x] google-services plugin apply doğrula (JSON varken)
   - [x] Status string platforma göre (G7)
-  - [x] Default FCM channel + `ic_stat_lotlot` (G10)
+  - [x] Default FCM channel + `ic_stat_lotlot` white loupe silhouette (G10; regenerate: `python3 tool/generate_notification_icon.py`)
   - [x] `tool/android_push_bootstrap.sh` (G8)
   - [ ] Premium + pushOn → register; logout → unregister; hesap değişince çift push yok (**§7.2 TA5/TA6**)
   - [ ] Foreground / background / killed + deep_link (**§7.2**)
