@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-19 (watchlist tier_limit / chart-alert paused — web v654 parity)
+> Son güncelleme: 2026-08-19 (watchlist copy — web v655 + store 1.0.0+95)
 
 ---
 
@@ -50,7 +50,7 @@ flowchart TD
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
 | **F6** | IAP paywall | İstemci + prod Apple; **I1/I2 Sandbox PASS** (2026-08-05, USB +58) | **Evet** |
-| **F7** | Mağaza teslimi | ASC: IAP + app **4 item** resubmit (19 Ağu); kod **+91** web v654 watchlist/alarm parity | Review + TF |
+| **F7** | Mağaza teslimi | ASC IAP paketi + kod **+95** (web v655 copy); Play/Apple aynı build | TF + review |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
 
@@ -435,6 +435,12 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v85 (2026-08-19) — İzleme limit kopyası (web v655)
+- Satır: “Limit doldu — analiz kapalı”
+- Banner: “Canlı izleme N hisse. Diğerleri listenizde duruyor — yer açın veya planı yükseltin.”
+- iOS + Android aynı Flutter; store build **1.0.0+95**
+- git tag **v85**
 
 ### v84 (2026-08-19) — Ücretsiz planda pasif izleme (web v654)
 - Web `9d7a5fb`: `active=false` + `disabled_reason=tier_limit` tam kart değil; kısa satır

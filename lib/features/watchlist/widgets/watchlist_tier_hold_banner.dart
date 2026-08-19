@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 
-/// Web v654 `renderer.js` inactive-watchlist alert.
+/// Web v655 `renderer.js` `_watchlistLiveLimitNote`.
 class WatchlistTierHoldBanner extends StatelessWidget {
-  const WatchlistTierHoldBanner({super.key});
+  const WatchlistTierHoldBanner({super.key, this.limit});
 
-  static const copy =
-      'Ücretsiz planda canlı izleme sınırlıdır. Fazlası silinmedi; '
-      'plan yükseltince veya listeden hisse çıkarınca yeniden açılır.';
+  final int? limit;
+
+  static String copyForLimit(int? limit) {
+    final n = (limit != null && limit > 0) ? limit : 10;
+    return 'Canlı izleme $n hisse. Diğerleri listenizde duruyor — '
+        'yer açın veya planı yükseltin.';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +25,9 @@ class WatchlistTierHoldBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
         border: Border.all(color: LotlotColors.border),
       ),
-      child: const Text(
-        copy,
-        style: TextStyle(
+      child: Text(
+        copyForLimit(limit),
+        style: const TextStyle(
           color: LotlotColors.textSecondary,
           fontSize: 13,
           height: 1.35,

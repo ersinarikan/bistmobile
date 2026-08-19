@@ -82,8 +82,8 @@ List<String> horizonPriceTeasers(Map<String, dynamic>? pred) {
 String disabledReasonLabel(String? reason) {
   switch ((reason ?? '').toLowerCase()) {
     case 'tier_limit':
-      // Web v654 renderer.js watchlist-tier-hold
-      return 'Plan limitinde bekliyor — analiz ve detay kapalı';
+      // Web v655 renderer.js watchlist-tier-hold
+      return 'Limit doldu — analiz kapalı';
     default:
       if (reason == null || reason.isEmpty) {
         return 'Bu hisse şu an pasif';

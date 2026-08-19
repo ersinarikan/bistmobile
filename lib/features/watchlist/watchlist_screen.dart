@@ -258,7 +258,7 @@ class _AuthWatchlistBody extends StatelessWidget {
                 .where(WatchlistController.isItemActive)
                 .map((item) => WatchlistSignalTile(item: item)),
             if (wl.items.any((e) => !WatchlistController.isItemActive(e))) ...[
-              const WatchlistTierHoldBanner(),
+              WatchlistTierHoldBanner(limit: wl.watchlistLimit),
               ...wl.items
                   .where((e) => !WatchlistController.isItemActive(e))
                   .map((item) => WatchlistSignalTile(item: item)),

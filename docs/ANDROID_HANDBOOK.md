@@ -378,7 +378,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### A5 — Ortak (opsiyonel, her iki OS)
 
-- [x] Watchlist `tier_limit` + chart-alert `paused` — ortak Flutter (web v654); AAB/IPA **+91**
+- [x] Watchlist `tier_limit` + chart-alert `paused` — ortak Flutter (web v654/v655); AAB/IPA **+95**
 - [ ] HTTPS App Links + Apple Universal Links (`assetlinks` / `aasa`) — web BIST bağımlı  
 
 ---

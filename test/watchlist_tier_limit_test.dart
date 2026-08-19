@@ -34,7 +34,7 @@ void main() {
   test('disabledReasonLabel maps tier_limit', () {
     expect(
       disabledReasonLabel('tier_limit'),
-      'Plan limitinde bekliyor — analiz ve detay kapalı',
+      'Limit doldu — analiz kapalı',
     );
     expect(disabledReasonLabel('other'), 'other');
     expect(disabledReasonLabel(null), contains('pasif'));
@@ -174,7 +174,7 @@ void main() {
 
     expect(find.text('ALTNY'), findsOneWidget);
     expect(
-      find.text('Plan limitinde bekliyor — analiz ve detay kapalı'),
+      find.text('Limit doldu — analiz kapalı'),
       findsOneWidget,
     );
     expect(find.text('Plan yükselt'), findsOneWidget);
@@ -183,14 +183,14 @@ void main() {
     expect(find.textContaining('Bildirim'), findsNothing);
   });
 
-  testWidgets('tier-hold banner uses web v654 copy', (tester) async {
+  testWidgets('tier-hold banner uses web v655 copy', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
-        home: const Scaffold(body: WatchlistTierHoldBanner()),
+        home: const Scaffold(body: WatchlistTierHoldBanner(limit: 10)),
       ),
     );
-    expect(find.text(WatchlistTierHoldBanner.copy), findsOneWidget);
+    expect(find.text(WatchlistTierHoldBanner.copyForLimit(10)), findsOneWidget);
   });
 
   testWidgets('paused chart alert row shows plan-limit label', (tester) async {
@@ -277,7 +277,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text(WatchlistTierHoldBanner.copy), findsOneWidget);
+    expect(find.text(WatchlistTierHoldBanner.copyForLimit(10)), findsOneWidget);
     expect(find.text('THYAO'), findsOneWidget);
     expect(find.text('ASELS'), findsOneWidget);
     expect(find.text('Detay'), findsOneWidget);
