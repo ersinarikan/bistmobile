@@ -9,9 +9,11 @@ import 'package:lotlotnet_mobile/core/api/api_client.dart';
 import 'package:lotlotnet_mobile/core/storage/token_storage.dart';
 import 'package:lotlotnet_mobile/core/theme/app_theme.dart';
 import 'package:lotlotnet_mobile/features/auth/session_controller.dart';
+import 'package:lotlotnet_mobile/features/chart_alerts/chart_alert_row.dart';
 import 'package:lotlotnet_mobile/features/chart_alerts/chart_alerts_controller.dart';
 import 'package:lotlotnet_mobile/features/watchlist/watchlist_controller.dart';
 import 'package:lotlotnet_mobile/features/watchlist/widgets/watchlist_signal_tile.dart';
+import 'package:lotlotnet_mobile/features/watchlist/widgets/watchlist_tier_hold_banner.dart';
 import 'package:provider/provider.dart';
 
 ApiClient _api(MockClientHandler handler) {
@@ -178,5 +180,36 @@ void main() {
     expect(find.text('Detay'), findsNothing);
     expect(find.text('tier_limit'), findsNothing);
     expect(find.textContaining('Bildirim'), findsNothing);
+  });
+
+  testWidgets('tier-hold banner uses web v654 copy', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: const Scaffold(body: WatchlistTierHoldBanner()),
+      ),
+    );
+    expect(find.text(WatchlistTierHoldBanner.copy), findsOneWidget);
+  });
+
+  testWidgets('paused chart alert row shows plan-limit label', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: Scaffold(
+          body: ChartAlertRow(
+            alert: {
+              'id': '2',
+              'symbol': 'THYAO',
+              'status': 'paused',
+              'summary_tr': 'Fiyat > 100',
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('THYAO'), findsOneWidget);
+    expect(find.text(ChartAlertRow.pausedLabel), findsOneWidget);
+    expect(find.text('Fiyat > 100'), findsOneWidget);
   });
 }

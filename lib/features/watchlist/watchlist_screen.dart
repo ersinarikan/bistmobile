@@ -15,6 +15,7 @@ import 'widgets/add_watchlist_sheet.dart';
 import 'widgets/first_stock_guide_dialog.dart';
 import 'widgets/watchlist_empty_onboarding.dart';
 import 'widgets/watchlist_signal_tile.dart';
+import 'widgets/watchlist_tier_hold_banner.dart';
 
 class WatchlistScreen extends StatefulWidget {
   const WatchlistScreen({super.key});
@@ -257,25 +258,7 @@ class _AuthWatchlistBody extends StatelessWidget {
                 .where(WatchlistController.isItemActive)
                 .map((item) => WatchlistSignalTile(item: item)),
             if (wl.items.any((e) => !WatchlistController.isItemActive(e))) ...[
-              Container(
-                width: double.infinity,
-                margin: const EdgeInsets.only(top: 8, bottom: 10),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: LotlotColors.surface,
-                  borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-                  border: Border.all(color: LotlotColors.border),
-                ),
-                child: const Text(
-                  'Ücretsiz planda canlı izleme sınırlıdır. Fazlası silinmedi; '
-                  'plan yükseltince veya listeden hisse çıkarınca yeniden açılır.',
-                  style: TextStyle(
-                    color: LotlotColors.textSecondary,
-                    fontSize: 13,
-                    height: 1.35,
-                  ),
-                ),
-              ),
+              const WatchlistTierHoldBanner(),
               ...wl.items
                   .where((e) => !WatchlistController.isItemActive(e))
                   .map((item) => WatchlistSignalTile(item: item)),
