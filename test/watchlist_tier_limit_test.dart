@@ -12,6 +12,7 @@ import 'package:lotlotnet_mobile/features/auth/session_controller.dart';
 import 'package:lotlotnet_mobile/features/chart_alerts/chart_alert_row.dart';
 import 'package:lotlotnet_mobile/features/chart_alerts/chart_alerts_controller.dart';
 import 'package:lotlotnet_mobile/features/watchlist/watchlist_controller.dart';
+import 'package:lotlotnet_mobile/features/watchlist/watchlist_screen.dart';
 import 'package:lotlotnet_mobile/features/watchlist/widgets/watchlist_signal_tile.dart';
 import 'package:lotlotnet_mobile/features/watchlist/widgets/watchlist_tier_hold_banner.dart';
 import 'package:provider/provider.dart';
@@ -211,5 +212,74 @@ void main() {
     expect(find.text('THYAO'), findsOneWidget);
     expect(find.text(ChartAlertRow.pausedLabel), findsOneWidget);
     expect(find.text('Fiyat > 100'), findsOneWidget);
+  });
+
+  testWidgets('watchlist screen shows kota, banner and hold row', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({
+      'lotlot_access_token': 'access',
+      'lotlot_refresh_token': 'refresh',
+    });
+    final api = _api((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/predictions')) {
+        return http.Response(jsonEncode({'status': 'success', 'items': []}), 200);
+      }
+      if (path.contains('pattern-analysis')) {
+        return http.Response(jsonEncode({'status': 'success'}), 200);
+      }
+      return http.Response(
+        jsonEncode({
+          'status': 'success',
+          'watchlist': [
+            {'symbol': 'THYAO', 'name': 'THY', 'active': true},
+            {
+              'symbol': 'ASELS',
+              'name': 'Aselsan',
+              'active': false,
+              'disabled_reason': 'tier_limit',
+            },
+          ],
+          'subscription': {
+            'watchlist_active_count': 10,
+            'watchlist_inactive_count': 8,
+            'watchlist_limit': 10,
+            'monthly_watchlist_mutations_used': 36,
+            'monthly_watchlist_mutations_remaining': 0,
+          },
+        }),
+        200,
+      );
+    });
+    final tokens = TokenStorage(storage: const FlutterSecureStorage());
+    final session = SessionController(tokenStorage: tokens, apiClient: api)
+      ..status = AuthStatus.authenticated;
+    final wl = WatchlistController(apiClient: api);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: wl),
+            ChangeNotifierProvider.value(value: session),
+          ],
+          child: const Scaffold(body: WatchlistScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('10 / 10 hisse'), findsOneWidget);
+    expect(find.text('8 hisse plan limitinde bekliyor'), findsOneWidget);
+    expect(
+      find.text(
+        'Üst sınır aşıldı; yeni hak yok. Fazla kullanım önceki plandan kalma.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text(WatchlistTierHoldBanner.copy), findsOneWidget);
+    expect(find.text('THYAO'), findsOneWidget);
+    expect(find.text('ASELS'), findsOneWidget);
+    expect(find.text('Detay'), findsOneWidget);
   });
 }
