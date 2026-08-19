@@ -2,7 +2,7 @@
 
 > Android ilerleme, gap ve iOS-güvenli plan. **iOS Review beklerken** bu dosya takip kaynağıdır.  
 > Ana ürün roadmap: [`AGENT_HANDBOOK.md`](AGENT_HANDBOOK.md) §0.  
-> Son güncelleme: 2026-08-08 (A3 Play Billing §0e / §7.3)
+> Son güncelleme: 2026-08-19 (watchlist tier_limit — ortak Flutter, iOS+Android)
 
 ---
 
@@ -378,6 +378,7 @@ iOS F0–F7’ye paralel takip. Her faz: **acceptance** + **iOS regression notu*
 
 ### A5 — Ortak (opsiyonel, her iki OS)
 
+- [x] Watchlist `tier_limit` + chart-alert `paused` — ortak Flutter (web v654); AAB/IPA **+91**
 - [ ] HTTPS App Links + Apple Universal Links (`assetlinks` / `aasa`) — web BIST bağımlı  
 
 ---

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/lotlot_accent_card.dart';
 import '../../auth/session_controller.dart';
+import '../../pro/soft_gate_sheet.dart';
 import '../../stock/widgets/formation_status.dart';
 import '../watchlist_controller.dart';
 import 'watchlist_card_badges.dart';
@@ -78,6 +79,19 @@ List<String> horizonPriceTeasers(Map<String, dynamic>? pred) {
   return out;
 }
 
+String disabledReasonLabel(String? reason) {
+  switch ((reason ?? '').toLowerCase()) {
+    case 'tier_limit':
+      // Web v654 renderer.js watchlist-tier-hold
+      return 'Plan limitinde bekliyor — analiz ve detay kapalı';
+    default:
+      if (reason == null || reason.isEmpty) {
+        return 'Bu hisse şu an pasif';
+      }
+      return reason;
+  }
+}
+
 /// Web dashboard tek izleme kartı (Detay → sheet).
 class WatchlistSignalTile extends StatelessWidget {
   const WatchlistSignalTile({super.key, required this.item});
@@ -86,10 +100,13 @@ class WatchlistSignalTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final active = WatchlistController.isItemActive(item);
+    if (!active) {
+      return _InactiveWatchlistRow(item: item);
+    }
+
     final symbol = item['symbol']?.toString() ?? '';
     final name = item['name']?.toString();
-    final active = item['active'] != false;
-    final reason = item['disabled_reason']?.toString();
     final alertOn = item['alert_enabled'] == true;
     final session = context.watch<SessionController>();
     final wl = context.watch<WatchlistController>();
@@ -133,271 +150,252 @@ class WatchlistSignalTile extends StatelessWidget {
       child: LotlotAccentCard(
         padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                symbol,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 17,
-                                  height: 1.2,
-                                  color: active
-                                      ? LotlotColors.textPrimary
-                                      : LotlotColors.textSecondary,
-                                ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              symbol,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 17,
+                                height: 1.2,
+                                color: LotlotColors.textPrimary,
                               ),
                             ),
-                            WatchlistMetaIcons(
-                              liquidityWarning: liquidity,
-                              evidenceSummary: evidence,
-                            ),
-                          ],
-                        ),
-                        if (name != null && name.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: LotlotColors.textSecondary,
-                              fontSize: 12,
-                            ),
+                          ),
+                          WatchlistMetaIcons(
+                            liquidityWarning: liquidity,
+                            evidenceSummary: evidence,
                           ),
                         ],
+                      ),
+                      if (name != null && name.isNotEmpty) ...[
+                        const SizedBox(height: 2),
                         Text(
-                          'Bildirim: ${alertOn ? 'Açık' : 'Kapalı'}',
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: LotlotColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (current is num)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Text(
-                        '₺${current.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 17,
-                          height: 1.2,
-                          color: active
-                              ? LotlotColors.textPrimary
-                              : LotlotColors.textSecondary,
-                        ),
-                      ),
-                    )
-                  else if (wl.enrichingPredictions && active)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 14, right: 4),
-                      child: SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: LotlotColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  IconButton(
-                    tooltip: 'Kaldır',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(
-                      Icons.remove_circle_outline,
-                      color: LotlotColors.danger,
-                    ),
-                    // mutating: çift DELETE + rate-limit fırtınasını kes.
-                    onPressed: symbol.isEmpty ||
-                            context.watch<WatchlistController>().mutating
-                        ? null
-                        : () => _remove(context, symbol),
-                  ),
-                ],
-              ),
-              if (teasers.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  teasers.join('  '),
-                  style: const TextStyle(
-                    color: LotlotColors.textSecondary,
-                    fontSize: 11,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
-              WatchlistBadgeStrip(
-                badges: badges,
-                horizonChip: hzChip,
-                selectedDelta: delta,
-                bestModel: bestChip,
-                emptyHint: analysis == null
-                    ? null
-                    : (badges.isEmpty ? 'Formasyon yok' : null),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (pill != null)
-                    Opacity(
-                      opacity: muted ? 0.58 : 1,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: pillColor.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: pillColor.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Text(
-                          pill,
-                          style: TextStyle(
-                            color: pillColor,
-                            fontWeight: FontWeight.w800,
                             fontSize: 12,
                           ),
                         ),
+                      ],
+                      Text(
+                        'Bildirim: ${alertOn ? 'Açık' : 'Kapalı'}',
+                        style: const TextStyle(
+                          color: LotlotColors.textSecondary,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (current is num)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(
+                      '₺${current.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
+                        height: 1.2,
+                        color: LotlotColors.textPrimary,
                       ),
                     ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (label != null || delta != null)
-                          Text(
-                            [
-                              if (label != null && label.isNotEmpty) label,
-                              if (delta != null) 'Δ $delta',
-                            ].join(' · '),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: muted || degraded
-                                  ? LotlotColors.textSecondary
-                                  : LotlotColors.textPrimary,
-                            ),
+                  )
+                else if (wl.enrichingPredictions)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 14, right: 4),
+                    child: SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: LotlotColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                IconButton(
+                  tooltip: 'Kaldır',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(
+                    Icons.remove_circle_outline,
+                    color: LotlotColors.danger,
+                  ),
+                  onPressed: symbol.isEmpty ||
+                          context.watch<WatchlistController>().mutating
+                      ? null
+                      : () => _remove(context, symbol),
+                ),
+              ],
+            ),
+            if (teasers.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                teasers.join('  '),
+                style: const TextStyle(
+                  color: LotlotColors.textSecondary,
+                  fontSize: 11,
+                  height: 1.35,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            WatchlistBadgeStrip(
+              badges: badges,
+              horizonChip: hzChip,
+              selectedDelta: delta,
+              bestModel: bestChip,
+              emptyHint: analysis == null
+                  ? null
+                  : (badges.isEmpty ? 'Formasyon yok' : null),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (pill != null)
+                  Opacity(
+                    opacity: muted ? 0.58 : 1,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: pillColor.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: pillColor.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Text(
+                        pill,
+                        style: TextStyle(
+                          color: pillColor,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (label != null || delta != null)
+                        Text(
+                          [
+                            if (label != null && label.isNotEmpty) label,
+                            if (delta != null) 'Δ $delta',
+                          ].join(' · '),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            color: muted || degraded
+                                ? LotlotColors.textSecondary
+                                : LotlotColors.textPrimary,
                           ),
-                        if (note != null && note.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            note,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: LotlotColors.textSecondary,
-                              fontSize: 12,
-                              height: 1.3,
-                            ),
+                        ),
+                      if (note != null && note.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          note,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: LotlotColors.textSecondary,
+                            fontSize: 12,
+                            height: 1.3,
                           ),
-                        ],
+                        ),
                       ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (genel is num) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Genel Sinyal Gücü',
+                style: TextStyle(
+                  color: LotlotColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (genel / 100).clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: LotlotColors.border,
+                        color: muted ? LotlotColors.textSecondary : barColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '%${genel.round()}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      color: muted ? LotlotColors.textSecondary : barColor,
                     ),
                   ),
                 ],
               ),
-              if (genel is num) ...[
-                const SizedBox(height: 8),
-                const Text(
-                  'Genel Sinyal Gücü',
-                  style: TextStyle(
-                    color: LotlotColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (genel / 100).clamp(0.0, 1.0),
-                          minHeight: 6,
-                          backgroundColor: LotlotColors.border,
-                          color: muted
-                              ? LotlotColors.textSecondary
-                              : barColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '%${genel.round()}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        color: muted
-                            ? LotlotColors.textSecondary
-                            : barColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              if (!active && reason != null && reason.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(
-                  reason,
-                  style: const TextStyle(
-                    color: LotlotColors.warning,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton.icon(
-                  onPressed: symbol.isEmpty
-                      ? null
-                      : () => showWatchlistDetailSheet(
-                            context,
-                            symbol: symbol,
-                            name: name,
-                          ),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(0, 36),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    textStyle: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  icon: const Icon(Icons.list_alt, size: 16),
-                  label: const Text('Detay'),
-                ),
-              ),
             ],
-          ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton.icon(
+                onPressed: symbol.isEmpty
+                    ? null
+                    : () => showWatchlistDetailSheet(
+                          context,
+                          symbol: symbol,
+                          name: name,
+                        ),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(0, 36),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  textStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                icon: const Icon(Icons.list_alt, size: 16),
+                label: const Text('Detay'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -411,5 +409,134 @@ class WatchlistSignalTile extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
       }
     }
+  }
+}
+
+/// `active=false` — kısa kilitli satır; Detay / analiz / bildirim yok.
+class _InactiveWatchlistRow extends StatelessWidget {
+  const _InactiveWatchlistRow({required this.item});
+
+  final Map<String, dynamic> item;
+
+  @override
+  Widget build(BuildContext context) {
+    final symbol = item['symbol']?.toString() ?? '';
+    final name = item['name']?.toString();
+    final reason = item['disabled_reason']?.toString();
+    final wl = context.watch<WatchlistController>();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Opacity(
+        opacity: 0.72,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
+          decoration: BoxDecoration(
+            color: LotlotColors.surface,
+            borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+            border: Border.all(color: LotlotColors.border),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 2, right: 8),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 18,
+                  color: LotlotColors.warning,
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      symbol,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: LotlotColors.textSecondary,
+                      ),
+                    ),
+                    if (name != null && name.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: LotlotColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 4),
+                    Text(
+                      disabledReasonLabel(reason),
+                      style: const TextStyle(
+                        color: LotlotColors.warning,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => showSoftGateSheet(
+                        context,
+                        kind: SoftGateKind.pro,
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Plan yükselt',
+                        style: TextStyle(
+                          color: LotlotColors.accent,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Kaldır',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(
+                  minWidth: 36,
+                  minHeight: 36,
+                ),
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(
+                  Icons.remove_circle_outline,
+                  color: LotlotColors.danger,
+                ),
+                onPressed: symbol.isEmpty || wl.mutating
+                    ? null
+                    : () async {
+                        final ok = await context
+                            .read<WatchlistController>()
+                            .removeSymbol(symbol);
+                        if (!context.mounted) return;
+                        if (!ok) {
+                          final err =
+                              context.read<WatchlistController>().lastError;
+                          if (err != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(err)),
+                            );
+                          }
+                        }
+                      },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

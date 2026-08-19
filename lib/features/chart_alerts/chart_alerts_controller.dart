@@ -20,12 +20,26 @@ class ChartAlertsController extends ChangeNotifier {
         limits?['active'] ??
         limits?['active_count'] ??
         limits?['count'];
-    return v is num ? v.toInt() : null;
+    if (v is num) return v.toInt();
+    if (alerts.isEmpty) return limits == null ? null : 0;
+    return activeAlerts.length;
   }
 
   int? get limit {
     final v = limits?['limit'] ?? limits?['chart_alert_limit'];
     return v is num ? v.toInt() : null;
+  }
+
+  List<Map<String, dynamic>> get activeAlerts =>
+      alerts.where(isAlertActive).toList();
+
+  List<Map<String, dynamic>> get pausedAlerts =>
+      alerts.where((a) => !isAlertActive(a)).toList();
+
+  static bool isAlertActive(Map<String, dynamic> a) {
+    final status = (a['status'] ?? a['state'] ?? '').toString().toLowerCase();
+    if (status.isEmpty) return a['active'] != false;
+    return status == 'active';
   }
 
   /// `channels_allowed` yoksa sunucu karar versin (true).

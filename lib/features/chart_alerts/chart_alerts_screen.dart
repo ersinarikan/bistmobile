@@ -210,63 +210,83 @@ class _ChartAlertsScreenState extends State<ChartAlertsScreen> {
               final summary = a['summary_tr']?.toString() ??
                   a['conditions_summary_tr']?.toString() ??
                   a['description']?.toString();
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: LotlotColors.surface,
-                  borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
-                  border: Border.all(color: LotlotColors.border),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            symbol,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                          if (summary != null) ...[
-                            const SizedBox(height: 4),
+              final active = ChartAlertsController.isAlertActive(a);
+              final statusLabel = active ? null : 'Duraklatıldı (plan limiti)';
+              return Opacity(
+                opacity: active ? 1 : 0.65,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: LotlotColors.surface,
+                    borderRadius:
+                        BorderRadius.circular(LotlotColors.radiusMd),
+                    border: Border.all(color: LotlotColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              summary,
-                              style: const TextStyle(
-                                color: LotlotColors.textSecondary,
-                                height: 1.35,
+                              symbol,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                color: active
+                                    ? LotlotColors.textPrimary
+                                    : LotlotColors.textSecondary,
                               ),
                             ),
+                            if (statusLabel != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                statusLabel,
+                                style: const TextStyle(
+                                  color: LotlotColors.warning,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                            if (summary != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                summary,
+                                style: const TextStyle(
+                                  color: LotlotColors.textSecondary,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      tooltip: 'Sil',
-                      onPressed: id.isEmpty || ctrl.mutating
-                          ? null
-                          : () async {
-                              final ok = await ctrl.remove(id);
-                              if (!mounted) return;
-                              if (!ok) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      ctrl.lastError ?? 'Silinemedi',
+                      IconButton(
+                        tooltip: 'Sil',
+                        onPressed: id.isEmpty || ctrl.mutating
+                            ? null
+                            : () async {
+                                final ok = await ctrl.remove(id);
+                                if (!mounted) return;
+                                if (!ok) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        ctrl.lastError ?? 'Silinemedi',
+                                      ),
                                     ),
-                                  ),
-                                );
-                              }
-                            },
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: LotlotColors.danger,
+                                  );
+                                }
+                              },
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: LotlotColors.danger,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }),

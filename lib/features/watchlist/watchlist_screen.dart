@@ -252,8 +252,35 @@ class _AuthWatchlistBody extends StatelessWidget {
             WatchlistEmptyOnboarding(
               onAddStock: () => _openAddAndMaybeGuide(context),
             )
-          else
-            ...wl.items.map((item) => WatchlistSignalTile(item: item)),
+          else ...[
+            ...wl.items
+                .where(WatchlistController.isItemActive)
+                .map((item) => WatchlistSignalTile(item: item)),
+            if (wl.items.any((e) => !WatchlistController.isItemActive(e))) ...[
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(top: 8, bottom: 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: LotlotColors.surface,
+                  borderRadius: BorderRadius.circular(LotlotColors.radiusMd),
+                  border: Border.all(color: LotlotColors.border),
+                ),
+                child: const Text(
+                  'Ücretsiz planda canlı izleme sınırlıdır. Fazlası silinmedi; '
+                  'plan yükseltince veya listeden hisse çıkarınca yeniden açılır.',
+                  style: TextStyle(
+                    color: LotlotColors.textSecondary,
+                    fontSize: 13,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+              ...wl.items
+                  .where((e) => !WatchlistController.isItemActive(e))
+                  .map((item) => WatchlistSignalTile(item: item)),
+            ],
+          ],
           const SizedBox(height: 16),
           Text(
             'Yatırım tavsiyesi değildir. Veri analizidir.',
@@ -277,13 +304,24 @@ class _QuotaBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final active = wl.activeCount;
     final limit = wl.watchlistLimit;
+    final inactive = wl.inactiveCount;
     final remaining = wl.mutationsRemaining;
     final quotaText = (active != null && limit != null)
         ? '$active / $limit hisse'
         : 'Kota bilgisi yükleniyor';
-    final mutText = remaining == null
-        ? null
-        : 'Bu ay kalan değişiklik: $remaining';
+
+    String? mutText;
+    if (wl.mutationsCarryoverExhausted) {
+      // Web account-modal.js _quotaBar over note
+      mutText =
+          'Üst sınır aşıldı; yeni hak yok. Fazla kullanım önceki plandan kalma.';
+    } else if (remaining != null) {
+      mutText = 'Bu ay kalan değişiklik: $remaining';
+    }
+
+    final inactiveNote = (inactive != null && inactive > 0)
+        ? '$inactive hisse plan limitinde bekliyor'
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -299,6 +337,16 @@ class _QuotaBar extends StatelessWidget {
             quotaText,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
+          if (inactiveNote != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              inactiveNote,
+              style: const TextStyle(
+                color: LotlotColors.warning,
+                fontSize: 13,
+              ),
+            ),
+          ],
           if (mutText != null) ...[
             const SizedBox(height: 4),
             Text(

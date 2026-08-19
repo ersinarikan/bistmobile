@@ -45,6 +45,12 @@ class WatchlistController extends ChangeNotifier {
     return items.where((e) => e['active'] != false).length;
   }
 
+  int? get inactiveCount {
+    final v = subscription?['watchlist_inactive_count'];
+    if (v is num) return v.toInt();
+    return items.where((e) => e['active'] == false).length;
+  }
+
   int? get watchlistLimit {
     final v = subscription?['watchlist_limit'];
     return v is num ? v.toInt() : null;
@@ -54,6 +60,23 @@ class WatchlistController extends ChangeNotifier {
     final v = subscription?['monthly_watchlist_mutations_remaining'];
     return v is num ? v.toInt() : null;
   }
+
+  int? get mutationsUsed {
+    final v = subscription?['monthly_watchlist_mutations_used'];
+    return v is num ? v.toInt() : null;
+  }
+
+  /// Ücretsize düşünce önceki plandan biriken mutation — 36/10 gibi taşma gösterme.
+  bool get mutationsCarryoverExhausted {
+    final rem = mutationsRemaining;
+    final used = mutationsUsed;
+    if (rem == null || used == null || rem > 0) return false;
+    // remaining 0 ve used, ücretsiz aylık haktan (10) veya watchlist limitinden belirgin fazla.
+    final cap = watchlistLimit ?? 10;
+    return used > cap;
+  }
+
+  static bool isItemActive(Map<String, dynamic> item) => item['active'] != false;
 
   Future<void> refresh() async {
     final gen = ++_refreshGeneration;
@@ -69,22 +92,35 @@ class WatchlistController extends ChangeNotifier {
       if (gen != _refreshGeneration) return;
 
       final raw = wl['watchlist'];
-      items = raw is List
+      final parsed = raw is List
           ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList()
-          : [];
+          : <Map<String, dynamic>>[];
+      // Aktifler üstte; pasif (tier_limit) altta kısa satır.
+      parsed.sort((a, b) {
+        final aa = isItemActive(a) ? 0 : 1;
+        final bb = isItemActive(b) ? 0 : 1;
+        return aa.compareTo(bb);
+      });
+      items = parsed;
       subscription = wl['subscription'] is Map
           ? Map<String, dynamic>.from(wl['subscription'] as Map)
           : null;
       // Sembol seti değiştiyse eski pred/pattern’ı temizle (yanlış kart sinyali yok).
-      final keys = items
+      // Pred/pattern yalnız aktif semboller — pasif kartta canlı sinyal yok.
+      final activeKeys = items
+          .where(isItemActive)
           .map((e) => (e['symbol']?.toString() ?? '').toUpperCase())
           .where((s) => s.isNotEmpty)
           .toSet();
       predictions = predictions
-          .where((e) => keys.contains((e['symbol']?.toString() ?? '').toUpperCase()))
+          .where(
+            (e) => activeKeys.contains(
+              (e['symbol']?.toString() ?? '').toUpperCase(),
+            ),
+          )
           .toList();
       patternBySymbol = Map<String, Map<String, dynamic>>.fromEntries(
-        patternBySymbol.entries.where((e) => keys.contains(e.key)),
+        patternBySymbol.entries.where((e) => activeKeys.contains(e.key)),
       );
       loading = false;
       notifyListeners();
@@ -148,7 +184,9 @@ class WatchlistController extends ChangeNotifier {
   }
 
   Future<void> _hydratePatterns(int gen) async {
+    // Pasif (tier_limit) için pattern çekme — kota/iş yükü + yanlış “canlı” izlenim.
     final symbols = items
+        .where(isItemActive)
         .map((e) => (e['symbol']?.toString() ?? '').toUpperCase())
         .where((s) => s.isNotEmpty)
         .toList();
