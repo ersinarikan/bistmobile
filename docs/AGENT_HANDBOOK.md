@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-19 (watchlist copy — web v655 + store 1.0.0+95)
+> Son güncelleme: 2026-08-19 (store rebuild 1.0.0+100)
 
 ---
 
@@ -439,7 +439,7 @@ State: **Provider**. Token: **flutter_secure_storage**.
 ### v85 (2026-08-19) — İzleme limit kopyası (web v655)
 - Satır: “Limit doldu — analiz kapalı”
 - Banner: “Canlı izleme N hisse. Diğerleri listenizde duruyor — yer açın veya planı yükseltin.”
-- iOS + Android aynı Flutter; store build **1.0.0+95**
+- iOS + Android aynı Flutter; store rebuild **1.0.0+100**
 - git tag **v85**
 
 ### v84 (2026-08-19) — Ücretsiz planda pasif izleme (web v654)
