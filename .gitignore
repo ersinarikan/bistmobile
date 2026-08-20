@@ -72,3 +72,4 @@ _ref_bist/
 
 # SonarCloud CLI token (never commit)
 .secrets/sonar.env
+.sonartoken

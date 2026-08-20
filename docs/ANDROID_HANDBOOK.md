@@ -2,7 +2,7 @@
 
 > Android ilerleme, gap ve iOS-güvenli plan. **iOS Review beklerken** bu dosya takip kaynağıdır.  
 > Ana ürün roadmap: [`AGENT_HANDBOOK.md`](AGENT_HANDBOOK.md) §0.  
-> Son güncelleme: 2026-08-19 (watchlist tier_limit — ortak Flutter, iOS+Android)
+> Son güncelleme: 2026-08-20 (onay sonrası billing borç → AGENT_HANDBOOK §0.10)
 
 ---
 
@@ -284,7 +284,7 @@ Splash, session, e-posta auth, Turnstile, watchlist, browse, hisse, soft gate, A
 | G3 | ~~Firebase Android + `google-services.json`~~ **DONE** (gitignore) | Düşük |
 | G4 | ~~Android OAuth + Play SHA clients~~ **DONE** (debug/Play/prev/PQ) | Orta |
 | G5 | ~~Apple Sign-In Android~~ **DONE** | Orta |
-| G6 | ~~Play Billing ürünleri + SA + `google_play=true`~~ **DONE** (API smoke OK) — tablet E2E **§7.3** açık | Düşük |
+| G6 | ~~Play Billing ürünleri + SA + `google_play=true`~~ **DONE** (API smoke OK) — tablet E2E **§7.3** / handbook **§0.10 TD-B4** (onay sonrası) | Düşük |
 
 ### P1 — Parity / polish
 
@@ -296,6 +296,7 @@ Splash, session, e-posta auth, Turnstile, watchlist, browse, hisse, soft gate, A
 | G10 | ~~Notification channel + icon~~ **DONE** (A2) |
 | G11 | Play Data safety formu |
 | G12 | HTTPS App Links + `assetlinks.json` (iOS aasa ile birlikte — ortak web işi) |
+| G13 | Onay sonrası billing cila: Play grace **2 gün kalsın** (Garanti 48s); RTDN; §7.3 I1b/I2 — [`AGENT_HANDBOOK.md`](AGENT_HANDBOOK.md) **§0.10** |
 
 ### Bilinçli non-gap
 
@@ -512,6 +513,7 @@ AAB’yi her fazda yüklemek zorunda değilsin — **A2+A3 bitince tek Play yük
 | 2026-08-08 | A3 plan: §0e Play Billing Console+SA rehberi; §7.3/§7.4 tablet notları; `android_play_billing_bootstrap.sh` (SA gelince) |
 | 2026-08-08 | A3 ops: Play abonelikler ACTIVE + SA + Publisher API smoke; config `google_play:true`; ship **1.0.0+82** dahili |
 | 2026-08-08 | Bildirim prefs tier parity: Free CTA / Pro e-posta / Premium push; backend PATCH gate + Free cleanup |
+| 2026-08-20 | Ödeme checklist yeşil (profil TRY, license `testerlar`, Premium `monthly`). Grace/RTDN/tablet E2E → §0.10 borç; Play grace 2g bilinçli |
 
 ### Acceptance özeti
 

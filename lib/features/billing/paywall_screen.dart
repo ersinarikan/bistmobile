@@ -10,6 +10,7 @@ import '../auth/session_controller.dart';
 import '../pro/soft_gate_sheet.dart';
 import 'billing_controller.dart';
 import 'iap_service.dart';
+import 'paywall_subscription_terms.dart';
 
 /// F6 paywall — StoreKit / Play; Garanti/WebView yok.
 class PaywallScreen extends StatefulWidget {
@@ -116,13 +117,27 @@ class _PaywallScreenState extends State<PaywallScreen> {
     }
   }
 
-  Future<void> _openWebAccount() async {
+  Future<void> _openUrl(String url) async {
     try {
-      await launchUrl(
-        Uri.parse('https://lotlot.net'),
+      final ok = await launchUrl(
+        Uri.parse(url),
         mode: LaunchMode.externalApplication,
       );
-    } catch (_) {}
+      if (!ok && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sayfa açılamadı')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sayfa açılamadı')),
+      );
+    }
+  }
+
+  Future<void> _openWebAccount() async {
+    await _openUrl('https://lotlot.net');
   }
 
   @override
@@ -192,6 +207,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 _PlanCard(
                   title: 'Pro',
                   subtitle: 'Günlük analiz için ideal',
+                  period: PaywallSubscriptionCopy.periodLabel,
                   bullets: const [
                     'AI yorum ve geniş analiz',
                     'Grafik uyarıları',
@@ -210,6 +226,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 _PlanCard(
                   title: 'Premium',
                   subtitle: 'Tam deneyim',
+                  period: PaywallSubscriptionCopy.periodLabel,
                   bullets: const [
                     'Push bildirimleri',
                     'Hisse Sihirbazı',
@@ -246,6 +263,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   onPressed: _openWebAccount,
                   child: const Text('Web hesabını aç'),
                 ),
+                const SizedBox(height: 16),
+                PaywallSubscriptionTerms(
+                  onOpenUrl: _openUrl,
+                  showAppleEula: Platform.isIOS,
+                ),
               ],
             ),
     );
@@ -256,6 +278,7 @@ class _PlanCard extends StatelessWidget {
   const _PlanCard({
     required this.title,
     required this.subtitle,
+    required this.period,
     required this.bullets,
     required this.price,
     required this.highlighted,
@@ -265,6 +288,7 @@ class _PlanCard extends StatelessWidget {
 
   final String title;
   final String subtitle;
+  final String period;
   final List<String> bullets;
   final String? price;
   final bool highlighted;
@@ -314,6 +338,15 @@ class _PlanCard extends StatelessWidget {
               style: const TextStyle(
                 color: LotlotColors.textSecondary,
                 height: 1.35,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              period,
+              style: const TextStyle(
+                color: LotlotColors.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 10),

@@ -1,7 +1,7 @@
 # LOTLOT.NET Mobile — Agent Kılavuzu
 
 > Bu dosya agent’ın çalışma kılavuzudur. **Her anlamlı değişiklikten sonra güncellenir.**
-> Son güncelleme: 2026-08-19 (store rebuild 1.0.0+100)
+> Son güncelleme: 2026-08-20 (paywall 3.1.2 binary; 1.0.0+101)
 
 ---
 
@@ -50,7 +50,7 @@ flowchart TD
 | **F4** | Hesap / yasal / bütünlük | Tamam (AccountSettings + PATCH prefs + legal URLs) | Hayır |
 | **F5** | Pro yüzey + push (satın alma yok) | Tamam (çekirdek + wizard/AI) | Satın alma yok |
 | **F6** | IAP paywall | İstemci + prod Apple; **I1/I2 Sandbox PASS** (2026-08-05, USB +58) | **Evet** |
-| **F7** | Mağaza teslimi | ASC IAP paketi + kod **+95** (web v655 copy); Play/Apple aynı build | TF + review |
+| **F7** | Mağaza teslimi | **+101** paywall 3.1.2 binary (önce +100 EULA metadata; Remove+yeniden submit) | TF + review |
 
 Guide §29 P0–P6 ile ilişki: P1 ≈ F1; P4 ≈ F2–F5; P2/P3/P6 ≈ F6–F7 (IAP sona kaydırıldı).
 
@@ -354,6 +354,28 @@ Matris T-F1…T-D1 (v41); W-B1…W-A2 (v43).
 
 **F7 go/no-go:** P1 + I1/I2 yeşil olmadan Add for Review yok (bilinçli sandbox notu yalnızca PM kararı). I1/I2 **PASS** — sıradaki: F7 checklist / TF upload.
 
+### 0.10 Onay sonrası — billing teknik borç (2026-08-20)
+
+**Şimdi yapma:** Play grace değiştirme, RTDN açma, yeni AAB/IPA, Remove from Review.  
+**Ne zaman:** App Store onay + Play üretime geçiş (veya 14 gün + üretim başvurusu) **sonra**.  
+**Kaynak (prod, salt okuma 2026-08-20):** `/etc/cron.d/bist-pattern-billing-sync` (`*/15` + 03:15 `billing_sync.sh`); `bist_pattern/billing/constants.py`.
+
+Bilinçli hiza (bozma): Play Console grace **2 gün** = Garanti `BILLING_KNOWN_FAILURE_GRACE_HOURS` **48**. Google’ın 7 gün önerisi **uygulanmaz** — backend 48s değişmeden Play’i 7 yapmak kanalları ayırır. `BILLING_RENEWAL_HOLD_HOURS` **36** (sonuç bilinmiyorken tutuş). `BILLING_GRACE_DAYS=3` settings’e yazılıyor, düşürme yolunda **kullanılmıyor** (BIST cila).
+
+Store IAP siparişi 15 dk cron’da banka poll’a girmez; erişim `subscription_expires_at` + verify/restore (Play `IN_GRACE_PERIOD` kabul; `ON_HOLD` değil). RTDN Play Console’da kapalı.
+
+| ID | Konu | Nerede | İş |
+|----|------|--------|-----|
+| TD-B1 | Grace hizasını doğrula / belgele | Play `monthly` + BIST Garanti | 2 gün / 48s kalsın. 7’ye çekmek = önce backend + her kanal. Play **askı 58 gün** LOTLOT erişimini uzatmaz. |
+| TD-B2 | Play RTDN | Play + GCP Pub/Sub + `POST /webhooks/google/play` | İptal / yenileme / grace bitişi anlık. Kutuyu Pub/Sub + backend hazır olmadan açma. |
+| TD-B3 | Apple ASN + Billing Grace | ASC Subscription Group + `/webhooks/apple/iap` | Grup grace (6/16?) vs 48s. Webhook v1 (`EXPIRED` / `GRACE_PERIOD_EXPIRED`) cilası. |
+| TD-B4 | Android IAP E2E | Tablet +100, license tester | §7.3: I1b Premium yükseltme, I2 restore, TA7c yönet. iOS I1/I2 Sandbox PASS (2026-08-05). |
+| TD-B5 | Fiyat kararı | Web 89/129 vs store 99/149 (Apple=Play) | Ürün: komisyon mu, web’e çekme mi. İncelemede oynatma. |
+| TD-B6 | ~~Paywall 3.1.2 in-app~~ | `PaywallScreen` + `PaywallSubscriptionTerms` | **+101:** aylık süre, 24s yenileme metni, Kullanım/Gizlilik (+ iOS Apple EULA). Metadata EULA +100’de kaldı. |
+| TD-B7 | `BILLING_GRACE_DAYS` ölü sabit | BIST `constants.py` | 3 gün mü 48s mi tek kaynak; kullanılmıyorsa sil veya bağla. Mobil işi değil. |
+
+Mobil client grace uydurmaz; `/me` `tier` okur.
+
 ---
 
 ## 1. Proje özeti
@@ -435,6 +457,17 @@ State: **Provider**. Token: **flutter_secure_storage**.
 - Kural `test-and-review`: yazınca senaryo + self-review zorunlu
 
 ## 4. Yapılanlar (kronoloji)
+
+### v86 (2026-08-20) — Paywall 3.1.2 binary
+- Plan kartı: “Aylık · otomatik yenilenir”
+- Satın alma altında 24s yenileme metni + Kullanım koşulları / Gizlilik (+ iOS Apple EULA)
+- Build **1.0.0+101** — ASC’de +100’ü review’dan çıkar, yeni IPA + IAP paketi
+
+### Handbook — onay sonrası billing borç (2026-08-20)
+
+- §0.10 TD-B1…B7: grace 2g/48s, RTDN, Apple ASN/grace, tablet E2E, fiyat 99/149, paywall 3.1.2, ölü `BILLING_GRACE_DAYS`
+- Market checklist (Play profil/banka, license tester, Premium `monthly`, Apple Paid Apps+TRY banka, royalty USD) yeşil
+- ASC +100 EULA Description resubmit → Waiting for Review
 
 ### v85 (2026-08-19) — İzleme limit kopyası (web v655)
 - Satır: “Limit doldu — analiz kapalı”
